@@ -12,7 +12,10 @@ CA_DEFAULT_PARAMS = {
     'use_time_window_guided': True,
     'use_compressed_annealing': True,
     'compressed_penalty_start': 0.1,
-    'compressed_penalty_end': 1.0
+    'compressed_penalty_end': 1.0,
+    'min_clusters': 1,
+    'max_clusters': 10,
+    'stop_consecutive_worse': 3,
 }
 
 @njit(cache=True)

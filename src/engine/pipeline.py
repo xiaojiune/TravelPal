@@ -14,7 +14,7 @@ TRAVEL_SPEED = 1.0
 
 def run_planning(poi_cache, city, hotel_name,
                  penalty_weight, early_wait_weight, late_return_weight,
-                 mode="fast", n_days=None, min_clusters=None, max_clusters=None):
+                 mode="fast", n_days=None):
     total_start = time.time()
 
     poi_names = [hotel_name] + [s["name"] for s in poi_cache["spots"]]
@@ -45,12 +45,15 @@ def run_planning(poi_cache, city, hotel_name,
 
     result = cluster_and_solve(
         spots, depot, cost_matrix, mode=mode,
-        n_days=n_days, min_clusters=min_clusters, max_clusters=max_clusters,
+        n_days=n_days,
         travel_speed=TRAVEL_SPEED,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
     )
+
+    if result["type"] == "suggestion":
+        return result
 
     solution = result["solution"]
     print(f"最优总成本 ({mode} 模式): {solution['total_cost']:.1f}\n")

@@ -122,8 +122,8 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
             if worse_count >= stop_consecutive_worse:
                 break
 
+    raw_results.sort(key=lambda x: x["cost"])
     deduped = _deduplicate(raw_results)
-    deduped.sort(key=lambda x: x["cost"])
     top5 = deduped[:5]
 
     return {

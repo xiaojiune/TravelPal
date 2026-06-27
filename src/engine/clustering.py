@@ -1,9 +1,23 @@
+# src/engine/clustering.py
+
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
+# ================== 聚类方法 ==================
 
 def cluster_by_distance_kmeans(spots, depot, n_clusters):
+    """
+    基于地理坐标的 K-means 聚类。
+
+    Args:
+        spots: 景点字典，每项含 {"x": float, "y": float}。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
+    """
     coords, indices = [], []
     for i, spot in spots.items():
         if i != depot:
@@ -19,6 +33,12 @@ def cluster_by_distance_kmeans(spots, depot, n_clusters):
 
 
 def cluster_by_time_window(spots, depot, n_clusters):
+    """
+    基于时间窗特征的 K-means 聚类。
+
+    特征向量：[开放时间, 关闭时间, 时间窗跨度]。
+    适用于将营业时间相似的景点分到同一天。
+    """
     features, indices = [], []
     for i, spot in spots.items():
         if i != depot:
@@ -35,6 +55,11 @@ def cluster_by_time_window(spots, depot, n_clusters):
 
 
 def cluster_by_spatiotemporal(spots, depot, n_clusters, sp_w=0.5, tp_w=0.5):
+    """
+    时空联合聚类（距离 + 时间窗）。
+
+    将坐标和时间窗拼接为四维特征，通过权重参数调节空间与时间的相对重要性。
+    """
     features, indices = [], []
     for i, spot in spots.items():
         if i != depot:
@@ -53,6 +78,12 @@ def cluster_by_spatiotemporal(spots, depot, n_clusters, sp_w=0.5, tp_w=0.5):
 
 
 def cluster_by_time_overlap(spots, depot, n_clusters):
+    """
+    时间窗重叠启发式分组。
+
+    将景点按时间窗起始时间排序后平摊到各组，保证每组时间窗连续。
+    无随机性，结果确定。
+    """
     cities = []
     for i, spot in spots.items():
         if i != depot:
@@ -73,6 +104,11 @@ def cluster_by_time_overlap(spots, depot, n_clusters):
 
 
 def cluster_by_time_density(spots, depot, n_clusters):
+    """
+    基于时间窗密度的 K-means 聚类。
+
+    仅使用时间窗起始时间作为一维特征，适用于时间段高度聚集的场景。
+    """
     times, indices = [], []
     for i, spot in spots.items():
         if i != depot:
@@ -88,6 +124,12 @@ def cluster_by_time_density(spots, depot, n_clusters):
 
 
 def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
+    """
+    混合优化分组（时间窗排序 + 距离优化重分配）。
+
+    先按时间窗排序平摊，再通过交换分组间边界节点来优化组内距离。
+    迭代至多 10 轮，无改善则提前停止。
+    """
     cities = []
     for i, spot in spots.items():
         if i != depot:
@@ -104,6 +146,7 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
         for _ in range(sz):
             groups[g].append(cities[idx]['id'])
             idx += 1
+    # 交换优化：将各组最晚节点与下一组最早节点交换以降低组内距离
     for _ in range(10):
         improved = False
         for i in range(n_clusters - 1):
@@ -130,6 +173,7 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
                 groups[j].append(i_latest)
                 after = avg_dist(groups[i]) + avg_dist(groups[j])
                 if after > before:
+                    # 交换后变差，撤销
                     groups[i].remove(j_earliest)
                     groups[j].remove(i_latest)
                     groups[i].append(i_latest)
@@ -140,6 +184,8 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
             break
     return groups
 
+
+# ================== 方法注册表与辅助函数 ==================
 
 CLUSTER_METHODS = [
     ("1. 基于距离的K-means聚类", cluster_by_distance_kmeans),
@@ -152,16 +198,23 @@ CLUSTER_METHODS = [
 
 
 def call_cluster(func, spots, depot, k, dist_mat=None):
+    """
+    统一调用聚类方法。
+
+    cluster_hybrid_optimized 需要 dist_mat 参数，其余仅需 spots/depot/k。
+    """
     if func.__name__ == 'cluster_hybrid_optimized':
         return func(spots, dist_mat, depot, k)
     return func(spots, depot, k)
 
 
 def pure_name(full_name):
+    """从带编号的全称中提取纯方法名，如 '1. xxx' → 'xxx'"""
     return full_name.split(". ", 1)[1] if ". " in full_name else full_name
 
 
 def find_method_func(name):
+    """通过方法名查找对应的函数对象"""
     for full, func in CLUSTER_METHODS:
         if pure_name(full) == name or full == name:
             return func

@@ -1,5 +1,5 @@
 # 不应该被提交的文件
-ignore/
+docs++/
 data/DataSets/
 frontend/static/
 

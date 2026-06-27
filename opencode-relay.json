@@ -1,0 +1,6 @@
+{
+  "instances": {
+    "alpha": { "port": 4000 },
+    "bravo": { "port": 4001 }
+  }
+}

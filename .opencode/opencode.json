@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "references": {
+    "old-project": {
+      "path": "D:/jb-file/python/TSPTW",
+      "description": "原项目（visualization分支），TravelPal 基于此改造，当需要参考旧代码（如前端交互、营业时间解析、Cesium 集成）时使用"
+    }
+  },
+  "plugin": [
+    "opencode-relay"
+  ]
+}

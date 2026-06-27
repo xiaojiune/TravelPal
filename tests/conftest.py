@@ -1,0 +1,45 @@
+import pytest
+from tests.dataset_loader import load_tsptw_dataset, find_dataset
+
+
+@pytest.fixture(scope="session")
+def n20_dataset():
+    return load_tsptw_dataset(find_dataset("n20w20", 1))
+
+
+@pytest.fixture(scope="session")
+def n60_dataset():
+    return load_tsptw_dataset(find_dataset("n60w60", 3))
+
+
+@pytest.fixture(scope="session")
+def n100_dataset():
+    return load_tsptw_dataset(find_dataset("n100w20", 1))
+
+
+@pytest.fixture(scope="session")
+def n200_dataset():
+    return load_tsptw_dataset(find_dataset("n200w40", 5))
+
+
+DATASET_IDS = [
+    "n20w20.001",
+    "n60w60.003",
+    "n100w20.001",
+    "n200w40.005",
+]
+
+
+def _load(subdir, instance):
+    return load_tsptw_dataset(find_dataset(subdir, instance))
+
+
+@pytest.fixture(params=[
+    ("n20w20", 1),
+    ("n60w60", 3),
+    ("n100w20", 1),
+    ("n200w40", 5),
+], ids=DATASET_IDS)
+def any_dataset(request):
+    subdir, instance = request.param
+    return _load(subdir, instance)

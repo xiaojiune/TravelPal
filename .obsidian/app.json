@@ -1,0 +1,10 @@
+{
+  "userIgnoreFilters": [
+    "src/",
+    "tests/",
+    "frontend/"
+  ],
+  "promptDelete": true,
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": false
+}

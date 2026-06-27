@@ -1,0 +1,96 @@
+# 不应该被提交的文件
+ignore/
+data/DataSets/
+frontend/static/
+
+# 敏感配置
+.env
+.env.local
+.env.*.local
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# Python 缓存与构建
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.so
+*.egg
+
+# 测试缓存与报告
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.cover
+coverage.xml
+nosetests.xml
+.hypothesis/
+
+# 类型检查
+dmypy.json
+.pyre/
+.pytype/
+cython_debug/
+
+# IDE 配置（保留个人风格）
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Obsidian 个人配置（提交 app.json 和 community-plugins.json，忽略其余）
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/plugins/
+
+# 日志与临时文件
+logs/
+tmp/
+temp/
+*.log
+*.pot
+*.mo
+*.orig
+*.bak
+*~
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Docker 本地覆盖
+docker-compose.override.yml
+
+# Jupyter 笔记本检查点
+.ipynb_checkpoints/
+
+# 静态资源（全量包下载，npm等下载方式无法正确导入）
+frontend/static/cesium/
+
+# opencode 插件缓存（本地生成，与项目无关）
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
+
+# 运行时数据
+data/chroma_db/
+
+# 生成图片（忽略生成目录，保留人工绘制的架构图）
+docs/images/generated/*.png
+docs/images/generated/*.jpg

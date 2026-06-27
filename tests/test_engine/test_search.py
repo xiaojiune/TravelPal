@@ -17,7 +17,7 @@ class TestCASuggest:
         assert "suggestions" in result
         assert 1 <= len(result["suggestions"]) <= 5
         for s in result["suggestions"]:
-            assert "k" in s
+            assert "n_days" in s
             assert "method" in s
             assert "cost" in s
             assert s["cost"] > 0
@@ -28,7 +28,7 @@ class TestCASuggest:
 
         result = ca_suggest(
             spots, depot, dist_mat,
-            min_clusters=2, max_clusters=4,
+            min_days=2, max_days=4,
             penalty_weight=100.0, early_wait_weight=0.1,
             late_return_weight=50.0,
         )
@@ -42,7 +42,7 @@ class TestCASuggest:
 
         result = ca_suggest(
             spots, depot, dist_mat,
-            min_clusters=1, max_clusters=1,
+            min_days=1, max_days=1,
             penalty_weight=100.0, early_wait_weight=0.1,
             late_return_weight=50.0,
         )
@@ -63,7 +63,7 @@ class TestClusterAndSolve:
         )
 
         assert result["type"] == "solution"
-        assert result["best_k"] == 3
+        assert result["best_days"] == 3
         assert result["solution"]["total_cost"] > 0
         assert result["solution"]["valid"]
 
@@ -78,7 +78,7 @@ class TestClusterAndSolve:
         )
 
         assert result["type"] == "solution"
-        assert result["best_k"] == 3
+        assert result["best_days"] == 3
         assert result["solution"]["valid"]
 
     def test_deep_mode_without_n_days_raises(self, n20_dataset):

@@ -71,29 +71,31 @@ def _deduplicate(results):
     return deduped
 
 
-def ca_suggest(spots, depot, dist_mat, min_clusters=None, max_clusters=None,
-               stop_consecutive_worse=None, travel_speed=1.0,
-               penalty_weight=100.0, early_wait_weight=0.1,
-               late_return_weight=50.0):
-    if min_clusters is None:
-        min_clusters = CA_DEFAULT_PARAMS["min_clusters"]
-    if max_clusters is None:
-        max_clusters = CA_DEFAULT_PARAMS["max_clusters"]
+def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
+               early_stop_gain_threshold=None, stop_consecutive_worse=None,
+               travel_speed=1.0, penalty_weight=100.0,
+               early_wait_weight=0.1, late_return_weight=50.0):
+    if min_days is None:
+        min_days = CA_DEFAULT_PARAMS["min_clusters"]
+    if max_days is None:
+        max_days = CA_DEFAULT_PARAMS["max_clusters"]
+    if early_stop_gain_threshold is None:
+        early_stop_gain_threshold = CA_DEFAULT_PARAMS["early_stop_gain_threshold"]
     if stop_consecutive_worse is None:
         stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
 
     n_spots = len(spots) - 1
-    max_k = min(max_clusters, n_spots)
+    max_days = min(max_days, n_spots)
 
     raw_results = []
 
     for method_name, method_func in CLUSTER_METHODS:
         best_cost = float("inf")
-        best_k = min_clusters
+        best_days = min_days
         worse_count = 0
 
-        for k in range(min_clusters, max_k + 1):
-            groups = call_cluster(method_func, spots, depot, k, dist_mat)
+        for n_days in range(min_days, max_days + 1):
+            groups = call_cluster(method_func, spots, depot, n_days, dist_mat)
             res = solve_groups(
                 groups, spots, dist_mat, "CA",
                 travel_speed, penalty_weight,
@@ -101,19 +103,24 @@ def ca_suggest(spots, depot, dist_mat, min_clusters=None, max_clusters=None,
             )
             raw_results.append({
                 "method": method_name,
-                "k": k,
+                "n_days": n_days,
                 "cost": res["total_cost"],
                 "groups": groups,
             })
             if res["total_cost"] < best_cost:
+                improvement = (best_cost - res["total_cost"]) / best_cost * 100
                 best_cost = res["total_cost"]
-                best_k = k
-                worse_count = 0
-            else:
-                if k > best_k:
+                best_days = n_days
+                if improvement < early_stop_gain_threshold:
                     worse_count += 1
-                    if worse_count >= stop_consecutive_worse:
-                        break
+                else:
+                    worse_count = 0
+            else:
+                if n_days > best_days:
+                    worse_count += 1
+
+            if worse_count >= stop_consecutive_worse:
+                break
 
     deduped = _deduplicate(raw_results)
     deduped.sort(key=lambda x: x["cost"])
@@ -123,7 +130,7 @@ def ca_suggest(spots, depot, dist_mat, min_clusters=None, max_clusters=None,
         "type": "suggestion",
         "suggestions": [
             {
-                "k": item["k"],
+                "n_days": item["n_days"],
                 "method": item["method"],
                 "cost": item["cost"],
                 "groups": item["groups"],
@@ -161,7 +168,7 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
         return {
             "type": "solution",
             "solution": best_result,
-            "best_k": n_days,
+            "best_days": n_days,
             "best_m": best_m,
         }
 

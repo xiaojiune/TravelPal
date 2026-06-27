@@ -141,7 +141,7 @@ def run_planning(poi_cache, city, hotel_name,
     return {
         "solution": solution,
         "mode": mode,
-        "best_k": result["best_k"],
+        "best_days": result["best_days"],
         "best_m": result["best_m"],
         "spots": spots,
         "dataset_name": dataset_name,

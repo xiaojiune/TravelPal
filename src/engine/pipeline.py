@@ -6,7 +6,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 from src.data.amap_loader import build_real_data
-from src.engine.search import sa_vns_pipeline
+from src.engine.search import cluster_and_solve
 from src.data.cesium_utils import generate_cesium_html
 
 TRAVEL_SPEED = 1.0
@@ -14,7 +14,7 @@ TRAVEL_SPEED = 1.0
 
 def run_planning(poi_cache, city, hotel_name,
                  penalty_weight, early_wait_weight, late_return_weight,
-                 min_clusters, max_clusters):
+                 mode="fast", n_days=None, min_clusters=None, max_clusters=None):
     total_start = time.time()
 
     poi_names = [hotel_name] + [s["name"] for s in poi_cache["spots"]]
@@ -43,20 +43,22 @@ def run_planning(poi_cache, city, hotel_name,
 
     depot = 0
 
-    result = sa_vns_pipeline(
-        spots, depot, cost_matrix, TRAVEL_SPEED,
-        penalty_weight, early_wait_weight, late_return_weight,
-        min_clusters, max_clusters
+    result = cluster_and_solve(
+        spots, depot, cost_matrix, mode=mode,
+        n_days=n_days, min_clusters=min_clusters, max_clusters=max_clusters,
+        travel_speed=TRAVEL_SPEED,
+        penalty_weight=penalty_weight,
+        early_wait_weight=early_wait_weight,
+        late_return_weight=late_return_weight,
     )
 
-    final_res = result['vns_result']
-    print(f"VNS 最优总成本: {final_res['total_cost']:.1f}")
-    print(f"较 SA 提升: {result['improvement']:.1f}%\n")
+    solution = result["solution"]
+    print(f"最优总成本 ({mode} 模式): {solution['total_cost']:.1f}\n")
 
     dataset_name = f"{city}_{len(poi_names)-1}spots_{result['best_k']}日游"
 
     daily_schedules = []
-    for day_idx, route in enumerate(final_res['routes']):
+    for day_idx, route in enumerate(solution["routes"]):
         schedule = []
         current_time = spots[0]["tw"][0]
         for i in range(len(route) - 1):
@@ -121,7 +123,7 @@ def run_planning(poi_cache, city, hotel_name,
     cesium_output_dir = os.path.join("frontend", "static", "cesium", "output")
     os.makedirs(cesium_output_dir, exist_ok=True)
     html_path = generate_cesium_html(
-        routes=final_res['routes'],
+        routes=solution["routes"],
         spots=spots,
         polylines=polylines,
         output_dir=cesium_output_dir,
@@ -134,14 +136,13 @@ def run_planning(poi_cache, city, hotel_name,
     print("✅ 所有任务完成。\n")
 
     return {
-        'final_res': final_res,
-        'sa_result': result['sa_result'],
-        'best_k': result['best_k'],
-        'best_m': result['best_m'],
-        'improvement': result['improvement'],
-        'spots': spots,
-        'dataset_name': dataset_name,
-        'html_url': html_url,
-        'algo_time': algo_time,
-        'daily_schedules': daily_schedules
+        "solution": solution,
+        "mode": mode,
+        "best_k": result["best_k"],
+        "best_m": result["best_m"],
+        "spots": spots,
+        "dataset_name": dataset_name,
+        "html_url": html_url,
+        "algo_time": algo_time,
+        "daily_schedules": daily_schedules,
     }

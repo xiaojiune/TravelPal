@@ -3,7 +3,7 @@ import random
 import numpy as np
 from numba import njit
 
-SA_DEFAULT_PARAMS = {
+CA_DEFAULT_PARAMS = {
     'max_iter': 2000,
     'initial_temperature': 1000.0,
     'cooling_rate': 0.95,
@@ -63,7 +63,7 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
     return round(total, 1), round(dis_sum, 1), round(time_penalty, 1)
 
 
-class SASolver:
+class CASolver:
     def __init__(self, city_indices, spots_dict, travel_speed=1.0,
                  penalty_weight=100.0, early_wait_weight=0.1,
                  late_return_weight=50.0, depot_index=0, **kwargs):
@@ -76,7 +76,7 @@ class SASolver:
         self.late_return_weight = late_return_weight
         self.depot_index = depot_index
 
-        self.params = SA_DEFAULT_PARAMS.copy()
+        self.params = CA_DEFAULT_PARAMS.copy()
         self.params.update(kwargs)
 
         n = len(spots_dict)

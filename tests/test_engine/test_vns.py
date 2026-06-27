@@ -1,6 +1,6 @@
 import pytest
 from src.engine.vns import VNSSolver
-from src.engine.sa import SASolver
+from src.engine.ca import CASolver
 
 
 class TestVNS:
@@ -24,15 +24,15 @@ class TestVNS:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        sa = SASolver(city_indices, spots)
+        ca = CASolver(city_indices, spots)
         vns = VNSSolver(city_indices, spots)
 
-        sa_res = sa.solve(dist_mat)
-        vns_res = vns.solve(dist_mat, initial_solution=sa_res["best_solution"])
+        ca_res = ca.solve(dist_mat)
+        vns_res = vns.solve(dist_mat, initial_solution=ca_res["best_solution"])
 
-        improvement = (sa_res["best_cost"] - vns_res["best_cost"]) / sa_res["best_cost"] * 100
-        assert vns_res["best_cost"] <= sa_res["best_cost"] + 1e-6, (
-            f"VNS 成本 {vns_res['best_cost']:.1f} 应不高于 SA 成本 {sa_res['best_cost']:.1f}"
+        improvement = (ca_res["best_cost"] - vns_res["best_cost"]) / ca_res["best_cost"] * 100
+        assert vns_res["best_cost"] <= ca_res["best_cost"] + 1e-6, (
+            f"VNS 成本 {vns_res['best_cost']:.1f} 应不高于 CA 成本 {ca_res['best_cost']:.1f}"
         )
 
     def test_vns_elite_pool(self, n20_dataset):
@@ -73,11 +73,11 @@ class TestVNS:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        sa = SASolver(city_indices, spots)
-        sa_res = sa.solve(dist_mat)
+        ca = CASolver(city_indices, spots)
+        ca_res = ca.solve(dist_mat)
 
         vns = VNSSolver(city_indices, spots)
-        vns_res = vns.solve(dist_mat, initial_solution=sa_res["best_solution"])
+        vns_res = vns.solve(dist_mat, initial_solution=ca_res["best_solution"])
 
         visited = set(vns_res["best_solution"][1:-1])
         assert visited == set(city_indices), "初始化解后应覆盖所有节点"

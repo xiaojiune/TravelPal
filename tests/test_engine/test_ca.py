@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.engine.sa import SASolver, SA_DEFAULT_PARAMS
+from src.engine.ca import CASolver, CA_DEFAULT_PARAMS
 
 
 class TestSA:
@@ -8,7 +8,7 @@ class TestSA:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = SASolver(city_indices, spots, travel_speed=1.0,
+        solver = CASolver(city_indices, spots, travel_speed=1.0,
                           penalty_weight=100.0, early_wait_weight=0.1,
                           late_return_weight=50.0)
         res = solver.solve(dist_mat)
@@ -25,7 +25,7 @@ class TestSA:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = SASolver(city_indices, spots, travel_speed=1.0,
+        solver = CASolver(city_indices, spots, travel_speed=1.0,
                           penalty_weight=100.0, early_wait_weight=0.1,
                           late_return_weight=50.0)
         res = solver.solve(dist_mat)
@@ -38,7 +38,7 @@ class TestSA:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = SASolver(city_indices, spots)
+        solver = CASolver(city_indices, spots)
         res = solver.solve(dist_mat)
 
         conv = res["convergence_history"]
@@ -52,8 +52,8 @@ class TestSA:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver_comp = SASolver(city_indices, spots, use_compressed_annealing=True)
-        solver_std = SASolver(city_indices, spots, use_compressed_annealing=False)
+        solver_comp = CASolver(city_indices, spots, use_compressed_annealing=True)
+        solver_std = CASolver(city_indices, spots, use_compressed_annealing=False)
 
         res_comp = solver_comp.solve(dist_mat)
         res_std = solver_std.solve(dist_mat)
@@ -65,7 +65,7 @@ class TestSA:
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = SASolver(city_indices, spots)
+        solver = CASolver(city_indices, spots)
         res = solver.solve(dist_mat)
 
         final_cost = res["best_cost"]
@@ -80,7 +80,7 @@ class TestSA:
         results = []
         for seed in range(3):
             np.random.seed(seed)
-            solver = SASolver(city_indices, spots)
+            solver = CASolver(city_indices, spots)
             res = solver.solve(dist_mat)
             results.append(res["best_cost"])
 
@@ -93,7 +93,7 @@ class TestSA:
         spots, dist_mat, _ = n60_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = SASolver(city_indices, spots,
+        solver = CASolver(city_indices, spots,
                           penalty_weight=100.0, early_wait_weight=0.1,
                           late_return_weight=50.0)
         res = solver.solve(dist_mat)

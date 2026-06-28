@@ -4,6 +4,8 @@ from src.engine.ca import CASolver
 
 
 class TestVNS:
+    """VNS 求解器的多起点收敛、精英池与 CA 对比验证"""
+
     def test_vns_solution_valid(self, n20_dataset):
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
@@ -20,7 +22,8 @@ class TestVNS:
         visited = set(sol[1:-1])
         assert visited == set(city_indices), f"遗漏节点: {set(city_indices) - visited}"
 
-    def test_vns_improves_over_sa(self, n20_dataset):
+    def test_vns_improves_over_ca(self, n20_dataset):
+        # 核心架构假设验证：VNS 以 CA 解为起点应能进一步优化或至少不劣化
         spots, dist_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 

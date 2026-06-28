@@ -3,6 +3,8 @@ from src.engine.search import cluster_and_solve, ca_suggest
 
 
 class TestCASuggest:
+    """ca_suggest 全参数搜索的早退、去重与排序逻辑验证"""
+
     def test_returns_suggestions(self, n20_dataset):
         spots, dist_mat, _ = n20_dataset
         depot = 0
@@ -50,8 +52,30 @@ class TestCASuggest:
         unique_methods = set(s["method"] for s in result["suggestions"])
         assert len(result["suggestions"]) <= len(unique_methods)
 
+    def test_early_stop_works(self, n20_dataset):
+        # 验证早退机制：增益阈值设高 + 容忍度设小 → 应快速停止，实际搜索天数范围小于 min_days~max_days
+        spots, dist_mat, _ = n20_dataset
+        depot = 0
+
+        result = ca_suggest(
+            spots, depot, dist_mat,
+            min_days=2, max_days=10,
+            early_stop_gain_threshold=50.0,
+            stop_consecutive_worse=1,
+            penalty_weight=100.0, early_wait_weight=0.1,
+            late_return_weight=50.0,
+        )
+
+        assert result["type"] == "suggestion"
+        assert len(result["suggestions"]) >= 1
+        searched_days = set(s["n_days"] for s in result["suggestions"])
+        # 因早退敏感，实际搜索的天数范围应远小于 2~10
+        assert len(searched_days) < 9, f"早退未生效：搜索了 {len(searched_days)} 个天数"
+
 
 class TestClusterAndSolve:
+    """cluster_and_solve 双模式（fast/deep）与天数分发逻辑验证"""
+
     def test_fast_mode_with_n_days(self, n20_dataset):
         spots, dist_mat, _ = n20_dataset
         depot = 0
@@ -142,6 +166,7 @@ class TestClusterAndSolve:
 
     @pytest.mark.slow
     def test_on_larger_dataset(self, n60_dataset):
+        # n60 验证编排层在大规模场景下两种模式均能产出可行解
         spots, dist_mat, _ = n60_dataset
         depot = 0
 

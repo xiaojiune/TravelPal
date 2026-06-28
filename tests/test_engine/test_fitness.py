@@ -4,6 +4,8 @@ from src.engine.fitness import analyze_solution
 
 
 class TestFitness:
+    """适应度函数的成本分量与边界条件验证"""
+
     def test_basic_cost_components(self, n20_dataset):
         spots, dist_mat, _ = n20_dataset
         depot = 0

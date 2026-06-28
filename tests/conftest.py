@@ -1,6 +1,8 @@
 import pytest
 from tests.dataset_loader import load_tsptw_dataset, find_dataset
 
+# 数据集 fixture 覆盖四种规模：n20（小）、n60（中）、n100（中大）、n200（大）
+
 
 @pytest.fixture(scope="session")
 def n20_dataset():

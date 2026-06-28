@@ -4,6 +4,8 @@ from src.engine.clustering import CLUSTER_METHODS, call_cluster
 
 
 class TestClustering:
+    """6 种聚类方法的正确性与分组覆盖验证"""
+
     def test_all_methods_return_valid_groups(self, n20_dataset):
         spots, dist_mat, _ = n20_dataset
         depot = 0
@@ -27,6 +29,7 @@ class TestClustering:
             )
 
     def test_cluster_count_matches_k(self, any_dataset):
+        # 参数化验证（any_dataset 覆盖 n20/n60/n100/n200 四种规模），确保每种方法都精确返回 k 组
         spots, dist_mat, _ = any_dataset
         depot = 0
 

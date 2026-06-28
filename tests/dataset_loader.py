@@ -4,6 +4,19 @@ from sklearn.manifold import MDS
 
 
 def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
+    """
+    加载 TSPTW 标准格式数据集。
+
+    格式说明：首行为景点数 n，接下来 n 行为 n×n 距离矩阵，
+    再 n 行为每个景点的时间窗 (start, end)。
+    最终通过 MDS 将距离矩阵降维到二维坐标用于可视化。
+
+    Args:
+        filepath: 数据集文件路径。
+
+    Returns:
+        Tuple[dict, np.ndarray, int]: (spots字典, 距离矩阵, 景点数n)。
+    """
     with open(filepath) as f:
         lines = f.readlines()
 
@@ -36,6 +49,7 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
 
 
 def _compute_mds_coords(dist_mat: np.ndarray) -> np.ndarray:
+    """通过 MDS 将距离矩阵降维为二维坐标，用于景点位置展示"""
     mds = MDS(
         n_components=2,
         metric=True,
@@ -49,6 +63,18 @@ def _compute_mds_coords(dist_mat: np.ndarray) -> np.ndarray:
 
 
 def find_dataset(subdir: str, instance: int = 1) -> str:
+    """在 data/datasets/ 下查找指定编号的数据集文件
+
+    Args:
+        subdir: 数据集子目录名（如 "n20w20"）。
+        instance: 实例编号，默认 1。
+
+    Returns:
+        str: 数据集绝对路径。
+
+    Raises:
+        FileNotFoundError: 数据集文件不存在。
+    """
     base = os.path.join(os.path.dirname(__file__), "..", "data", "datasets")
     path = os.path.join(base, subdir, f"{subdir}.{instance:03d}.txt")
     if not os.path.exists(path):

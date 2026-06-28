@@ -22,9 +22,9 @@
 # find_method_func(name) -> callable | None                               按名称查找聚类函数
 #
 # ---- search.py ----
-# cluster_and_solve(spots, depot, dist_mat, mode="fast", n_days=None, ...) -> dict  双阶段路由入口
-# solve_groups(groups, spots, dist_mat, solver_type="CA", ...) -> dict              对已分组路径逐一求解
-# ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None, ...) -> dict     全参数搜索，输出 top-5 建议
+# cluster_and_solve(spots, depot, dist_mat, mode="fast", n_days=None, use_real_time_matrix=False, ...) -> dict  双阶段路由入口
+# solve_groups(groups, spots, dist_mat, solver_type="CA", use_real_time_matrix=False, ...) -> dict              对已分组路径逐一求解
+# ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None, use_real_time_matrix=False, ...) -> dict     全参数搜索，输出 top-5 建议
 
 from src.engine.vns import VNSSolver, VNS_DEFAULT_PARAMS
 from src.engine.ca import CASolver, CA_DEFAULT_PARAMS

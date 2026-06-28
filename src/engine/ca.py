@@ -31,12 +31,39 @@ CA_DEFAULT_PARAMS = {
 @njit(cache=True)
 def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
                        early_wait_weight, late_return_weight, depot_index,
-                       spots_start, spots_end, spots_stay):
-    """Numba JIT 编译的适应度计算内核（与 VNS 共享相同逻辑）"""
+                       spots_start, spots_end, spots_stay,
+                       use_real_time_matrix=False):
+    """
+    Numba JIT 编译的适应度计算内核（与 VNS 共享相同逻辑）。
+
+    沿路径逐段模拟行程，累计总成本与时间惩罚。
+    路径必须从 depot 出发并回到 depot，长度不足 3 时返回极大惩罚值。
+
+    两种矩阵模式：
+    - use_real_time_matrix=False（默认，标准数据集）：矩阵元素为距离，travel_time = d / travel_speed
+    - use_real_time_matrix=True（高德真实数据）：矩阵元素为旅行时间（小时），travel_time = d
+
+    Args:
+        line: 路径数组（含起终点的完整路径）。
+        dis_matrix: 距离/旅行时间矩阵。
+        travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时该参数无效。
+        penalty_weight: 迟到惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+        depot_index: 起终点索引。
+        spots_start: 各景点时间窗开始时间数组。
+        spots_end: 各景点时间窗结束时间数组。
+        spots_stay: 各景点停留时长数组。
+        use_real_time_matrix: 矩阵是否为旅行时间（避免 d / travel_speed 重复计算）。
+
+    Returns:
+        Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
+            旅行累积值：标准模式下为总距离，真实模式下为总旅行时间。
+    """
     if len(line) < 3:
         return 999999.0, 999999.0, 999999.0
 
-    dis_sum = 0.0
+    travel_sum = 0.0
     time_penalty = 0.0
     depot_start = spots_start[depot_index]
     depot_end = spots_end[depot_index]
@@ -46,8 +73,8 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
         fr = line[i]
         to = line[i + 1]
         d = dis_matrix[fr][to]
-        dis_sum += d
-        travel_time = d / travel_speed
+        travel_sum += d
+        travel_time = d if use_real_time_matrix else d / travel_speed
         arrival = current_time + travel_time
 
         if to != depot_index:
@@ -70,11 +97,8 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
                 time_penalty += (arrival - depot_end) * late_return_weight
             current_time = arrival
 
-    if current_time > depot_end:
-        time_penalty += (current_time - depot_end) * late_return_weight
-
-    total = dis_sum + time_penalty
-    return round(total, 1), round(dis_sum, 1), round(time_penalty, 1)
+    total = travel_sum + time_penalty
+    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)
 
 
 # ================== CASolver 主类 ==================
@@ -85,22 +109,29 @@ class CASolver:
 
     基于模拟退火框架，引入压缩系数动态调节距离成本与时间惩罚之间的权重比例。
     搜索初期偏向探索可行域之外的区域，后期逐渐收紧至可行解。
+
+    增强特性：
+    - 时间窗引导邻域：针对违规最严重的节点执行重定位扰动（加速不可行解修复）
+    - 压缩系数动态增长：初期惩罚权重小（允许探索不可行区域），后期逐渐增大至与原始成本一致
+    - 2-opt 精细化：主循环结束后对最优解执行 First Improvement 2-opt 局部搜索
     """
 
     def __init__(self, city_indices, spots_dict, travel_speed=1.0,
                  penalty_weight=100.0, early_wait_weight=0.1,
-                 late_return_weight=50.0, depot_index=0, **kwargs):
+                 late_return_weight=50.0, depot_index=0,
+                 use_real_time_matrix=False, **kwargs):
         """
         初始化压缩退火求解器。
 
         Args:
             city_indices: 需要规划路径的城市索引列表。
             spots_dict: 景点字典，每项含 {"tw": (start, end), "stay": float}。
-            travel_speed: 旅行速度（距离/时间单位）。
+            travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时无效。
             penalty_weight: 迟到惩罚权重。
             early_wait_weight: 早到等待惩罚权重。
             late_return_weight: 晚归惩罚权重。
             depot_index: 起终点索引（默认为 0）。
+            use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
             **kwargs: 覆盖 CA_DEFAULT_PARAMS 的额外参数。
         """
         self.city_indices = list(city_indices)
@@ -111,6 +142,7 @@ class CASolver:
         self.early_wait_weight = early_wait_weight
         self.late_return_weight = late_return_weight
         self.depot_index = depot_index
+        self.use_real_time_matrix = use_real_time_matrix
 
         self.params = CA_DEFAULT_PARAMS.copy()
         self.params.update(kwargs)
@@ -124,7 +156,17 @@ class CASolver:
     # ---------- 适应度计算 ----------
 
     def _cal_fitness(self, line, dis_matrix):
-        """直接调用 Numba 内核（无需缓存，CA 单次运行不重复评估同一解）"""
+        """直接调用 Numba 内核评估路径成本
+
+        CA 单次运行中几乎不会重复评估同一解，故不设缓存。
+
+        Args:
+            line: 路径列表（含起终点的完整路径）。
+            dis_matrix: 距离/旅行时间矩阵。
+
+        Returns:
+            Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
+        """
         line_arr = np.array(line, dtype=np.int32)
         dis_arr = np.asarray(dis_matrix, dtype=np.float64)
         return _cal_fitness_numba(
@@ -132,7 +174,8 @@ class CASolver:
             self.travel_speed, self.penalty_weight,
             self.early_wait_weight, self.late_return_weight,
             self.depot_index,
-            self.spots_start, self.spots_end, self.spots_stay
+            self.spots_start, self.spots_end, self.spots_stay,
+            self.use_real_time_matrix
         )
 
     # ---------- 初始解 ----------
@@ -161,16 +204,16 @@ class CASolver:
         if len(inner) < 2:
             return neighbor
         if temp_ratio > 0.7 or random.random() < temp_ratio:
-            # 大范围反转
+            # 高温段：大范围反转，强化全局探索能力
             i = random.randint(0, len(inner) - 2)
             j = random.randint(i + 1, len(inner) - 1)
             inner[i:j + 1] = reversed(inner[i:j + 1])
         elif temp_ratio > 0.3 or random.random() < 0.5:
-            # 交换两点
+            # 中温段：交换两点，平衡探索与利用
             i, j = random.sample(range(len(inner)), 2)
             inner[i], inner[j] = inner[j], inner[i]
         else:
-            # 插入重定位
+            # 低温段：插入重定位，精细化微调局部结构
             i = random.randint(0, len(inner) - 1)
             j = random.randint(0, len(inner) - 1)
             while i == j:
@@ -226,7 +269,17 @@ class CASolver:
         return [self.depot_index] + inner + [self.depot_index]
 
     def _get_neighbor(self, solution, iteration, max_iter, dis_matrix):
-        """混合邻域选择：50% 概率使用时间窗引导，50% 使用标准邻域"""
+        """混合邻域选择：50% 概率使用时间窗引导，50% 使用标准邻域
+
+        Args:
+            solution: 当前解路径。
+            iteration: 当前迭代次数。
+            max_iter: 总迭代次数。
+            dis_matrix: 距离矩阵。
+
+        Returns:
+            List[int]: 新邻居解路径。
+        """
         temp_ratio = iteration / max_iter if max_iter > 0 else 0.5
         if self.params['use_time_window_guided'] and random.random() < 0.5:
             return self._time_window_guided_neighbor(solution, dis_matrix, temp_ratio)
@@ -238,7 +291,8 @@ class CASolver:
         """
         2-opt 局部搜索（First Improvement）。
 
-        遍历所有可能的反转对，找到改善立即应用并重新扫描。
+        使用 First Improvement 而非 Best Improvement 策略：
+        找到首个改善即接受，牺牲单步最优性换取更快的整体收敛速度。
         """
         best_sol = solution.copy()
         best_cost, _, _ = self._cal_fitness(best_sol, dis_matrix)
@@ -272,7 +326,12 @@ class CASolver:
             dis_matrix: 距离矩阵。
 
         Returns:
-            dict: {'best_solution', 'best_cost', 'best_distance', 'best_penalty', 'convergence_history'}
+            dict: 包含以下键：
+                - best_solution (List[int]): 最优路径（含起终点）。
+                - best_cost (float): 最优总成本（旅行累积值 + 时间惩罚，单位由输入矩阵决定）。
+                - best_distance (float): 旅行累积值。标准模式 = 总距离；真实模式 = 总旅行时间。
+                - best_penalty (float): 最优路径总时间惩罚。
+                - convergence_history (List[float]): 收敛曲线，每轮迭代后的最优成本。
         """
         cur = self._initial_solution()
         cur_cost, cur_dist, cur_pen = self._cal_fitness(cur, dis_matrix)

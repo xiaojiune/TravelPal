@@ -7,7 +7,8 @@ from src.engine.fitness import analyze_solution
 
 def solve_groups(groups, spots, dist_mat, solver_type="CA",
                  travel_speed=1.0, penalty_weight=100.0,
-                 early_wait_weight=0.1, late_return_weight=50.0):
+                 early_wait_weight=0.1, late_return_weight=50.0,
+                 use_real_time_matrix=False):
     total_cost, total_dist, total_wait, total_late = 0, 0, 0, 0
     routes, histories = [], []
     for g in groups:
@@ -20,6 +21,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
                 late_return_weight=late_return_weight,
+                use_real_time_matrix=use_real_time_matrix,
             )
         else:
             solver = CASolver(
@@ -28,6 +30,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
                 late_return_weight=late_return_weight,
+                use_real_time_matrix=use_real_time_matrix,
             )
         res = solver.solve(dist_mat)
         routes.append(res["best_solution"])
@@ -38,7 +41,8 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
             res["best_solution"], dist_mat, spots, travel_speed,
             early_wait_weight=early_wait_weight,
             penalty_weight=penalty_weight,
-            late_return_weight=late_return_weight, depot=0
+            late_return_weight=late_return_weight, depot=0,
+            use_real_time_matrix=use_real_time_matrix,
         )
         total_wait += w
         total_late += l
@@ -74,7 +78,8 @@ def _deduplicate(results):
 def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
                early_stop_gain_threshold=None, stop_consecutive_worse=None,
                travel_speed=1.0, penalty_weight=100.0,
-               early_wait_weight=0.1, late_return_weight=50.0):
+               early_wait_weight=0.1, late_return_weight=50.0,
+               use_real_time_matrix=False):
     if min_days is None:
         min_days = CA_DEFAULT_PARAMS["min_clusters"]
     if max_days is None:
@@ -100,6 +105,7 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
                 groups, spots, dist_mat, "CA",
                 travel_speed, penalty_weight,
                 early_wait_weight, late_return_weight,
+                use_real_time_matrix=use_real_time_matrix,
             )
             raw_results.append({
                 "method": method_name,
@@ -144,7 +150,8 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
 def cluster_and_solve(spots, depot, dist_mat, mode="fast",
                       n_days=None, travel_speed=1.0,
                       penalty_weight=100.0, early_wait_weight=0.1,
-                      late_return_weight=50.0):
+                      late_return_weight=50.0,
+                      use_real_time_matrix=False):
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
         best_cost = float("inf")
@@ -158,6 +165,7 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
                 groups, spots, dist_mat, solver_type,
                 travel_speed, penalty_weight,
                 early_wait_weight, late_return_weight,
+                use_real_time_matrix=use_real_time_matrix,
             )
             if res["total_cost"] < best_cost:
                 best_cost = res["total_cost"]
@@ -181,4 +189,5 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
+        use_real_time_matrix=use_real_time_matrix,
     )

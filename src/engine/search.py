@@ -9,6 +9,26 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
                  travel_speed=1.0, penalty_weight=100.0,
                  early_wait_weight=0.1, late_return_weight=50.0,
                  use_real_time_matrix=False):
+    """
+    对已分组的路径逐一求解。
+
+    遍历各组，为每组创建对应类型的求解器并执行求解。
+    最后汇总所有组的成本、距离、等待、迟到等指标。
+
+    Args:
+        groups: 分组列表，每组为景点索引列表。
+        spots: 景点字典，键为索引，值为景点属性。
+        dist_mat: 距离/成本矩阵。
+        solver_type: "CA" 或 "VNS"。
+        travel_speed: 行驶速度（标准数据集），默认 1.0。
+        penalty_weight: 违规惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
+
+    Returns:
+        dict: 包含 routes（路径列表）、histories（收敛历史）、total_cost、total_dist、wait、late、valid（是否覆盖所有景点）。
+    """
     total_cost, total_dist, total_wait, total_late = 0, 0, 0, 0
     routes, histories = [], []
     for g in groups:
@@ -37,6 +57,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
         histories.append(res["convergence_history"])
         total_cost += res["best_cost"]
         total_dist += res["best_distance"]
+        # 求解器内部以 cost 为主，不直接暴露 wait/late 明细，因此重新调用 analyze_solution 提取详细指标
         _, _, w, l, _ = analyze_solution(
             res["best_solution"], dist_mat, spots, travel_speed,
             early_wait_weight=early_wait_weight,
@@ -46,6 +67,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
         )
         total_wait += w
         total_late += l
+    # 校验所有非 depot 景点是否都已被覆盖
     visited = set()
     for r in routes:
         for c in r:
@@ -80,6 +102,29 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
                travel_speed=1.0, penalty_weight=100.0,
                early_wait_weight=0.1, late_return_weight=50.0,
                use_real_time_matrix=False):
+    """
+    全参数搜索，输出 top-5 建议。
+
+    遍历 6 种聚类方法 × min_days~max_days 天数，使用 CA 快速求解各组，
+    按成本排序去重后返回前 5 个最优方案。支持增益阈值式早退。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        dist_mat: 距离/成本矩阵。
+        min_days: 最小天数（默认 CA_DEFAULT_PARAMS["min_clusters"]）。
+        max_days: 最大天数（默认 CA_DEFAULT_PARAMS["max_clusters"]）。
+        early_stop_gain_threshold: 增益阈值百分比（默认 1.0%），低于此视为无效改善。
+        stop_consecutive_worse: 连续无效改善次数上限（默认 3）。
+        travel_speed: 行驶速度。
+        penalty_weight: 违规惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
+
+    Returns:
+        dict: type="suggestion"，suggestions 为前 5 个最优方案的列表（含 n_days、method、cost、groups）。
+    """
     if min_days is None:
         min_days = CA_DEFAULT_PARAMS["min_clusters"]
     if max_days is None:
@@ -90,6 +135,7 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
         stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
 
     n_spots = len(spots) - 1
+    # 天数不能超过景点数，否则必然有空组
     max_days = min(max_days, n_spots)
 
     raw_results = []
@@ -113,6 +159,7 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
                 "cost": res["total_cost"],
                 "groups": groups,
             })
+            # 增益阈值早退：改善不明显（< early_stop_gain_threshold%）或连续变差达到上限时停止该聚类方法的搜索
             if res["total_cost"] < best_cost:
                 improvement = (best_cost - res["total_cost"]) / best_cost * 100
                 best_cost = res["total_cost"]
@@ -128,6 +175,7 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
             if worse_count >= stop_consecutive_worse:
                 break
 
+    # 先按成本排序再去重：不同聚类方法可能产出相同分组，靠后的运行轮次因 CA 随机性成本可能更低，排序确保每组保留最优解
     raw_results.sort(key=lambda x: x["cost"])
     deduped = _deduplicate(raw_results)
     top5 = deduped[:5]
@@ -152,6 +200,28 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
                       penalty_weight=100.0, early_wait_weight=0.1,
                       late_return_weight=50.0,
                       use_real_time_matrix=False):
+    """
+    双阶段路由入口。
+
+    - 指定 n_days：遍历 6 种聚类方法，对每组调用对应求解器（CA/VNS）求最优解。
+    - 未指定 n_days + mode="fast"：回退到 ca_suggest() 输出建议。
+    - 未指定 n_days + mode="deep"：报错（VNS 无自动分群能力）。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        dist_mat: 距离/成本矩阵。
+        mode: "fast"（CA，秒级）或 "deep"（VNS，分钟级）。
+        n_days: 行程天数。deep 模式必填。
+        travel_speed: 行驶速度。
+        penalty_weight: 违规惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
+
+    Returns:
+        dict: type="suggestion"（未指定天数时）或 type="solution"（已指定天数时）。
+    """
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
         best_cost = float("inf")

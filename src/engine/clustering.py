@@ -38,6 +38,14 @@ def cluster_by_time_window(spots, depot, n_clusters):
 
     特征向量：[开放时间, 关闭时间, 时间窗跨度]。
     适用于将营业时间相似的景点分到同一天。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
     """
     features, indices = [], []
     for i, spot in spots.items():
@@ -59,6 +67,16 @@ def cluster_by_spatiotemporal(spots, depot, n_clusters, sp_w=0.5, tp_w=0.5):
     时空联合聚类（距离 + 时间窗）。
 
     将坐标和时间窗拼接为四维特征，通过权重参数调节空间与时间的相对重要性。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+        sp_w: 空间权重（默认 0.5）。
+        tp_w: 时间权重（默认 0.5）。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
     """
     features, indices = [], []
     for i, spot in spots.items():
@@ -83,6 +101,14 @@ def cluster_by_time_overlap(spots, depot, n_clusters):
 
     将景点按时间窗起始时间排序后平摊到各组，保证每组时间窗连续。
     无随机性，结果确定。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
     """
     cities = []
     for i, spot in spots.items():
@@ -108,6 +134,14 @@ def cluster_by_time_density(spots, depot, n_clusters):
     基于时间窗密度的 K-means 聚类。
 
     仅使用时间窗起始时间作为一维特征，适用于时间段高度聚集的场景。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
     """
     times, indices = [], []
     for i, spot in spots.items():
@@ -129,6 +163,15 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
 
     先按时间窗排序平摊，再通过交换分组间边界节点来优化组内距离。
     迭代至多 10 轮，无改善则提前停止。
+
+    Args:
+        spots: 景点字典。
+        dist_mat: 距离矩阵，用于评估交换收益。
+        depot: depot 索引。
+        n_clusters: 聚类组数。
+
+    Returns:
+        List[List[int]]: 每个分组包含的景点索引列表。
     """
     cities = []
     for i, spot in spots.items():
@@ -209,12 +252,23 @@ def call_cluster(func, spots, depot, k, dist_mat=None):
 
 
 def pure_name(full_name):
-    """从带编号的全称中提取纯方法名，如 '1. xxx' → 'xxx'"""
+    """从带编号的全称中提取纯方法名，如 '1. xxx' → 'xxx'
+
+    Returns:
+        str: 纯方法名（去掉前缀编号）。
+    """
     return full_name.split(". ", 1)[1] if ". " in full_name else full_name
 
 
 def find_method_func(name):
-    """通过方法名查找对应的函数对象"""
+    """通过方法名查找对应的函数对象
+
+    Args:
+        name: 方法名（带编号或不带均可）。
+
+    Returns:
+        callable | None: 找到的函数对象，未找到返回 None。
+    """
     for full, func in CLUSTER_METHODS:
         if pure_name(full) == name or full == name:
             return func

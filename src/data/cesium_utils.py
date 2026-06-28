@@ -39,6 +39,19 @@ def _get_icon(name):
 
 
 def gcj02_to_wgs84(lng, lat):
+    """
+    将 GCJ-02（高德/火星坐标系）坐标转换为 WGS-84 坐标。
+
+    高德使用中国加密坐标系 GCJ-02，而 Cesium 默认使用 WGS-84，
+    因此所有从高德 API 获取的坐标均需转换。
+
+    Args:
+        lng: GCJ-02 经度。
+        lat: GCJ-02 纬度。
+
+    Returns:
+        Tuple[float, float]: (WGS-84 经度, WGS-84 纬度)。
+    """
     EE = 0.00669342162296594323
     A = 6378245.0
     dLat = _transform_lat(lng - 105.0, lat - 35.0)
@@ -69,6 +82,17 @@ def _transform_lng(x, y):
 
 
 def _decode_polyline(polyline_str):
+    """
+    解析高德折线字符串为 WGS-84 坐标点列表。
+
+    高德返回的折线为 GCJ-02 坐标，解析时一并转换为 WGS-84。
+
+    Args:
+        polyline_str: 高德 API 返回的折线字符串（经纬度对以 ; 分隔）。
+
+    Returns:
+        List[Tuple[float, float]]: WGS-84 坐标点列表。
+    """
     if not polyline_str:
         return []
     try:
@@ -85,6 +109,19 @@ def _decode_polyline(polyline_str):
 
 
 def _douglas_peucker(points, epsilon=0.0003):
+    """
+    Douglas-Peucker 折线简化算法。
+
+    减少折线点数以降低浏览器渲染压力。
+    epsilon=0.0003 对应约 30 米精度，不影响视觉效果的条件下最大化压缩。
+
+    Args:
+        points: 原始坐标点列表。
+        epsilon: 简化阈值（度数），默认 0.0003（约 30 米）。
+
+    Returns:
+        List[Tuple[float, float]]: 简化后的坐标点列表。
+    """
     if len(points) <= 2:
         return points
     dmax, index = 0, 0
@@ -115,9 +152,28 @@ def _perpendicular_distance(point, line_start, line_end):
 
 def generate_cesium_html(routes, spots, polylines=None, output_dir="frontend/static/cesium",
                          token=None, dataset_name="旅游路径", daily_schedules=None):
+    """
+    生成 Cesium 3D 地图 HTML 文件。
+
+    包含两种折线叠加：真实轨迹（彩色虚线）+ 流动动画（白色发光），
+    以及景点标注、图例和每日行程信息面板。
+
+    Args:
+        routes: 每日路径列表，每项为景点索引序列。
+        spots: 景点字典。
+        polylines: 高德折线数据，键为 (from, to)，值为折线字符串。
+        output_dir: 输出目录。
+        token: Cesium Ion 访问令牌。
+        dataset_name: 数据集名称。
+        daily_schedules: 每日详细行程列表。
+
+    Returns:
+        str: 生成的 HTML 文件路径。
+    """
     token = token or CESIUM_TOKEN
     os.makedirs(output_dir, exist_ok=True)
 
+    # 两种折线叠加：彩色虚线表示真实轨迹，白色发光折线作为流动动画效果，增强视觉层次
     real_trajectories_js = ""
     flow_lines_js = ""
     if polylines:
@@ -274,6 +330,7 @@ def generate_cesium_html(routes, spots, polylines=None, output_dir="frontend/sta
         center_lat += wgs_lat
     center_lng /= len(spots)
     center_lat /= len(spots)
+    # 根据景点分布范围动态计算视角高度：跨度越大飞得越高，确保所有景点可见
     altitude = max(20000, (max(spot["x"] for spot in spots.values()) - min(spot["x"] for spot in spots.values())) * 50000 + 5000)
 
     html = f"""<!DOCTYPE html>

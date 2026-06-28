@@ -5,6 +5,16 @@ from src.config import AMAP_API_KEY
 
 
 def get_poi_location(poi_name, city="北京"):
+    """
+    通过高德地点搜索 API 获取 POI 坐标。
+
+    Args:
+        poi_name: 景点名称。
+        city: 城市名，默认北京。
+
+    Returns:
+        Tuple[float, float]: (经度, 纬度)，失败时返回 (116.4, 39.9)。
+    """
     params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY}
     try:
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
@@ -32,6 +42,19 @@ def _parse_date(date_str, year):
 
 
 def _parse_opentime_to_tw(opentime_str):
+    """
+    解析高德营业时间字符串为时间窗元组。
+
+    支持格式：'月-日:时段-时段'（如 "6-1:09:00-22:00"），
+    以及跨日期段 '月-日-月-日:时段-时段'。
+    仅返回与当天匹配的时段。
+
+    Args:
+        opentime_str: 高德 API 返回的营业时间字符串。
+
+    Returns:
+        Tuple[int, int] | None: (开始分钟, 结束分钟)，解析失败返回 None。
+    """
     if not opentime_str:
         return None
     today = datetime.date.today()
@@ -76,6 +99,16 @@ def _parse_opentime_to_tw(opentime_str):
 
 
 def get_poi_details(poi_name, city):
+    """
+    获取 POI 详细信息（坐标 + 营业时间 + 地址）。
+
+    Args:
+        poi_name: 景点名称。
+        city: 城市名。
+
+    Returns:
+        Tuple[float, float, str, str]: (经度, 纬度, 营业时间字符串, 完整地址)。失败返回默认值。
+    """
     params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY, "extensions": "all"}
     try:
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
@@ -102,6 +135,17 @@ def get_poi_details(poi_name, city):
 
 
 def _get_driving_data(origin, destination, max_retries=3):
+    """
+    调用高德驾车路径规划 API 获取距离、耗时、轨迹折线。
+
+    Args:
+        origin: (经度, 纬度) 起点坐标。
+        destination: (经度, 纬度) 终点坐标。
+        max_retries: 失败重试次数，默认 3。
+
+    Returns:
+        Tuple[float | None, int | None, str | None]: (距离 km, 耗时 秒, 折线字符串)。
+    """
     url = "https://restapi.amap.com/v3/direction/driving"
     params = {
         "origin": f"{origin[0]},{origin[1]}",
@@ -139,6 +183,20 @@ def _get_driving_data(origin, destination, max_retries=3):
 
 
 def build_real_data(poi_names, coords, delay=0.4):
+    """
+    调用高德 API 构建完整的驾车成本矩阵。
+
+    利用对称性优化：A→B 与 B→A 使用相同 API 结果填充，减少一半请求量。
+    delay 参数用于控制 QPS，避免触发高德 API 限流。
+
+    Args:
+        poi_names: POI 名称列表（含酒店）。
+        coords: 坐标列表，与 poi_names 一一对应。
+        delay: API 调用间隔秒数，默认 0.4（高德 QPS 限制约 2-3 次/秒）。
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, dict]: cost_matrix_hours（小时）、dist_matrix_km、polylines_dict。
+    """
     n = len(poi_names)
     cost = np.zeros((n, n))
     dist = np.zeros((n, n))
@@ -148,6 +206,7 @@ def build_real_data(poi_names, coords, delay=0.4):
         for j in range(n):
             if i == j:
                 continue
+            # 利用对称性：A→B 已请求过则 B→A 直接填入，减少 API 调用量
             if cost[j][i] > 0:
                 cost[i][j] = cost[j][i]
                 dist[i][j] = dist[j][i]
@@ -161,7 +220,9 @@ def build_real_data(poi_names, coords, delay=0.4):
                     polylines[(i, j)] = poly
             else:
                 print(f"警告：{i} -> {j} 驾车路径规划失败")
+                # -1 标记不可达，下游在计算路由时需跳过此类边
                 cost[i][j] = -1
                 dist[i][j] = -1
+            # 每次 API 调用后等待 delay 秒，控制 QPS 避免被高德限流
             time.sleep(delay)
     return cost, dist, polylines

@@ -15,6 +15,24 @@ TRAVEL_SPEED = 1.0
 def run_planning(poi_cache, city, hotel_name,
                  penalty_weight, early_wait_weight, late_return_weight,
                  mode="fast", n_days=None):
+    """
+    双阶段流程编排入口。
+
+    加载真实数据 → 构建景点字典 → 执行 cluster_and_solve → 生成每日行程 → 输出 Cesium HTML。
+
+    Args:
+        poi_cache: 包含 hotel 和 spots 的缓存数据（由前端/外部传入）。
+        city: 城市名，用于高德 API 查询和文件命名。
+        hotel_name: 酒店名称。
+        penalty_weight: 违规惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+        mode: "fast" 或 "deep"。
+        n_days: 行程天数（可选）。
+
+    Returns:
+        dict: type="suggestion"（未指定天数）或包含 solution、best_days、html_url、daily_schedules 等。
+    """
     total_start = time.time()
 
     poi_names = [hotel_name] + [s["name"] for s in poi_cache["spots"]]
@@ -32,6 +50,7 @@ def run_planning(poi_cache, city, hotel_name,
     for i, spot in enumerate(poi_cache["spots"], start=1):
         tw_start = spot["tw"][0]
         tw_end = spot["tw"][1]
+        # 将时间窗收缩为实际可用时段：到达之后才开放、关闭之前需留足停留时间
         expected_arrival = spot.get("expected_arrival", tw_start)
         effective_start = max(tw_start, expected_arrival)
         effective_end = tw_end - spot["stay"]
@@ -75,6 +94,7 @@ def run_planning(poi_cache, city, hotel_name,
                 effective_start, effective_end = spots[to_node]["tw"]
                 stay = spots[to_node]["stay"]
 
+                # 到达维度：早到需等待，晚到则违规；离开维度：若实际离开时间超过原始关门时间算晚归
                 wait_time = max(0, effective_start - arrival_time)
                 late_arrival = max(0, arrival_time - effective_end)
                 actual_start = max(arrival_time, effective_start)

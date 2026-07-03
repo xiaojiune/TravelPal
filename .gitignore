@@ -86,6 +86,12 @@ docker-compose.override.yml
 # 静态资源（全量包下载，npm等下载方式无法正确导入）
 frontend/static/cesium/
 
+# 前端构建
+node_modules/
+frontend/node_modules/
+.npmrc
+frontend/.npmrc
+
 # opencode 本地文件（plans、插件缓存等，与项目无关）
 .opencode/node_modules/
 .opencode/package.json

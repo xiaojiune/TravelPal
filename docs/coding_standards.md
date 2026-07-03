@@ -199,6 +199,22 @@ VNS_DEFAULT_PARAMS = { ... }
 - 标准的、广泛使用的设计模式（如工厂模式、单例模式）。
 - 类中的 getter 方法（如 `get_elite_pool()`）。
 
+### 前端文件注释规范
+
+Vue SFC / TypeScript 与 Python 注释的差异对照：
+
+| 场景 | Python | Vue / TypeScript |
+|------|--------|-----------------|
+| 组件/函数注释 | Google docstring | JSDoc（`/** @param ... @returns ... */`） |
+| 关键逻辑注释 | `#` Why 注释 | `//` Why 注释 |
+| 接口/Props 说明 | 类型注解 + docstring | `defineProps` + JSDoc |
+| 常量/配置 | 大写下划线 + 行内注释 | `const` + JSDoc |
+
+注释深度参照 P0/P1 分层标准：
+- **P0 等价**（核心组件如 CesiumMap.vue、AgentChat.vue）：JSDoc + 行内 Why 注释
+- **P1 等价**（管道组件如 SchedulePanel.vue）：JSDoc
+- **P2 等价**（基础组件如 DayCard.vue）：行内 Why 注释即可
+
 ---
 
 ## 编码约定

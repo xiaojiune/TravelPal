@@ -15,6 +15,4 @@
 # PlanRequest(BaseModel)                                 统一请求模型：酒店 + 景点 + 算法参数
 # POIItem(BaseModel)                                     单个景点数据：名称、坐标、时间窗、停留时长
 
-from src.api.server import create_app
-
-__all__ = ["create_app"]
+__all__: list[str] = []

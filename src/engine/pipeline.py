@@ -7,7 +7,6 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 from src.data.amap_loader import build_real_data
 from src.engine.search import cluster_and_solve
-from src.data.cesium_utils import generate_cesium_html
 
 TRAVEL_SPEED = 1.0
 
@@ -18,7 +17,7 @@ def run_planning(poi_cache, city, hotel_name,
     """
     双阶段流程编排入口。
 
-    加载真实数据 → 构建景点字典 → 执行 cluster_and_solve → 生成每日行程 → 输出 Cesium HTML。
+    加载真实数据 → 构建景点字典 → 执行 cluster_and_solve → 生成每日行程 → 返回前端可视乎化数据。
 
     Args:
         poi_cache: 包含 hotel 和 spots 的缓存数据（由前端/外部传入）。
@@ -31,7 +30,7 @@ def run_planning(poi_cache, city, hotel_name,
         n_days: 行程天数（可选）。
 
     Returns:
-        dict: type="suggestion"（未指定天数）或包含 solution、best_days、html_url、daily_schedules 等。
+        dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
     """
     total_start = time.time()
 
@@ -117,7 +116,7 @@ def run_planning(poi_cache, city, hotel_name,
                 else:
                     departure_status = "正常离开"
 
-                tw_str = f"{original_start // 60}:{int(original_start % 60):02d} - {original_end // 60}:{int(original_end % 60):02d}"
+                tw_str = f"{int(original_start // 60):02d}:{int(original_start % 60):02d} - {int(original_end // 60):02d}:{int(original_end % 60):02d}"
                 stay_str = f"{stay} min" if stay > 0 else "-"
 
                 schedule.append({
@@ -142,19 +141,6 @@ def run_planning(poi_cache, city, hotel_name,
                 })
         daily_schedules.append(schedule)
 
-    print("生成 Cesium 3D 地图...")
-    cesium_output_dir = os.path.join("frontend", "static", "cesium", "output")
-    os.makedirs(cesium_output_dir, exist_ok=True)
-    html_path = generate_cesium_html(
-        routes=solution["routes"],
-        spots=spots,
-        polylines=polylines,
-        output_dir=cesium_output_dir,
-        dataset_name=dataset_name,
-        daily_schedules=daily_schedules
-    )
-    html_url = f"http://localhost:8099/output/travelpal_route.html"
-
     algo_time = time.time() - total_start
     print("所有任务完成。\n")
 
@@ -165,7 +151,6 @@ def run_planning(poi_cache, city, hotel_name,
         "best_m": result["best_m"],
         "spots": spots,
         "dataset_name": dataset_name,
-        "html_url": html_url,
         "algo_time": algo_time,
         "daily_schedules": daily_schedules,
     }

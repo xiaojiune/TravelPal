@@ -105,3 +105,6 @@ data/chroma_db/
 # 生成图片（忽略生成目录，保留人工绘制的架构图）
 docs/images/generated/*.png
 docs/images/generated/*.jpg
+
+# Windows 重定向残留
+nul

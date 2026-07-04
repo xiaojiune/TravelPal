@@ -18,7 +18,7 @@
 
       <div class="plan-layout">
         <div class="plan-map">
-          <CesiumMap :routes="solution.routes" :spots="store.planResult.spots" />
+          <AmapMap :routes="solution.routes" :spots="store.planResult.spots" :amapKey="store.planResult.amap_api_key || ''" />
         </div>
         <div class="plan-schedule">
           <SchedulePanel :daily-schedules="store.planResult.daily_schedules" />
@@ -31,7 +31,7 @@
 <script setup>
 import { computed } from 'vue'
 import { usePlanStore } from '../stores/plan'
-import CesiumMap from '../components/CesiumMap.vue'
+import AmapMap from '../components/AmapMap.vue'
 import SchedulePanel from '../components/SchedulePanel.vue'
 
 const store = usePlanStore()
@@ -50,7 +50,7 @@ const solution = computed(() => store.planResult.solution || {})
 .metric-label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
 .metric-value { font-size: 20px; font-weight: 700; color: #333; }
 .plan-layout { display: flex; gap: 20px; }
-.plan-map { flex: 2; min-height: 500px; }
+.plan-map { flex: 2; height: 550px; }
 .plan-schedule { flex: 1; min-width: 320px; }
 .btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
 .btn-primary { background: #1a73e8; color: #fff; }

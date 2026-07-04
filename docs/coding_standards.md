@@ -86,7 +86,7 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 | 层级 | 范围 | 注释要求 |
 |------|------|---------|
 | **P0** | 核心算法模块（vns.py、ca.py、clustering.py、fitness.py） | 三类注释完整覆盖：参数字典设计说明 + Google docstring + 行内 Why 注释 |
-| **P1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py、cesium_utils.py） | Google docstring + 关键逻辑 Why 注释（跳过参数字典设计说明） |
+| **P1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | Google docstring + 关键逻辑 Why 注释（跳过参数字典设计说明） |
 | **P2** | 测试/config（tests/*.py、config.py） | 行内 Why 注释即可 |
 
 ### 段落分隔线
@@ -211,7 +211,7 @@ Vue SFC / TypeScript 与 Python 注释的差异对照：
 | 常量/配置 | 大写下划线 + 行内注释 | `const` + JSDoc |
 
 注释深度参照 P0/P1 分层标准：
-- **P0 等价**（核心组件如 CesiumMap.vue、AgentChat.vue）：JSDoc + 行内 Why 注释
+- **P0 等价**（核心组件如 AmapMap.vue、AgentChat.vue）：JSDoc + 行内 Why 注释
 - **P1 等价**（管道组件如 SchedulePanel.vue）：JSDoc
 - **P2 等价**（基础组件如 DayCard.vue）：行内 Why 注释即可
 

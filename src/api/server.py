@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from src.api.routes import router
 
@@ -25,16 +24,6 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(router)
-
-    # 挂载 CesiumJS 静态资源：Vue 页面中引用 /Build/Cesium.js 时可获取
-    try:
-        app.mount(
-            "/Build",
-            StaticFiles(directory="frontend/static/Cesium/Build"),
-            name="cesium",
-        )
-    except RuntimeError:
-        pass
 
     return app
 

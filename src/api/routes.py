@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from src.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem
 from src.engine.pipeline import run_planning
 from src.data.amap_loader import get_poi_details
+from src.config import AMAP_API_KEY
 
 router = APIRouter()
 
@@ -97,6 +98,7 @@ async def plan(req: PlanRequest):
             mode=req.mode,
             n_days=req.n_days,
         )
+        result["amap_api_key"] = AMAP_API_KEY
         return result
     except Exception as e:
         traceback.print_exc()

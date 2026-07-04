@@ -157,7 +157,7 @@ def _get_driving_data(origin, destination, max_retries=3):
         try:
             resp = requests.get(url, params=params, timeout=10)
             data = resp.json()
-            if data["status"] == "1" and int(data["count"]) > 0:
+            if data["status"] == "1" and "route" in data and data["route"].get("paths"):
                 path = data["route"]["paths"][0]
                 distance_km = int(path["distance"]) / 1000.0
                 duration = int(path["duration"])

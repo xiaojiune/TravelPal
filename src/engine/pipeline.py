@@ -77,7 +77,7 @@ def run_planning(poi_cache, city, hotel_name,
     solution = result["solution"]
     print(f"最优总成本 ({mode} 模式): {solution['total_cost']:.1f}\n")
 
-    dataset_name = f"{city}_{len(poi_names)-1}spots_{result['best_k']}日游"
+    dataset_name = f"{city}_{len(poi_names)-1}spots_{result['best_days']}日游"
 
     daily_schedules = []
     for day_idx, route in enumerate(solution["routes"]):
@@ -117,7 +117,7 @@ def run_planning(poi_cache, city, hotel_name,
                 else:
                     departure_status = "正常离开"
 
-                tw_str = f"{original_start // 60}:{original_start % 60:02d} - {original_end // 60}:{original_end % 60:02d}"
+                tw_str = f"{original_start // 60}:{int(original_start % 60):02d} - {original_end // 60}:{int(original_end % 60):02d}"
                 stay_str = f"{stay} min" if stay > 0 else "-"
 
                 schedule.append({
@@ -142,7 +142,7 @@ def run_planning(poi_cache, city, hotel_name,
                 })
         daily_schedules.append(schedule)
 
-    print("🌍 生成 Cesium 3D 地图...")
+    print("生成 Cesium 3D 地图...")
     cesium_output_dir = os.path.join("frontend", "static", "cesium", "output")
     os.makedirs(cesium_output_dir, exist_ok=True)
     html_path = generate_cesium_html(
@@ -156,7 +156,7 @@ def run_planning(poi_cache, city, hotel_name,
     html_url = f"http://localhost:8099/output/travelpal_route.html"
 
     algo_time = time.time() - total_start
-    print("✅ 所有任务完成。\n")
+    print("所有任务完成。\n")
 
     return {
         "solution": solution,

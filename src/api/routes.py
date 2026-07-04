@@ -1,6 +1,8 @@
+import traceback
 from fastapi import APIRouter, HTTPException
-from src.api.schemas import PlanRequest
+from src.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem
 from src.engine.pipeline import run_planning
+from src.data.amap_loader import get_poi_details
 
 router = APIRouter()
 
@@ -31,6 +33,30 @@ def _build_poi_cache(req: PlanRequest):
     return {"hotel": hotel, "spots": spots}
 
 
+@router.post("/api/poi-lookup", response_model=POILookupResponse)
+async def poi_lookup(req: POILookupRequest):
+    """批量查询 POI 坐标和地址。
+
+    前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
+    返回每个名称的坐标和地址。未找到的名称列入 failed 列表。
+    """
+    items: list[POILookupItem] = []
+    failed: list[str] = []
+
+    for name in req.names:
+        try:
+            lon, lat, biz_hours, address = get_poi_details(name, req.city)
+            # 高德返回默认坐标 (116.4, 39.9) 时视为未找到
+            if abs(lon - 116.4) < 0.01 and abs(lat - 39.9) < 0.01:
+                failed.append(name)
+            else:
+                items.append(POILookupItem(name=name, lon=lon, lat=lat, address=address))
+        except Exception:
+            failed.append(name)
+
+    return POILookupResponse(items=items, failed=failed)
+
+
 @router.post("/api/suggest")
 async def suggest(req: PlanRequest):
     """获取方案建议列表。
@@ -38,7 +64,6 @@ async def suggest(req: PlanRequest):
     不指定 n_days，run_planning 内部回退到 ca_suggest()，
     遍历多种聚类方法 × 天数，返回 top-5 建议。
     """
-    # 前端从高德查询 POI 后传回坐标，后端无需再调用外部 API
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
@@ -59,7 +84,6 @@ async def plan(req: PlanRequest):
     """执行完整规划，返回 3D 地图 HTML 和每日行程。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
-    耗时取决于景点数和 API 限流。
     """
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
@@ -75,6 +99,7 @@ async def plan(req: PlanRequest):
         )
         return result
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

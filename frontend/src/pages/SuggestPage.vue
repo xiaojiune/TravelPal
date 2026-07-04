@@ -69,7 +69,7 @@ async function generatePlan() {
     store.planResult = data
     router.push('/plan')
   } catch (e) {
-    alert('规划失败: ' + e.message)
+    alert('规划失败: ' + (e.response?.data?.detail || e.message))
   } finally {
     store.loading = false
   }

@@ -20,6 +20,34 @@ class POIItem(BaseModel):
     stay: float = Field(default=0, description="停留时间，分钟")
 
 
+class POILookupRequest(BaseModel):
+    """POI 坐标/地址查询请求。
+
+    调用高德 POI 搜索 API 批量获取坐标和地址。
+    酒店也作为普通 POI 查询，前端根据名称匹配区分。
+    """
+    city: str
+    names: list[str] = Field(min_length=1, description="POI 名称列表（酒店+景点）")
+
+
+class POILookupItem(BaseModel):
+    """单个 POI 查询结果。"""
+    name: str
+    lon: float
+    lat: float
+    address: str
+
+
+class POILookupResponse(BaseModel):
+    """POI 查询响应。
+
+    items: 查询成功的 POI 列表。
+    failed: 未找到的 POI 名称列表。
+    """
+    items: list[POILookupItem]
+    failed: list[str]
+
+
 class PlanRequest(BaseModel):
     """统一请求模型，适用于 /api/suggest 和 /api/plan。
 

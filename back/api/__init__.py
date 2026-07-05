@@ -1,5 +1,3 @@
-# src/api/__init__.py
-#
 # ================== 接口清单 ==================
 #
 # ---- server.py ----
@@ -19,6 +17,6 @@
 # POILookupItem(BaseModel)                               单个 POI 查询结果
 # POILookupResponse(BaseModel)                           POI 查询响应
 
-from src.api.server import create_app
+from back.api.server import create_app
 
 __all__: list[str] = ["create_app"]

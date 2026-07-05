@@ -1,5 +1,3 @@
-# src/engine/__init__.py
-#
 # ================== 接口清单 ==================
 #
 # ---- vns.py ----
@@ -26,11 +24,11 @@
 # solve_groups(groups, spots, dist_mat, solver_type="CA", use_real_time_matrix=False, ...) -> dict              对已分组路径逐一求解
 # ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None, use_real_time_matrix=False, ...) -> dict     全参数搜索，输出 top-5 建议
 
-from src.engine.vns import VNSSolver, VNS_DEFAULT_PARAMS
-from src.engine.ca import CASolver, CA_DEFAULT_PARAMS
-from src.engine.fitness import analyze_solution
-from src.engine.clustering import CLUSTER_METHODS, call_cluster, find_method_func
-from src.engine.search import cluster_and_solve, solve_groups, ca_suggest
+from back.engine.vns import VNSSolver, VNS_DEFAULT_PARAMS
+from back.engine.ca import CASolver, CA_DEFAULT_PARAMS
+from back.engine.fitness import analyze_solution
+from back.engine.clustering import CLUSTER_METHODS, call_cluster, find_method_func
+from back.engine.search import cluster_and_solve, solve_groups, ca_suggest
 
 __all__ = [
     'VNSSolver', 'VNS_DEFAULT_PARAMS',

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from src.engine.clustering import CLUSTER_METHODS, call_cluster
+from back.engine.clustering import CLUSTER_METHODS, call_cluster
 
 
 class TestClustering:

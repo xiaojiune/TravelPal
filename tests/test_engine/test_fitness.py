@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from src.engine.fitness import analyze_solution
+from back.engine.fitness import analyze_solution
 
 
 class TestFitness:

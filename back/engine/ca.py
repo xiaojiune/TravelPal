@@ -1,4 +1,3 @@
-# src/engine/ca.py
 
 import math
 import random

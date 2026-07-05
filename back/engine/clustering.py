@@ -1,4 +1,3 @@
-# src/engine/clustering.py
 
 import numpy as np
 from sklearn.cluster import KMeans

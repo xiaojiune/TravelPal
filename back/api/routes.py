@@ -1,9 +1,9 @@
 import traceback
 from fastapi import APIRouter, HTTPException
-from src.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem
-from src.engine.pipeline import run_planning
-from src.data.amap_loader import get_poi_details
-from src.config import AMAP_API_KEY
+from back.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem
+from back.engine.pipeline import run_planning
+from back.data.amap_loader import get_poi_details
+from back.config import AMAP_API_KEY
 
 router = APIRouter()
 

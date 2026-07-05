@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 from numba import njit
-from back.engine.fitness import analyze_solution
+from backend.engine.fitness import analyze_solution
 
 # ================== VNS 默认参数 ==================
 # VNS_DEFAULT_PARAMS 设计说明：

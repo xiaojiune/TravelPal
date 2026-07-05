@@ -17,6 +17,6 @@
 # POILookupItem(BaseModel)                               单个 POI 查询结果
 # POILookupResponse(BaseModel)                           POI 查询响应
 
-from back.api.server import create_app
+from backend.api.server import create_app
 
 __all__: list[str] = ["create_app"]

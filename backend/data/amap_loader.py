@@ -1,7 +1,7 @@
 import os, time, datetime
 import numpy as np
 import requests
-from back.config import AMAP_API_KEY
+from backend.config import AMAP_API_KEY
 
 
 def get_poi_location(poi_name, city="北京"):

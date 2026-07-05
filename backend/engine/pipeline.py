@@ -5,8 +5,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from back.data.amap_loader import build_real_data
-from back.engine.search import cluster_and_solve
+from backend.data.amap_loader import build_real_data
+from backend.engine.search import cluster_and_solve
 
 TRAVEL_SPEED = 1.0
 

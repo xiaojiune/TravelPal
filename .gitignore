@@ -100,7 +100,7 @@ frontend/.npmrc
 .opencode/plans/
 
 # 运行时数据
-data/chroma_db/
+backend/data/chroma_db/
 
 # 生成图片（忽略生成目录，保留人工绘制的架构图）
 docs/images/generated/*.png

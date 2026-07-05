@@ -1,8 +1,8 @@
 import numpy as np
-from back.engine.ca import CASolver, CA_DEFAULT_PARAMS
-from back.engine.vns import VNSSolver
-from back.engine.clustering import CLUSTER_METHODS, call_cluster
-from back.engine.fitness import analyze_solution
+from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
+from backend.engine.vns import VNSSolver
+from backend.engine.clustering import CLUSTER_METHODS, call_cluster
+from backend.engine.fitness import analyze_solution
 
 
 def solve_groups(groups, spots, dist_mat, solver_type="CA",

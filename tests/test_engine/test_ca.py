@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from back.engine.ca import CASolver, CA_DEFAULT_PARAMS
+from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 
 
 class TestSA:

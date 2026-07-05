@@ -24,8 +24,7 @@ taskkill /f /im python.exe
 ## 启动后端
 
 ```bash
-cd /mnt/d/AAA/TravelPal
-.venv/bin/python -m backend.api.server
+python -m backend.api.server
 ```
 
 ## 启动前端

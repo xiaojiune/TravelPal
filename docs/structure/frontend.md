@@ -29,22 +29,22 @@ frontend/
 ## 组件树
 
 ```
-App.vue
-├── NavigationBar.vue           # 顶部导航/页面切换
-├── HomePage.vue                # 首页：城市输入 + 酒店选择 + 参数配置
-│   ├── CityInput.vue
-│   ├── DateRangePicker.vue
-│   └── ModeSelector.vue        # fast/deep 模式切换
-├── SuggestPage.vue             # ca_suggest 方案建议列表
-│   └── SuggestionCard.vue      # 每条建议的简要成本/天数展示
-├── PlanPage.vue                # 核心规划展示页
-│   ├── AmapMap.vue             # 高德 2D 地图视图
-│   │   └── RoutePolyline.vue   # 每日路径折线
-│   ├── SchedulePanel.vue       # 每日行程列表（左/下侧）
-│   │   └── DayCard.vue         # 某一天：景点列表 + 时间线
-│   └── AgentChat.vue           # LLM Agent 聊天面板（右/下侧）
-│       └── ChatMessage.vue     # 单条消息（用户/Agent）
-└── HistoryPage.vue             # 历史方案记录
+App.vue                         [✅]
+├── NavigationBar.vue           # 顶部导航/页面切换 [⏸ P2]
+├── HomePage.vue                # 首页：城市输入 + 酒店选择 + 参数配置 [✅]
+│   ├── CityInput.vue           [⏸ P2]
+│   ├── DateRangePicker.vue     [⏸ P2]
+│   └── ModeSelector.vue        # fast/deep 模式切换 [⏸ P2]
+├── SuggestPage.vue             # ca_suggest 方案建议列表 [✅]
+│   └── SuggestionCard.vue      # 每条建议的简要成本/天数展示 [⏸ P2]
+├── PlanPage.vue                # 核心规划展示页 [✅]
+│   ├── AmapMap.vue             # 高德 2D 地图视图 [✅]
+│   │   └── RoutePolyline.vue   # 每日路径折线 [⏸ P2]
+│   ├── SchedulePanel.vue       # 每日行程列表（左/下侧） [✅]
+│   │   └── DayCard.vue         # 某一天：景点列表 + 时间线 [⏸ P2]
+│   └── AgentChat.vue           # LLM Agent 聊天面板（右/下侧） [⏸ P2]
+│       └── ChatMessage.vue     # 单条消息（用户/Agent） [⏸ P2]
+└── HistoryPage.vue             # 历史方案记录 [⏸ P2]
 ```
 
 ## 关键文件说明

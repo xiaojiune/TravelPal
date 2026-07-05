@@ -42,7 +42,7 @@
 每个 `.py` 文件顶部标注模块路径：
 
 ```text
-# src/engine/vns.py
+# backend/engine/vns.py
 ```
 
 ### 接口清单（文件顶部）
@@ -53,7 +53,7 @@
 # ================== 接口清单 ==================
 # VNSSolver(city_indices, spots_dict, ...) -> 求解器实例
 # solver.solve(dis_matrix) -> dict
-# build_real_data(poi_names, city, ...) -> (cost_matrix_hours, dist_matrix_km, ...)
+# build_real_data(poi_names, coords, delay=0.4) -> (cost_matrix_hours, dist_matrix_km, ...)
 ```
 
 ### 接口变更工作流

@@ -6,9 +6,7 @@
 
 # 项目：TravelPal
 
-基于双引擎 + LLM Agent 的智能旅游规划系统——旅行伴侣。
-基于旧项目 D:\jb-file\python\TSPTW 的 visualization 分支改造。
-需要参考旧代码时，使用 @old-project 引用。
+旅行伴侣 —— 基于双引擎 + LLM Agent
 
 ## 代码规范
 

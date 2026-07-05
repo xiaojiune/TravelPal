@@ -25,8 +25,6 @@ TravelPal/
 ├── docs/                       # 决策日志 + 结构文档
 │   ├── adr/                    架构决策记录（001 / 002 / 003）
 │   └── structure/              当前结构描述（project / back / frontend / data）
-│
-└── docs++/                     # 外部知识库（架构设计 / 技术栈 / 旧项目参考等）
 ```
 
 ## 系统级调用链路

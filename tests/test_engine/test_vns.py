@@ -1,6 +1,6 @@
 import pytest
-from src.engine.vns import VNSSolver
-from src.engine.ca import CASolver
+from backend.engine.vns import VNSSolver
+from backend.engine.ca import CASolver
 
 
 class TestVNS:

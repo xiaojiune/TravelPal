@@ -42,7 +42,7 @@
 每个 `.py` 文件顶部标注模块路径：
 
 ```text
-# src/engine/vns.py
+# backend/engine/vns.py
 ```
 
 ### 接口清单（文件顶部）
@@ -53,7 +53,7 @@
 # ================== 接口清单 ==================
 # VNSSolver(city_indices, spots_dict, ...) -> 求解器实例
 # solver.solve(dis_matrix) -> dict
-# build_real_data(poi_names, city, ...) -> (cost_matrix_hours, dist_matrix_km, ...)
+# build_real_data(poi_names, coords, delay=0.4) -> (cost_matrix_hours, dist_matrix_km, ...)
 ```
 
 ### 接口变更工作流
@@ -86,7 +86,7 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 | 层级 | 范围 | 注释要求 |
 |------|------|---------|
 | **P0** | 核心算法模块（vns.py、ca.py、clustering.py、fitness.py） | 三类注释完整覆盖：参数字典设计说明 + Google docstring + 行内 Why 注释 |
-| **P1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py、cesium_utils.py） | Google docstring + 关键逻辑 Why 注释（跳过参数字典设计说明） |
+| **P1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | Google docstring + 关键逻辑 Why 注释（跳过参数字典设计说明） |
 | **P2** | 测试/config（tests/*.py、config.py） | 行内 Why 注释即可 |
 
 ### 段落分隔线
@@ -198,6 +198,22 @@ VNS_DEFAULT_PARAMS = { ... }
 - 逻辑清晰、不言自明的代码（如 `x = y + 1`）。
 - 标准的、广泛使用的设计模式（如工厂模式、单例模式）。
 - 类中的 getter 方法（如 `get_elite_pool()`）。
+
+### 前端文件注释规范
+
+Vue SFC / TypeScript 与 Python 注释的差异对照：
+
+| 场景 | Python | Vue / TypeScript |
+|------|--------|-----------------|
+| 组件/函数注释 | Google docstring | JSDoc（`/** @param ... @returns ... */`） |
+| 关键逻辑注释 | `#` Why 注释 | `//` Why 注释 |
+| 接口/Props 说明 | 类型注解 + docstring | `defineProps` + JSDoc |
+| 常量/配置 | 大写下划线 + 行内注释 | `const` + JSDoc |
+
+注释深度参照 P0/P1 分层标准：
+- **P0 等价**（核心组件如 AmapMap.vue、AgentChat.vue）：JSDoc + 行内 Why 注释
+- **P1 等价**（管道组件如 SchedulePanel.vue）：JSDoc
+- **P2 等价**（基础组件如 DayCard.vue）：行内 Why 注释即可
 
 ---
 

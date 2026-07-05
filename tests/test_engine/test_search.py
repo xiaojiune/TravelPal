@@ -1,5 +1,5 @@
 import pytest
-from src.engine.search import cluster_and_solve, ca_suggest
+from backend.engine.search import cluster_and_solve, ca_suggest
 
 
 class TestCASuggest:

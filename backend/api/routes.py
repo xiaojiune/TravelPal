@@ -1,10 +1,11 @@
 import traceback
 from fastapi import APIRouter, HTTPException
-from backend.api.schemas import PlanRequest, PlanAdjustRequest, POILookupRequest, POILookupResponse, POILookupItem
+from backend.api.schemas import PlanRequest, PlanAdjustRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
 from backend.engine.pipeline import run_planning, adjust_plan
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY
-from backend.agent.tools import parse_biz_hours
+from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
@@ -113,12 +114,31 @@ async def plan(req: PlanRequest):
 
 
 @router.post("/api/chat")
-async def chat():
-    """LLM Agent 对话接口（预留）。
+async def chat(req: ChatRequest):
+    """LLM Agent 对话接口，SSE 流式输出。
 
-    TODO: 后续接入 LLM Agent，支持 SSE 流式输出。
+    Mock 模式返回死 token，方便前端联调。
+    正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
     """
-    return {"status": "not_implemented", "message": "LLM Agent 功能尚未接入"}
+    try:
+        messages = build_chat_messages(req.message, req.plan_result)
+
+        async def _stream():
+            for token in chat_stream(messages):
+                yield f"data: {token}\n\n"
+            yield "data: {\"done\":true}\n\n"
+
+        return StreamingResponse(
+            _stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.patch("/api/plan/adjust")

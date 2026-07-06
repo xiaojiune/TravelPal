@@ -20,6 +20,11 @@ const routes = [
     name: 'Plan',
     component: () => import('../pages/PlanPage.vue'),
   },
+  {
+    path: '/agent',
+    name: 'Agent',
+    component: () => import('../pages/AgentPage.vue'),
+  },
 ]
 
 const router = createRouter({

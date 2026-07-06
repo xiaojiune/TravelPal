@@ -1,4 +1,4 @@
-"""Agent 工具函数：营业时间 LLM 解析。"""
+"""Agent 工具函数：营业时间 LLM 解析 + 对话消息构建。"""
 from datetime import datetime
 from openai import OpenAI
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
@@ -53,6 +53,107 @@ _PARSE_PROMPT = (
     "6. 跨午夜营业时间（如 22:00-02:00）截断到当天 24:00，即 end=1440\n\n"
     "opentime2：{opentime2}"
 )
+
+
+_CHAT_SYSTEM = (
+    "你是一个旅行伴侣，正在陪用户一起规划旅行。\n"
+    "核心原则：\n"
+    "1. 用简短的口语回复，像朋友聊天一样自然\n"
+    "2. 不要帮用户计算路径或规划行程——这不是你需要做的\n"
+    "3. 用户可能需要陪伴、建议或讨论想法，倾听就好\n"
+    "4. 如果用户问起当前的规划方案，可以参考提供的规划上下文来回应\n"
+    "5. 永远不要说你在「作为AI助手」——你就是旅行伴侣本人\n"
+    "6. 如果用户的问题超出了旅行范围，温和地引导回旅行话题"
+)
+
+
+def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
+    """构建对话消息列表。
+
+    Args:
+        message: 用户输入的消息。
+        plan_result: 可选的规划结果，注入 system prompt 作为上下文。
+
+    Returns:
+        OpenAI-compatible messages 列表。
+    """
+    system = _CHAT_SYSTEM
+    if plan_result:
+        import json
+        summary = {
+            "city": plan_result.get("city", "未知"),
+            "n_days": plan_result.get("best_days", 0),
+            "total_cost": plan_result.get("solution", {}).get("total_cost", 0),
+            "commentary": plan_result.get("commentary", ""),
+        }
+        system += f"\n\n当前规划概要（供参考）：\n{json.dumps(summary, ensure_ascii=False)}"
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": message},
+    ]
+
+
+def mock_stream_chat(messages: list[dict]):
+    """Mock SSE 流式聊天，模拟 3 条响应用于联调。
+
+    Args:
+        messages: OpenAI-compatible 消息列表（Mock 模式实际不使用）。
+
+    Yields:
+        逐字符流式 token。
+    """
+    replies = [
+        "哈哈，这个安排不错嘛！不过第二天的景点有点多，到时候可能会有点赶。要不要我帮你想想怎么调整？",
+        "如果我是你，我会把第三天那个离酒店最远的景点换到第二天去，这样少跑一段回头路。",
+        "对了，你酒店附近有个夜市很出名，晚上可以去逛逛～",
+    ]
+    for reply in replies:
+        for char in reply:
+            yield char
+            import time
+            time.sleep(0.02)
+
+
+def stream_chat(messages: list[dict]):
+    """真实 DeepSeek SSE 流式聊天。
+
+    Args:
+        messages: OpenAI-compatible 消息列表（system + user）。
+
+    Yields:
+        DeepSeek 返回的内容 token。
+    """
+    client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+    resp = client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=messages,
+        stream=True,
+        temperature=0.7,
+        max_tokens=1024,
+    )
+    for chunk in resp:
+        delta = chunk.choices[0].delta if chunk.choices else None
+        if delta and delta.content:
+            yield delta.content
+
+
+MOCK_MODE = True
+
+
+def chat_stream(messages: list[dict]):
+    """统一入口：MOCK_MODE=True 时模拟，否则调 DeepSeek。
+
+    Args:
+        messages: OpenAI-compatible 消息列表。
+
+    Yields:
+        逐字符或逐 token 流式输出。
+    """
+    if MOCK_MODE:
+        yield from mock_stream_chat(messages)
+    else:
+        yield from stream_chat(messages)
 
 
 def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:

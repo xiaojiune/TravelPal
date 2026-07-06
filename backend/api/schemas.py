@@ -92,6 +92,16 @@ class PlanRequest(BaseModel):
                                       description="晚归惩罚权重（默认 50.0）")
 
 
+class ChatRequest(BaseModel):
+    """LLM Agent 对话请求。
+
+    message: 用户输入的消息。
+    plan_result: 可选的规划结果上下文，供 Agent 参考。
+    """
+    message: str = Field(min_length=1, description="用户输入的消息")
+    plan_result: dict | None = Field(default=None, description="规划结果上下文")
+
+
 class PlanAdjustRequest(BaseModel):
     """方案调整请求。
 

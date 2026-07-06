@@ -23,3 +23,8 @@ export function postPlan(data) {
 export function postChat(message, sessionId) {
   return http.post('/chat', { message, session_id: sessionId }).then(r => r.data)
 }
+
+/** 调整已有方案（均衡/改天数等） */
+export function patchPlanAdjust(data) {
+  return http.patch('/plan/adjust', data).then(r => r.data)
+}

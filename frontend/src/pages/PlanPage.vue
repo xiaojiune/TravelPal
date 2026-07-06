@@ -14,6 +14,11 @@
         <div class="metric"><span class="metric-label">等待惩罚</span><span class="metric-value">{{ solution.wait.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">迟到惩罚</span><span class="metric-value">{{ solution.late.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">算法耗时</span><span class="metric-value">{{ store.planResult.algo_time.toFixed(1) }}s</span></div>
+        <div class="metric metric-action">
+          <button class="btn btn-outline" @click="doBalance" :disabled="balancing">
+            {{ balancing ? '均衡中...' : '⚖️ 均衡分配' }}
+          </button>
+        </div>
       </div>
 
       <div class="plan-layout">
@@ -30,13 +35,34 @@
 
 <script setup>
 // ====== 状态定义 ======
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { usePlanStore } from '../stores/plan'
+import { patchPlanAdjust } from '../services/api'
 import AmapMap from '../components/AmapMap.vue'
 import SchedulePanel from '../components/SchedulePanel.vue'
 
 const store = usePlanStore()
 const solution = computed(() => store.planResult.solution || {})
+const balancing = ref(false)
+
+// ====== 数据操作 ======
+async function doBalance() {
+  balancing.value = true
+  try {
+    const data = await patchPlanAdjust({
+      spots: store.planResult.spots,
+      cost_matrix: store.planResult.cost_matrix,
+      dist_matrix: store.planResult.dist_matrix,
+      routes: solution.value.routes,
+      adjustments: { balance: true },
+    })
+    store.planResult = data
+  } catch (e) {
+    alert('均衡失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    balancing.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -50,6 +76,10 @@ const solution = computed(() => store.planResult.solution || {})
 }
 .metric-label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
 .metric-value { font-size: 20px; font-weight: 700; color: #333; }
+.metric-action { display: flex; align-items: center; justify-content: center; }
+.btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-block; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
 .plan-layout { display: flex; gap: 20px; }
 .plan-map { flex: 2; height: 550px; }
 .plan-schedule { flex: 1; min-width: 320px; }

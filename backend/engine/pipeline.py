@@ -6,7 +6,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.data.amap_loader import build_real_data
-from backend.engine.search import cluster_and_solve
+from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
 
 TRAVEL_SPEED = 1.0
 
@@ -153,4 +153,109 @@ def run_planning(poi_cache, city, hotel_name,
         "dataset_name": dataset_name,
         "algo_time": algo_time,
         "daily_schedules": daily_schedules,
+        "cost_matrix": cost_matrix.tolist(),
+        "dist_matrix": dist_matrix.tolist(),
+    }
+
+
+def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustments):
+    """
+    对已有方案执行调整（均衡、重算天数、重算某天）。
+
+    从 routes 重构分组 → 按 adjustments 调整 → 重新求解 → 生成新每日行程。
+
+    Args:
+        spots_dict: 景点字典（与 run_planning 返回的 spots 格式一致）。
+        cost_matrix_list: 成本矩阵（2D list，前端传回）。
+        dist_matrix_list: 距离矩阵（2D list，前端传回）。
+        routes: 当前方案路径列表，每组含首尾 depot。
+        adjustments: 调整指令 dict，如 {"balance": true}。
+
+    Returns:
+        dict: 与 run_planning 相同格式的完整规划结果。
+    """
+    cost_matrix = np.array(cost_matrix_list)
+    dist_matrix = np.array(dist_matrix_list)
+    core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
+
+    if adjustments.get("balance"):
+        balanced = balance_groups(core_groups, spots_dict)
+        core_groups = [g[1:-1] for g in balanced]
+
+    result = solve_groups(
+        core_groups, spots_dict, cost_matrix,
+        solver_type="CA",
+        travel_speed=TRAVEL_SPEED,
+    )
+    print(f"调整后总成本: {result['total_cost']:.1f}\n")
+
+    daily_schedules = []
+    for day_idx, route in enumerate(result["routes"]):
+        schedule = []
+        current_time = spots_dict[0]["tw"][0]
+        for i in range(len(route) - 1):
+            from_node = route[i]
+            to_node = route[i + 1]
+            travel_time = dist_matrix[from_node][to_node]
+            arrival_time = round(current_time + travel_time)
+
+            if to_node != 0:
+                original_start, original_end = spots_dict[to_node]["original_tw"]
+                effective_start, effective_end = spots_dict[to_node]["tw"]
+                stay = spots_dict[to_node]["stay"]
+
+                wait_time = max(0, effective_start - arrival_time)
+                late_arrival = max(0, arrival_time - effective_end)
+                actual_start = max(arrival_time, effective_start)
+                departure_time = actual_start + stay
+                late_departure = max(0, departure_time - original_end)
+
+                if int(late_arrival) > 0:
+                    arrival_status = f"迟到 {int(late_arrival)} 分钟"
+                elif int(wait_time) > 0:
+                    arrival_status = f"早到 {int(wait_time)} 分钟"
+                else:
+                    arrival_status = "正常到达"
+
+                if int(late_departure) > 0:
+                    departure_status = f"迟到 {int(late_departure)} 分钟离开"
+                else:
+                    departure_status = "正常离开"
+
+                tw_str = f"{int(original_start // 60):02d}:{int(original_start % 60):02d} - {int(original_end // 60):02d}:{int(original_end % 60):02d}"
+                stay_str = f"{stay} min" if stay > 0 else "-"
+
+                schedule.append({
+                    "name": spots_dict[to_node]["name"],
+                    "arrival": arrival_time,
+                    "departure": departure_time,
+                    "tw": tw_str,
+                    "stay": stay_str,
+                    "arrival_status": arrival_status,
+                    "departure_status": departure_status,
+                })
+                current_time = departure_time
+            else:
+                schedule.append({
+                    "name": "酒店（返回）",
+                    "arrival": arrival_time,
+                    "departure": 0,
+                    "tw": "-",
+                    "stay": "-",
+                    "arrival_status": "",
+                    "departure_status": "",
+                })
+        daily_schedules.append(schedule)
+
+    return {
+        "solution": result,
+        "mode": "adjust",
+        "best_days": len(routes),
+        "best_m": "balance",
+        "spots": spots_dict,
+        "dataset_name": "调整方案",
+        "algo_time": 0,
+        "daily_schedules": daily_schedules,
+        "cost_matrix": cost_matrix.tolist(),
+        "dist_matrix": dist_matrix.tolist(),
     }

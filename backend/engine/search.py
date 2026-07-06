@@ -5,6 +5,43 @@ from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
 
 
+def balance_groups(groups, spots, depot=0):
+    """
+    强制均衡分组，确保每天的总停留时间接近。
+
+    将景点按停留时间贪心分配到当前负荷最小的天，
+    尽可能让每天的停留时间均匀分布。
+
+    Args:
+        groups: 原始分组（不含 depot），每组为景点索引列表。
+        spots: 景点字典，键为索引，值为含 stay 字段的属性。
+        depot: depot 索引，默认 0。
+
+    Returns:
+        均衡后的分组列表，每组含首尾 depot。
+    """
+    all_spots = []
+    for g in groups:
+        for node in g:
+            if node != depot and node not in all_spots:
+                all_spots.append(node)
+
+    k = len(groups)
+    new_groups = [[] for _ in range(k)]
+    day_loads = [0] * k
+
+    for spot in all_spots:
+        stay = spots[spot]["stay"]
+        min_idx = min(range(k), key=lambda i: day_loads[i])
+        new_groups[min_idx].append(spot)
+        day_loads[min_idx] += stay
+
+    balanced = [[depot] + core + [depot] for core in new_groups]
+    final_loads = [sum(spots[n]["stay"] for n in g if n != depot) for g in balanced]
+    print(f"  均衡后每日停留负荷: {final_loads}, 目标均值: {sum(final_loads)/k:.0f} min")
+    return balanced
+
+
 def solve_groups(groups, spots, dist_mat, solver_type="CA",
                  travel_speed=1.0, penalty_weight=100.0,
                  early_wait_weight=0.1, late_return_weight=50.0,

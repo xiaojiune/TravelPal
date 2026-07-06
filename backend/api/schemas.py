@@ -90,3 +90,17 @@ class PlanRequest(BaseModel):
                                      description="早到等待惩罚权重（默认 0.1）")
     late_return_weight: float = Field(default=50.0, ge=0,
                                       description="晚归惩罚权重（默认 50.0）")
+
+
+class PlanAdjustRequest(BaseModel):
+    """方案调整请求。
+
+    前端在查看方案后希望调整（如均衡天、改天数、重算某天）时调用。
+    暂只支持 balance，后续扩展 replan_day / change_days。
+    """
+    spots: dict
+    cost_matrix: list
+    dist_matrix: list
+    routes: list
+    adjustments: dict = Field(default_factory=lambda: {"balance": True},
+                               description="调整指令，如 {'balance': true}")

@@ -7,6 +7,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.data.amap_loader import build_real_data
 from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
+from backend.agent.commentator import generate_commentary
 
 TRAVEL_SPEED = 1.0
 
@@ -144,6 +145,8 @@ def run_planning(poi_cache, city, hotel_name,
     algo_time = time.time() - total_start
     print("所有任务完成。\n")
 
+    commentary = generate_commentary(solution, spots, dist_matrix)
+
     return {
         "solution": solution,
         "mode": mode,
@@ -155,6 +158,7 @@ def run_planning(poi_cache, city, hotel_name,
         "daily_schedules": daily_schedules,
         "cost_matrix": cost_matrix.tolist(),
         "dist_matrix": dist_matrix.tolist(),
+        "commentary": commentary,
     }
 
 
@@ -247,6 +251,8 @@ def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustme
                 })
         daily_schedules.append(schedule)
 
+    commentary = generate_commentary(result, spots_dict, dist_matrix)
+
     return {
         "solution": result,
         "mode": "adjust",
@@ -258,4 +264,5 @@ def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustme
         "daily_schedules": daily_schedules,
         "cost_matrix": cost_matrix.tolist(),
         "dist_matrix": dist_matrix.tolist(),
+        "commentary": commentary,
     }

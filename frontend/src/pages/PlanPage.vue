@@ -21,6 +21,10 @@
         </div>
       </div>
 
+      <div v-if="store.planResult.commentary" class="commentary">
+        💬 {{ store.planResult.commentary }}
+      </div>
+
       <div class="plan-layout">
         <div class="plan-map">
           <AmapMap :routes="solution.routes" :spots="store.planResult.spots" :amapKey="store.planResult.amap_api_key || ''" />
@@ -77,6 +81,10 @@ async function doBalance() {
 .metric-label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; }
 .metric-value { font-size: 20px; font-weight: 700; color: #333; }
 .metric-action { display: flex; align-items: center; justify-content: center; }
+.commentary {
+  background: #f0f7ff; border: 1px solid #d0e3ff; border-radius: 8px;
+  padding: 10px 16px; margin-bottom: 16px; font-size: 14px; color: #1a56db;
+}
 .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-block; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }

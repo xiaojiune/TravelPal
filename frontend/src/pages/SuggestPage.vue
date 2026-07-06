@@ -39,6 +39,7 @@
 </template>
 
 <script setup>
+// ====== 状态定义 ======
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '../stores/plan'

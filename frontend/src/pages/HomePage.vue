@@ -118,6 +118,8 @@
 </template>
 
 <script setup>
+// ====== 状态定义 ======
+// 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '../stores/plan'
@@ -136,9 +138,11 @@ const loading = ref(false)
 const editRows = ref([])
 const editHint = ref('')
 
+// ====== 计算属性 ======
 const canSearchHotel = computed(() => store.city && store.hotelName.trim())
 const canSearchSpots = computed(() => store.city && spotText.value.trim())
 const hasResults = computed(() => hotelResult.value || spotResults.value.length > 0)
+// 管理表格显隐逻辑：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。
 const showManagement = computed(() => {
   if (hasResults.value) return false
   if (store.spots.length > 0) return true
@@ -154,6 +158,8 @@ const allResults = computed(() => {
   return list
 })
 
+// ====== 编辑表格构建 ======
+// 构建编辑态行数据：与 store 源数据解耦，用户点击确认后再统一回写，避免中途修改污染全局状态
 function rebuildEditRows() {
   const rows = []
   if (store.hotelName && store.hotelLon) {
@@ -183,6 +189,7 @@ function formatBiz(start, end) {
   return `${s}-${e}`
 }
 
+// ====== 数据操作 ======
 async function searchHotel() {
   loading.value = true
   hotelResult.value = null
@@ -217,7 +224,9 @@ async function searchSpots() {
   }
 }
 
+// 确认选中 POI → 更新 store → 清空搜索状态 → 重建编辑表格
 function confirmPoi() {
+  // 酒店单独处理：取第一个勾选项，直接覆盖 store 中的酒店坐标
   const hotel = allResults.value.find(item => item.isHotel && item.checked)
   if (hotel) {
     store.hotelLon = hotel.lon
@@ -225,6 +234,7 @@ function confirmPoi() {
     store.hotelAddress = hotel.address
   }
 
+  // 景点按名称去重，避免重复添加
   const selectedSpots = allResults.value.filter(item => !item.isHotel && item.checked)
   const existingNames = new Set(store.spots.map(s => s.name))
   const newSpots = selectedSpots.filter(item => !existingNames.has(item.name))
@@ -283,6 +293,7 @@ function applyEdits() {
   rebuildEditRows()
 }
 
+// 获取方案建议：buildRequest(null) 中 null 表示自动检测天数（由引擎端 ca_suggest 自动推断）
 async function fetchSuggest() {
   store.loading = true
   try {

@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+// ====== 状态定义 ======
 import { computed } from 'vue'
 import { usePlanStore } from '../stores/plan'
 import AmapMap from '../components/AmapMap.vue'

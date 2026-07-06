@@ -1,4 +1,5 @@
 <template>
+  <!-- 全局导航 + 页面出口 -->
   <div id="travelpal-app">
     <nav class="nav-bar">
       <router-link to="/" class="nav-brand">TravelPal</router-link>

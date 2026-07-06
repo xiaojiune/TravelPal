@@ -1,12 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-// 页面间共享的规划状态：首页输入 → 方案建议 → 规划结果
-//
-// buildRequest(nDays)       序列化 PlanRequest（可选天数）
-// reset()                   清空所有状态
+/**
+ * 页面间共享的规划状态：首页输入 → 方案建议 → 规划结果
+ *
+ * @property buildRequest(nDays)  序列化 PlanRequest，nDays=null 时由引擎自动推断
+ * @property reset()              清空所有状态
+ */
 
 export const usePlanStore = defineStore('plan', () => {
+  // ====== 输入状态 ======
   const city = ref('')
   const hotelName = ref('')
   const hotelLon = ref(0)
@@ -19,13 +22,18 @@ export const usePlanStore = defineStore('plan', () => {
   const earlyWaitWeight = ref(0.1)
   const lateReturnWeight = ref(50)
 
+  // ====== 方案状态 ======
   const suggestions = ref([])
   const selectedNDays = ref(null)
   const selectedMethod = ref('')
 
+  // ====== 结果状态 ======
   const planResult = ref(null)
   const loading = ref(false)
 
+  // ====== 方法 ======
+
+  /** 将当前状态序列化为后端 PlanRequest 格式 */
   function buildRequest(nDays) {
     return {
       city: city.value,
@@ -50,6 +58,7 @@ export const usePlanStore = defineStore('plan', () => {
     }
   }
 
+  /** 重置所有状态，返回初始状态 */
   function reset() {
     city.value = ''
     hotelName.value = ''

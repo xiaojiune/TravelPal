@@ -33,15 +33,20 @@
 </template>
 
 <script setup>
-// 每日行程表格组件
-//
-// Props:
-//   dailySchedules — 每日行程数组，每项含 name/arrival/departure/tw/stay/arrival_status/departure_status
-//
-// fmt(m)  将分钟数转换为 HH:MM 格式
-// statusClass(s)  准时/等待标记返回原文，违规标记添加 ⚠️ 前缀
+/**
+ * 每日行程面板组件。
+ * 接收 dailySchedules 数据，以表格形式展示每日景点到达/离开/状态。
+ *
+ * @param {Array} dailySchedules - 每日行程数组，每项含
+ *   name/arrival/departure/tw/stay/arrival_status/departure_status
+ */
 defineProps({ dailySchedules: { type: Array, default: () => [] } })
 
+/**
+ * 将分钟数转换为 HH:MM 格式。
+ * @param {number} m - 距午夜分钟数
+ * @returns {string} 格式如 "8:30"
+ */
 function fmt(m) {
   if (m == null || m <= 0) return '-'
   const h = Math.floor(m / 60)
@@ -49,6 +54,12 @@ function fmt(m) {
   return `${h}:${String(min).padStart(2, '0')}`
 }
 
+/**
+ * 将到达/离开状态文本加上违规标记。
+ * 准时/等待直接返回，违规行为加 ⚠️ 前缀。
+ * @param {string} s - 状态文本
+ * @returns {string}
+ */
 function statusClass(s) {
   if (!s) return '-'
   return s.includes('准时') || s.includes('等待') ? s : `⚠️ ${s}`

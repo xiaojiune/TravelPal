@@ -4,6 +4,7 @@ from backend.api.schemas import PlanRequest, POILookupRequest, POILookupResponse
 from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY
+from backend.agent.tools import parse_biz_hours
 
 router = APIRouter()
 
@@ -51,7 +52,13 @@ async def poi_lookup(req: POILookupRequest):
             if abs(lon - 116.4) < 0.01 and abs(lat - 39.9) < 0.01:
                 failed.append(name)
             else:
-                items.append(POILookupItem(name=name, lon=lon, lat=lat, address=address))
+                parsed = parse_biz_hours(biz_hours) if biz_hours else None
+                tw_start = parsed[0] if parsed else None
+                tw_end = parsed[1] if parsed else None
+                items.append(POILookupItem(
+                    name=name, lon=lon, lat=lat, address=address,
+                    tw_start=tw_start, tw_end=tw_end,
+                ))
         except Exception:
             failed.append(name)
 

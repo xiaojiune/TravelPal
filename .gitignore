@@ -1,4 +1,5 @@
 # 不应该被提交的文件
+AAA-test/
 docs++/
 data/DataSets/
 !data/DataSets/n20w20/n20w20.001.txt

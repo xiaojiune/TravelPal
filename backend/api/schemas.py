@@ -31,11 +31,17 @@ class POILookupRequest(BaseModel):
 
 
 class POILookupItem(BaseModel):
-    """单个 POI 查询结果。"""
+    """单个 POI 查询结果。
+
+    tw_start/tw_end 由 LLM 解析 opentime2 后返回，
+    前端不再硬编码默认营业时间。
+    """
     name: str
     lon: float
     lat: float
     address: str
+    tw_start: int | None = Field(default=None, description="营业开始分钟数，0-1440，LLM 解析")
+    tw_end: int | None = Field(default=None, description="营业结束分钟数，0-1440，LLM 解析")
 
 
 class POILookupResponse(BaseModel):

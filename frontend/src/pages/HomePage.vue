@@ -232,6 +232,8 @@ function confirmPoi() {
     store.hotelLon = hotel.lon
     store.hotelLat = hotel.lat
     store.hotelAddress = hotel.address
+    if (hotel.tw_start != null) store.hotelTwStart = hotel.tw_start
+    if (hotel.tw_end != null) store.hotelTwEnd = hotel.tw_end
   }
 
   // 景点按名称去重，避免重复添加
@@ -241,7 +243,7 @@ function confirmPoi() {
   for (const item of newSpots) {
     store.spots.push({
       name: item.name, lon: item.lon, lat: item.lat,
-      twStart: 480, twEnd: 1020, stay: 60,
+      twStart: item.tw_start ?? 480, twEnd: item.tw_end ?? 1020, stay: 60,
       address: item.address,
     })
   }

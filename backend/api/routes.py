@@ -1,3 +1,4 @@
+import json
 import traceback
 from fastapi import APIRouter, HTTPException
 from backend.api.schemas import PlanRequest, PlanAdjustRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
@@ -125,8 +126,8 @@ async def chat(req: ChatRequest):
 
         async def _stream():
             for token in chat_stream(messages):
-                yield f"data: {token}\n\n"
-            yield "data: {\"done\":true}\n\n"
+                yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         return StreamingResponse(
             _stream(),

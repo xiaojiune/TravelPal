@@ -14,7 +14,7 @@ export function useTypewriter({ speed = 30 } = {}) {
   let index = 0
   let timer = null
 
-  // 一次性设置完整文本并开始打字，先 stop() 清理上一个动画
+  // 一次性设置完整文本并开始打字动画
   function start(text) {
     stop()
     buffer = text
@@ -31,23 +31,20 @@ export function useTypewriter({ speed = 30 } = {}) {
     }, speed)
   }
 
-  // SSE 场景：持续追加 token 到 buffer，若已暂停则重启打字
+  // SSE 逐 token 追加：直接渲染，不等待 timer
   function append(chunk) {
-    buffer += chunk
-    if (!timer) {
-      timer = setInterval(() => {
-        if (index >= buffer.length) {
-          clearInterval(timer)
-          timer = null
-          return
-        }
-        displayText.value += buffer[index]
-        index++
-      }, speed)
-    }
+    displayText.value += chunk
   }
 
-  // 停止打字动画并清空定时器
+  // 重置：清空显示文本和缓冲区
+  function reset() {
+    stop()
+    displayText.value = ''
+    buffer = ''
+    index = 0
+  }
+
+  // 停止打字动画
   function stop() {
     if (timer) {
       clearInterval(timer)
@@ -55,5 +52,5 @@ export function useTypewriter({ speed = 30 } = {}) {
     }
   }
 
-  return { displayText, start, append, stop }
+  return { displayText, start, append, reset, stop }
 }

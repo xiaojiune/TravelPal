@@ -36,7 +36,7 @@ const inputText = ref('')
 const loading = ref(false)
 const messages = ref([])
 // 打字机速度 30ms/字，适合 Mock 流式节奏
-const { displayText, append, stop } = useTypewriter({ speed: 30 })
+const { displayText, append, reset, stop } = useTypewriter({ speed: 30 })
 
 /**
  * 发送用户消息，读取 SSE 流式响应并逐字打字机渲染。
@@ -52,7 +52,7 @@ async function send() {
   // 先占位空气泡，SSE 流式追加内容
   messages.value.push({ role: 'assistant', content: '' })
   loading.value = true
-  stop()
+  reset()
   const msgIndex = messages.value.length - 1
 
   try {
@@ -77,21 +77,18 @@ async function send() {
       const lines = partial.split('\n')
       partial = lines.pop() || ''
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6)
-          if (data === '{"done":true}') break
-          // 纯文本 SSE：直接将 token 追加到打字机缓冲区
-          // JSON 格式（如 {"token":"字"}）也会回退到纯文本追加
-          try {
-            const parsed = JSON.parse(data)
-            if (parsed.token) {
-              append(parsed.token)
-              messages.value[msgIndex].content = displayText.value
-            }
-          } catch {
-            append(data)
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6)
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.type === 'done') break
+          if (parsed.type === 'content' && parsed.data) {
+            append(parsed.data)
             messages.value[msgIndex].content = displayText.value
           }
+        } catch {
+          append(data)
+          messages.value[msgIndex].content = displayText.value
         }
       }
       // 每次读完后刷新 DOM 再滚动，确保打字机新内容可见

@@ -95,7 +95,7 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
 
 
 def mock_stream_chat(messages: list[dict]):
-    """Mock SSE 流式聊天，模拟 3 条响应用于联调。
+    """Mock SSE 流式聊天，模拟 1 条自然回复用于联调。
 
     Args:
         messages: OpenAI-compatible 消息列表（Mock 模式实际不使用）。
@@ -103,16 +103,11 @@ def mock_stream_chat(messages: list[dict]):
     Yields:
         逐字符流式 token。
     """
-    replies = [
-        "哈哈，这个安排不错嘛！不过第二天的景点有点多，到时候可能会有点赶。要不要我帮你想想怎么调整？",
-        "如果我是你，我会把第三天那个离酒店最远的景点换到第二天去，这样少跑一段回头路。",
-        "对了，你酒店附近有个夜市很出名，晚上可以去逛逛～",
-    ]
-    for reply in replies:
-        for char in reply:
-            yield char
-            import time
-            time.sleep(0.02)
+    reply = "今天的安排不错，下午可以去附近的公园走走！"
+    for char in reply:
+        yield char
+        import time
+        time.sleep(0.05)
 
 
 def stream_chat(messages: list[dict]):

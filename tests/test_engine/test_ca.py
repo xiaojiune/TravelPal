@@ -3,9 +3,13 @@ import numpy as np
 from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 
 
+# ================== CA 求解器 ==================
+
+
 class TestSA:
     """CA 求解器的基础正确性与压缩退火特性测试"""
 
+    # ---------- 基础正确性 ----------
     def test_sa_solution_valid(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
@@ -50,6 +54,7 @@ class TestSA:
                 f"收敛历史不应上升: {conv[i - 1]} -> {conv[i]}"
             )
 
+    # ---------- 退火模式 ----------
     def test_sa_compressed_vs_standard(self, n20_dataset):
         # 验证两种退火模式（压缩/标准）均能产出可行解，不要求严格优劣
         spots, cost_mat, _ = n20_dataset
@@ -76,6 +81,7 @@ class TestSA:
         pre_2opt_cost = conv[-1] if len(conv) > 1 else final_cost
         assert final_cost <= pre_2opt_cost + 1e-6, "2-opt 后成本不应上升"
 
+    # ---------- 随机性 ----------
     def test_sa_different_seeds_different_results(self, n20_dataset):
         # 验证算法对随机种子敏感（不收敛到单一解），保证探索能力
         spots, cost_mat, _ = n20_dataset
@@ -93,6 +99,7 @@ class TestSA:
             "不同随机种子应产生不同或相同的最优解"
         )
 
+    # ---------- 扩展性 ----------
     def test_sa_on_larger_dataset(self, n60_dataset):
         # n60（60 个景点）验证求解器在大规模问题下的可扩展性和解覆盖能力
         spots, cost_mat, _ = n60_dataset

@@ -17,9 +17,9 @@
 
 修改函数签名或新增公开 API 时，遵循以下顺序：
 
-1. **先更新 `__init__.py`** 顶部的接口清单注释块
+1. **先更新 `__init__.py` 的 `__all__` 列表**
 2. **再修改**对应的实现文件
-3. **确保**接口清单与 `__all__` 列表保持同步
+3. **确保**`__all__` 中已包含新增的公开 API
 4. **重命名或删除**：遵循相同的先更新清单、再修改代码的顺序。对于重命名，建议保留旧名作为别名（`old_name = new_name`）并标记 `# Deprecated`，给予下游调用方过渡期
 
 ### 编码约定
@@ -32,7 +32,10 @@
 def parse_time(s: str | None) -> tuple[int, int] | None: ...
 ```
 
-> 已知缺漏：`planner.py`、`pipeline.py` 部分函数缺少类型注解，需补全。
+**类型注解执行边界**：
+- 强制范围：公开 API（`__all__` 导出的函数/类）必须完整标注类型
+- 推荐范围：内部私有函数推荐标注，简单单行函数可豁免
+- NumPy 补充：数组统一标注为 `np.ndarray`，关键矩阵在 docstring 补充维度说明
 
 **命名风格**：变量/函数使用 `snake_case`，类使用 `PascalCase`，常量使用 `UPPER_CASE`。
 
@@ -66,6 +69,13 @@ import logging
 logger = logging.getLogger(__name__)
 ```
 
+**日志级别约定**：
+- DEBUG：开发调试用，不提交生产
+- INFO：正常业务流程节点
+- WARNING：异常但可自动恢复
+- ERROR：流程中断致命错误
+- 异常优先使用 Python 内置类型（ValueError/TypeError/KeyError），不滥用自定义异常
+
 **TODO/FIXME 格式**：统一使用 `# TODO: xxx` / `# FIXME: xxx` 格式，禁止其他变体。
 
 **独立运行入口**：每个模块可以保留 `if __name__ == "__main__":` 作为测试入口。
@@ -77,6 +87,8 @@ def solve(dis_matrix, initial_solution: list[int] | None = None):
     if initial_solution is None:
         initial_solution = []
 ```
+
+**单函数长度软约束**：单函数代码建议不超过 80 行，核心算法可放宽至 120 行。超过后优先拆分子函数。
 
 #### NumPy / Numba 专项
 
@@ -96,31 +108,6 @@ def solve(dis_matrix, initial_solution: list[int] | None = None):
 
 ### 接口清单规范
 
-#### 文件头路径注释
-
-每个 `.py` 文件顶部标注模块路径：
-
-```text
-# backend/engine/vns.py
-```
-
-#### 接口清单（文件顶部）
-
-对外暴露的接口在文件头部集中列出，每行格式为 `函数名(参数...) -> 返回值说明`：
-
-```text
-# ================== 接口清单 ==================
-# VNSSolver(city_indices, spots_dict, ...) -> 求解器实例
-# solver.solve(dis_matrix) -> dict
-```
-
-**底线规则**：
-- 仅列模块顶层函数 + 类核心入口方法
-- **不列** getter/辅助方法/私有函数（以下划线开头），如 `engine/__init__.py` 的 `solver.get_elite_pool()` 应移除
-- 接口清单仅用于快速预览，`__all__` 为公开 API 的唯一真值
-
-#### `__init__.py` 导出
-
 使用 `__all__` 明确声明模块的公开 API，替代手写接口清单的维护负担：
 
 ```text
@@ -129,7 +116,6 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 
 **净化规则**：
 - `__all__` 不得包含下划线开头的私有函数，如 `data/__init__.py` 的 `_parse_opentime_to_tw` 应移除
-- 接口清单与 `__all__` 双源主从关系：`__all__` 为唯一真值，顶部注释清单仅用于快速预览
 
 > 当前接口清单以手动注释块维护。未来如引入 Sphinx 等文档工具，可考虑从函数/类 Docstring 中自动提取接口文档，配合 `sphinx-apidoc` 生成，减少人工维护成本。
 
@@ -141,9 +127,9 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 
 | 层级 | 范围 | 注释要求 |
 |------|------|---------|
-| **P0** | 核心算法模块（vns.py、ca.py、clustering.py、fitness.py） | 参数设计说明 + Google docstring + 行内 Why 注释 |
-| **P1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | Google docstring + 关键逻辑 Why 注释（跳过参数设计说明） |
-| **P2** | 测试/config（tests/*.py、config.py） | 行内 Why 注释即可 |
+| **L0** | 核心算法（vns.py、ca.py、clustering.py、fitness.py） | P2~P3 标准：参数设计说明 + Google docstring + 行内 Why |
+| **L1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | P1~P2 标准：Google docstring + 关键逻辑 Why |
+| **L2** | 测试/config（tests/*.py、config.py） | P0~P1 标准：行内 Why 即可 |
 
 #### 段落分隔线
 

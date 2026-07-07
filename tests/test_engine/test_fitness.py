@@ -3,9 +3,13 @@ import numpy as np
 from backend.engine.fitness import analyze_solution
 
 
+# ================== 适应度函数 ==================
+
+
 class TestFitness:
     """适应度函数的成本分量与边界条件验证"""
 
+    # ---------- 基础成本 ----------
     def test_basic_cost_components(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -46,6 +50,7 @@ class TestFitness:
         assert late_pen == 0, f"不应有迟到惩罚: {late_pen}"
         assert len(violations) == 0, f"不应有违规: {violations}"
 
+    # ---------- 惩罚边界 ----------
     def test_early_arrival_incurs_wait_penalty(self):
         spots = {
             0: {"name": "depot", "tw": (0, 1000), "stay": 0},

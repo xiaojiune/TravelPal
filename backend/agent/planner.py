@@ -2,7 +2,7 @@ import numpy as np
 from backend.engine.search import cluster_and_solve, solve_groups
 
 
-def adjust_plan_days(spots_dict, cost_matrix, dist_matrix, new_n_days):
+def adjust_plan_days(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:
     """调整方案天数，保持景点不变，用新 n_days 重新规划。
 
     Args:
@@ -35,11 +35,14 @@ def adjust_plan_days(spots_dict, cost_matrix, dist_matrix, new_n_days):
         "solution": solution,
         "best_days": new_n_days,
         "best_m": result["best_m"],
-        "daily_schedules": daily_schedules,
-    }
+    "daily_schedules": daily_schedules,
+}
 
 
-def remove_poi_from_plan(spots_dict, cost_matrix, dist_matrix, routes, poi_name):
+# ================== 移除景点 ==================
+
+
+def remove_poi_from_plan(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix: np.ndarray, routes: list, poi_name: str) -> dict:
     """从方案中移除指定景点并重新求解。
 
     Args:

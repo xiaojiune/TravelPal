@@ -3,9 +3,13 @@ import pytest
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 
 
+# ================== 聚类方法 ==================
+
+
 class TestClustering:
     """6 种聚类方法的正确性与分组覆盖验证"""
 
+    # ---------- 基础验证 ----------
     def test_all_methods_return_valid_groups(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -40,6 +44,7 @@ class TestClustering:
                     f"{full_name}: k={k}, 实际组数={len(groups)}"
                 )
 
+    # ---------- 分组质量 ----------
     def test_each_group_nonempty(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0

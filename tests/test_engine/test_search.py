@@ -2,9 +2,13 @@ import pytest
 from backend.engine.search import cluster_and_solve, ca_suggest
 
 
+# ================== CA 全参数搜索 ==================
+
+
 class TestCASuggest:
     """ca_suggest 全参数搜索的早退、去重与排序逻辑验证"""
 
+# ---------- 基础用例 ----------
     def test_returns_suggestions(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -73,9 +77,13 @@ class TestCASuggest:
         assert len(searched_days) < 9, f"早退未生效：搜索了 {len(searched_days)} 个天数"
 
 
+# ================== 双模式分发 ==================
+
+
 class TestClusterAndSolve:
     """cluster_and_solve 双模式（fast/deep）与天数分发逻辑验证"""
 
+    # ---------- fast 模式 ----------
     def test_fast_mode_with_n_days(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -91,6 +99,7 @@ class TestClusterAndSolve:
         assert result["solution"]["total_cost"] > 0
         assert result["solution"]["valid"]
 
+    # ---------- deep 模式 ----------
     def test_deep_mode_with_n_days(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -116,6 +125,7 @@ class TestClusterAndSolve:
                 late_return_weight=50.0,
             )
 
+    # ---------- fast 无天数 ----------
     def test_fast_mode_without_n_days_returns_suggestions(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -129,6 +139,7 @@ class TestClusterAndSolve:
         assert result["type"] == "suggestion"
         assert len(result["suggestions"]) >= 1
 
+    # ---------- 解有效性验证 ----------
     def test_routes_cover_all_nodes(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
@@ -164,6 +175,7 @@ class TestClusterAndSolve:
                 assert route[-1] == depot, f"{mode}: 应以 depot 结束"
                 assert len(route) >= 3, f"{mode}: 至少 depot-景点-depot"
 
+    # ---------- 扩展性 ----------
     @pytest.mark.slow
     def test_on_larger_dataset(self, n60_dataset):
         # n60 验证编排层在大规模场景下两种模式均能产出可行解

@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
+# ================== 辅助函数 ==================
 
 def _build_poi_cache(req: PlanRequest):
     """将 PlanRequest 转换为 run_planning 所需的 poi_cache 格式。
@@ -36,6 +37,7 @@ def _build_poi_cache(req: PlanRequest):
     ]
     return {"hotel": hotel, "spots": spots}
 
+# ================== 路由端点 ==================
 
 @router.post("/api/poi-lookup", response_model=POILookupResponse)
 async def poi_lookup(req: POILookupRequest):
@@ -66,6 +68,7 @@ async def poi_lookup(req: POILookupRequest):
 
     return POILookupResponse(items=items, failed=failed)
 
+# ---------- 规划相关 ----------
 
 @router.post("/api/suggest")
 async def suggest(req: PlanRequest):
@@ -113,6 +116,7 @@ async def plan(req: PlanRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ---------- Agent 对话 ----------
 
 @router.post("/api/chat")
 async def chat(req: ChatRequest):
@@ -125,6 +129,7 @@ async def chat(req: ChatRequest):
         messages = build_chat_messages(req.message, req.plan_result)
 
         async def _stream():
+            """SSE 生成器：逐 token 推送 chat_stream 输出，最后发 done 信号。"""
             async for token in chat_stream(messages):
                 yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"

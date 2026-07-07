@@ -4,6 +4,7 @@ from backend.engine.vns import VNSSolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
 
+# ================== 分组求解 ==================
 
 def balance_groups(groups, spots, depot=0):
     """
@@ -123,6 +124,7 @@ def solve_groups(groups, spots, cost_mat, solver_type="CA",
 
 
 def _deduplicate(results):
+    """用 frozenset 对 results 按分组结构去重，保留顺序中首次出现的唯一解。"""
     seen = set()
     deduped = []
     for item in results:
@@ -133,6 +135,7 @@ def _deduplicate(results):
             deduped.append(item)
     return deduped
 
+# ================== CA 全参数搜索 ==================
 
 def ca_suggest(spots, depot, cost_mat, min_days=None, max_days=None,
                early_stop_gain_threshold=None, stop_consecutive_worse=None,
@@ -231,6 +234,7 @@ def ca_suggest(spots, depot, cost_mat, min_days=None, max_days=None,
         "message": "请指定行程天数以获得最终方案",
     }
 
+# ================== 双模式分发 ==================
 
 def cluster_and_solve(spots, depot, cost_mat, mode="fast",
                       n_days=None, travel_speed=1.0,

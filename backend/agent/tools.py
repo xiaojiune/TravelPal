@@ -4,6 +4,8 @@ from datetime import datetime
 from openai import OpenAI
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 
+# ================== Prompt 模板 ==================
+
 _HOLIDAYS_AVAILABLE = False
 try:
     import holidays
@@ -33,6 +35,8 @@ def _get_date_context() -> str:
         parts.append("当日为周末")
     return "；".join(parts)
 
+
+# ================== 日期上下文 ==================
 
 _PARSE_PROMPT = (
     "你是一个营业时间解析助手。\n"
@@ -67,6 +71,8 @@ _CHAT_SYSTEM = (
     "6. 如果用户的问题超出了旅行范围，温和地引导回旅行话题"
 )
 
+
+# ---------- 对话消息构建 ----------
 
 def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
     """构建对话消息列表。
@@ -133,9 +139,12 @@ async def stream_chat(messages: list[dict]):
             yield delta.content
             await asyncio.sleep(0)
 
+# ================== 公开 API ==================
 
 MOCK_MODE = True
 
+
+# ---------- SSE 流式聊天 ----------
 
 async def chat_stream(messages: list[dict]):
     """统一入口：MOCK_MODE=True 时模拟，否则调 DeepSeek。

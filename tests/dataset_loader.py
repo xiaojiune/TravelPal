@@ -48,6 +48,9 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
     return spots, cost_mat, n
 
 
+# ================== MDS 降维 ==================
+
+
 def _compute_mds_coords(cost_mat: np.ndarray) -> np.ndarray:
     """通过 MDS 将距离矩阵降维为二维坐标，用于景点位置展示"""
     mds = MDS(
@@ -60,6 +63,9 @@ def _compute_mds_coords(cost_mat: np.ndarray) -> np.ndarray:
         max_iter=1000,
     )
     return mds.fit_transform(cost_mat)
+
+
+# ================== 数据集路径查找 ==================
 
 
 def find_dataset(subdir: str, instance: int = 1) -> str:

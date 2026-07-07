@@ -5,6 +5,9 @@
 
 import numpy as np
 
+# ================== 规则模板 ==================
+
+# ---------- 子规则 ----------
 
 def check_wait(solution, spots, cost_mat):
     """等待惩罚超过阈值时提醒早到。"""
@@ -57,6 +60,8 @@ def check_normal(solution, spots, cost_mat):
 
 RULES = [check_wait, check_late, check_density, check_distance, check_normal]
 
+
+# ================== LLM 润色 ==================
 
 def polish_with_llm(text: str, enabled: bool = False) -> str:
     # TODO: enabled=True 时调用 DeepSeek API 将评语润色为更口语化的表达

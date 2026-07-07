@@ -20,6 +20,9 @@ class POIItem(BaseModel):
     stay: float = Field(default=0, description="停留时间，分钟")
 
 
+# ================== 查询请求 / 响应 ==================
+
+
 class POILookupRequest(BaseModel):
     """POI 坐标/地址查询请求。
 
@@ -52,6 +55,9 @@ class POILookupResponse(BaseModel):
     """
     items: list[POILookupItem]
     failed: list[str]
+
+
+# ================== 规划请求 ==================
 
 
 class PlanRequest(BaseModel):
@@ -92,6 +98,9 @@ class PlanRequest(BaseModel):
                                       description="晚归惩罚权重（默认 50.0）")
 
 
+# ================== Agent 对话 ==================
+
+
 class ChatRequest(BaseModel):
     """LLM Agent 对话请求。
 
@@ -100,6 +109,9 @@ class ChatRequest(BaseModel):
     """
     message: str = Field(min_length=1, description="用户输入的消息")
     plan_result: dict | None = Field(default=None, description="规划结果上下文")
+
+
+# ================== 方案调整 ==================
 
 
 class PlanAdjustRequest(BaseModel):

@@ -9,16 +9,19 @@ from backend.data.amap_loader import build_real_data
 from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
 from backend.agent.commentator import generate_commentary
 
+# ================== 常量 ==================
+
 TRAVEL_SPEED = 1.0
 
+# ================== 主入口 ==================
 
-def run_planning(poi_cache, city, hotel_name,
-                 penalty_weight, early_wait_weight, late_return_weight,
-                 mode="fast", n_days=None):
+def run_planning(poi_cache: dict, city: str, hotel_name: str,
+                 penalty_weight: float, early_wait_weight: float, late_return_weight: float,
+                 mode: str = "fast", n_days: int | None = None) -> dict:
     """
     双阶段流程编排入口。
 
-    加载真实数据 → 构建景点字典 → 执行 cluster_and_solve → 生成每日行程 → 返回前端可视乎化数据。
+    加载真实数据 → 构建景点字典 → 执行 cluster_and_solve → 生成每日行程 → 返回前端可视化数据。
 
     Args:
         poi_cache: 包含 hotel 和 spots 的缓存数据（由前端/外部传入）。
@@ -99,8 +102,9 @@ def run_planning(poi_cache, city, hotel_name,
         "commentary": commentary,
     }
 
+# ================== 工具函数 ==================
 
-def _rebuild_schedule(routes, spots_dict, dist_matrix):
+def _rebuild_schedule(routes: list, spots_dict: dict, dist_matrix: np.ndarray) -> list:
     """从路径和景点字典重建每日行程表。
 
     Args:
@@ -170,8 +174,9 @@ def _rebuild_schedule(routes, spots_dict, dist_matrix):
         daily_schedules.append(schedule)
     return daily_schedules
 
+# ================== 方案调整 ==================
 
-def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustments):
+def adjust_plan(spots_dict: dict, cost_matrix_list: list, dist_matrix_list: list, routes: list, adjustments: dict) -> dict:
     """
     对已有方案执行调整（均衡、移除景点、改天数）。
 

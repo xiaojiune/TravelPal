@@ -208,7 +208,14 @@ class VNSSolver:
     # ---------- 初始解生成 ----------
 
     def _init_nearest_neighbor(self, cost_mat):
-        """最近邻贪心初始解"""
+        """最近邻贪心初始解：从未访问节点中选成本最小的加入路径。
+
+        Args:
+            cost_mat: 成本矩阵。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         unvisited = set(self.city_indices)
         route = [self.depot_index]
         cur = self.depot_index
@@ -221,7 +228,11 @@ class VNSSolver:
         return route
 
     def _init_time_window(self):
-        """按时间窗起始时间排序的初始解"""
+        """按时间窗起始时间排序的初始解：早开门的景点优先访问。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
             cities_with_time.sort(key=lambda x: x[1])
@@ -229,7 +240,11 @@ class VNSSolver:
         return [self.depot_index, self.depot_index]
 
     def _init_random(self):
-        """随机排列初始解"""
+        """随机排列初始解：提供种群多样性，防止陷入局部最优。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         route = self.city_indices.copy()
         random.shuffle(route)
         return [self.depot_index] + route + [self.depot_index]
@@ -237,7 +252,14 @@ class VNSSolver:
     # ---------- 邻域算子 ----------
 
     def _swap(self, route):
-        """Swap 算子：交换内部两点位置"""
+        """Swap 算子：交换内部两点位置，改变节点访问顺序。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -247,7 +269,14 @@ class VNSSolver:
         return r
 
     def _inversion(self, route):
-        """Inversion 算子：反转内部一段子序列"""
+        """Inversion 算子：反转内部一段子序列，改变路径拓扑。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -258,7 +287,14 @@ class VNSSolver:
         return r
 
     def _insert(self, route):
-        """Insert 算子：随机删除一个节点并插入到另一位置"""
+        """Insert 算子：随机删除一个节点并插入到另一位置，改变路径结构。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -272,7 +308,14 @@ class VNSSolver:
         return r
 
     def _2opt(self, route):
-        """2-opt 算子：反转内部两个切割点之间的子序列"""
+        """2-opt 算子：反转内部两个切割点之间的子序列，消除路径交叉。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 3: return r
@@ -456,7 +499,12 @@ class VNSSolver:
     # ---------- 精英池管理 ----------
 
     def _update_elite(self, solution, cost):
-        """将解加入精英池，超出容量时替换最差者"""
+        """将解加入精英池，超出容量时替换最差者。
+
+        Args:
+            solution: 当前解路径。
+            cost: 当前解成本。
+        """
         if len(self.elite_pool) < self.params['elite_size']:
             self.elite_pool.append((solution.copy(), cost))
         else:

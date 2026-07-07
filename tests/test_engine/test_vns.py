@@ -3,9 +3,13 @@ from backend.engine.vns import VNSSolver
 from backend.engine.ca import CASolver
 
 
+# ================== VNS 求解器 ==================
+
+
 class TestVNS:
     """VNS 求解器的多起点收敛、精英池与 CA 对比验证"""
 
+    # ---------- 基础正确性 ----------
     def test_vns_solution_valid(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
@@ -49,6 +53,7 @@ class TestVNS:
         assert len(elite) <= 3, f"精英池应不超过 3 个: {len(elite)}"
         assert len(elite) >= 1, "精英池至少应有 1 个解"
 
+    # ---------- 多起点 ----------
     def test_vns_multi_start_best_selected(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
@@ -60,6 +65,7 @@ class TestVNS:
         assert res["best_solution"][-1] == 0
         assert res["best_cost"] > 0
 
+    # ---------- 收敛 ----------
     def test_vns_convergence(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))

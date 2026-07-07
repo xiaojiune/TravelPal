@@ -19,6 +19,12 @@
             {{ balancing ? '均衡中...' : '⚖️ 均衡分配' }}
           </button>
         </div>
+        <div class="metric metric-action metric-days">
+          <input type="number" v-model.number="newDays" min="1" class="days-input" />
+          <button class="btn btn-outline" @click="doAdjustDays" :disabled="adjusting">
+            {{ adjusting ? '调整中...' : '📅 调整天数' }}
+          </button>
+        </div>
       </div>
 
       <div v-if="store.planResult.commentary" class="commentary">
@@ -30,7 +36,7 @@
           <AmapMap :routes="solution.routes" :spots="store.planResult.spots" :amapKey="store.planResult.amap_api_key || ''" />
         </div>
         <div class="plan-schedule">
-          <SchedulePanel :daily-schedules="store.planResult.daily_schedules" />
+          <SchedulePanel :daily-schedules="store.planResult.daily_schedules" :on-remove-poi="doRemovePoi" />
         </div>
       </div>
     </template>
@@ -48,6 +54,12 @@ import SchedulePanel from '../components/SchedulePanel.vue'
 const store = usePlanStore()
 const solution = computed(() => store.planResult.solution || {})
 const balancing = ref(false)
+const adjusting = ref(false)
+const newDays = ref(1)
+
+watch(() => store.planResult?.best_days, (val) => {
+  if (val) newDays.value = val
+})
 
 // 收到新规划结果时写入 localStorage 历史记录
 function saveToHistory() {
@@ -90,6 +102,40 @@ async function doBalance() {
     balancing.value = false
   }
 }
+
+async function doAdjustDays() {
+  adjusting.value = true
+  try {
+    const data = await patchPlanAdjust({
+      spots: store.planResult.spots,
+      cost_matrix: store.planResult.cost_matrix,
+      dist_matrix: store.planResult.dist_matrix,
+      routes: solution.value.routes,
+      adjustments: { adjust_days: newDays.value },
+    })
+    store.planResult = data
+  } catch (e) {
+    alert('调整天数失败: ' + (e.response?.data?.detail || e.message))
+  } finally {
+    adjusting.value = false
+  }
+}
+
+async function doRemovePoi(name) {
+  if (!confirm(`确定移除「${name}」吗？移除后将重新规划。`)) return
+  try {
+    const data = await patchPlanAdjust({
+      spots: store.planResult.spots,
+      cost_matrix: store.planResult.cost_matrix,
+      dist_matrix: store.planResult.dist_matrix,
+      routes: solution.value.routes,
+      adjustments: { remove_poi: name },
+    })
+    store.planResult = data
+  } catch (e) {
+    alert('移除景点失败: ' + (e.response?.data?.detail || e.message))
+  }
+}
 </script>
 
 <style scoped>
@@ -116,4 +162,6 @@ async function doBalance() {
 .plan-schedule { flex: 1; min-width: 320px; }
 .btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
 .btn-primary { background: #1a73e8; color: #fff; }
+.metric-days { gap: 6px; }
+.days-input { width: 52px; text-align: center; padding: 6px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
 </style>

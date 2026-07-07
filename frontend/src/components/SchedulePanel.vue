@@ -14,6 +14,7 @@
             <th>停留</th>
             <th>到达状态</th>
             <th>离开状态</th>
+            <th v-if="onRemovePoi"></th>
           </tr>
         </thead>
         <tbody>
@@ -25,6 +26,10 @@
             <td>{{ item.stay ?? '-' }}</td>
             <td>{{ statusClass(item.arrival_status) }}</td>
             <td>{{ statusClass(item.departure_status) }}</td>
+            <td v-if="onRemovePoi && item.name !== '酒店（返回）'">
+              <button class="btn-remove" @click="onRemovePoi(item.name)" title="移除景点">✕</button>
+            </td>
+            <td v-else-if="onRemovePoi"></td>
           </tr>
         </tbody>
       </table>
@@ -40,7 +45,10 @@
  * @param {Array} dailySchedules - 每日行程数组，每项含
  *   name/arrival/departure/tw/stay/arrival_status/departure_status
  */
-defineProps({ dailySchedules: { type: Array, default: () => [] } })
+defineProps({
+  dailySchedules: { type: Array, default: () => [] },
+  onRemovePoi: { type: Function, default: null },
+})
 
 /**
  * 将分钟数转换为 HH:MM 格式。
@@ -76,4 +84,11 @@ function statusClass(s) {
 .schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e0e0e0; color: #888; font-weight: 600; }
 .schedule-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }
 .depot-row td { color: #999; font-style: italic; }
+.btn-remove {
+  background: none; border: 1px solid #e0e0e0; border-radius: 4px;
+  cursor: pointer; color: #d32f2f; font-size: 12px; width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; padding: 0;
+}
+.btn-remove:hover { background: #ffebee; border-color: #d32f2f; }
 </style>

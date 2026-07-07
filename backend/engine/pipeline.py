@@ -40,8 +40,7 @@ def run_planning(poi_cache, city, hotel_name,
              [(s["lon"], s["lat"]) for s in poi_cache["spots"]]
 
     print("正在调用驾车API计算成本矩阵...")
-    cost_matrix_hours, dist_matrix, polylines = build_real_data(poi_names, coords)
-    cost_matrix = np.round(cost_matrix_hours * 60, 0)
+    cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
     print("成本矩阵构建完成。\n")
 
     spots = {0: {"name": hotel_name, "tw": poi_cache["hotel"]["tw"], "stay": 0,

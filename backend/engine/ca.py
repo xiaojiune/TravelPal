@@ -28,7 +28,7 @@ CA_DEFAULT_PARAMS = {
 # ================== Numba 适应度内核 ==================
 
 @njit(cache=True)
-def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
+def _cal_fitness_numba(line, cost_mat, travel_speed, penalty_weight,
                        early_wait_weight, late_return_weight, depot_index,
                        spots_start, spots_end, spots_stay,
                        use_real_time_matrix=False):
@@ -44,7 +44,7 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
 
     Args:
         line: 路径数组（含起终点的完整路径）。
-        dis_matrix: 距离/旅行时间矩阵。
+        cost_mat: 距离/旅行时间矩阵。
         travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时该参数无效。
         penalty_weight: 迟到惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
@@ -71,7 +71,7 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
     for i in range(len(line) - 1):
         fr = line[i]
         to = line[i + 1]
-        d = dis_matrix[fr][to]
+        d = cost_mat[fr][to]
         travel_sum += d
         travel_time = d if use_real_time_matrix else d / travel_speed
         arrival = current_time + travel_time
@@ -154,20 +154,20 @@ class CASolver:
 
     # ---------- 适应度计算 ----------
 
-    def _cal_fitness(self, line, dis_matrix):
+    def _cal_fitness(self, line, cost_mat):
         """直接调用 Numba 内核评估路径成本
 
         CA 单次运行中几乎不会重复评估同一解，故不设缓存。
 
         Args:
             line: 路径列表（含起终点的完整路径）。
-            dis_matrix: 距离/旅行时间矩阵。
+            cost_mat: 距离/旅行时间矩阵。
 
         Returns:
             Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
         """
         line_arr = np.array(line, dtype=np.int32)
-        dis_arr = np.asarray(dis_matrix, dtype=np.float64)
+        dis_arr = np.asarray(cost_mat, dtype=np.float64)
         return _cal_fitness_numba(
             line_arr, dis_arr,
             self.travel_speed, self.penalty_weight,
@@ -224,7 +224,7 @@ class CASolver:
 
     # ---------- 时间窗引导邻域 ----------
 
-    def _time_window_guided_neighbor(self, solution, dis_matrix, temp_ratio):
+    def _time_window_guided_neighbor(self, solution, cost_mat, temp_ratio):
         """
         时间窗引导邻域生成。
 
@@ -238,7 +238,7 @@ class CASolver:
         current_time = depot_start
         for i in range(len(solution) - 1):
             fr, to = solution[i], solution[i + 1]
-            dis = dis_matrix[fr][to]
+            dis = cost_mat[fr][to]
             arrival = current_time + dis / self.travel_speed
             if to != self.depot_index:
                 spot = self.spots_dict[to]
@@ -267,26 +267,26 @@ class CASolver:
         inner.insert(new_pos, city)
         return [self.depot_index] + inner + [self.depot_index]
 
-    def _get_neighbor(self, solution, iteration, max_iter, dis_matrix):
+    def _get_neighbor(self, solution, iteration, max_iter, cost_mat):
         """混合邻域选择：50% 概率使用时间窗引导，50% 使用标准邻域
 
         Args:
             solution: 当前解路径。
             iteration: 当前迭代次数。
             max_iter: 总迭代次数。
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
 
         Returns:
             List[int]: 新邻居解路径。
         """
         temp_ratio = iteration / max_iter if max_iter > 0 else 0.5
         if self.params['use_time_window_guided'] and random.random() < 0.5:
-            return self._time_window_guided_neighbor(solution, dis_matrix, temp_ratio)
+            return self._time_window_guided_neighbor(solution, cost_mat, temp_ratio)
         return self._standard_neighbor(solution, temp_ratio)
 
     # ---------- 2-opt 局部搜索 ----------
 
-    def _local_search_2opt(self, solution, dis_matrix, max_iter=20):
+    def _local_search_2opt(self, solution, cost_mat, max_iter=20):
         """
         2-opt 局部搜索（First Improvement）。
 
@@ -294,7 +294,7 @@ class CASolver:
         找到首个改善即接受，牺牲单步最优性换取更快的整体收敛速度。
         """
         best_sol = solution.copy()
-        best_cost, _, _ = self._cal_fitness(best_sol, dis_matrix)
+        best_cost, _, _ = self._cal_fitness(best_sol, cost_mat)
         improved = True
         it = 0
         while improved and it < max_iter:
@@ -305,7 +305,7 @@ class CASolver:
                     new_inner = inner.copy()
                     new_inner[i:j + 1] = reversed(new_inner[i:j + 1])
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
-                    new_cost, _, _ = self._cal_fitness(new_sol, dis_matrix)
+                    new_cost, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if new_cost < best_cost:
                         best_sol, best_cost = new_sol, new_cost
                         improved = True
@@ -317,12 +317,12 @@ class CASolver:
 
     # ---------- 主求解入口 ----------
 
-    def solve(self, dis_matrix):
+    def solve(self, cost_mat):
         """
         执行压缩退火主循环。
 
         Args:
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
 
         Returns:
             dict: 包含以下键：
@@ -333,7 +333,7 @@ class CASolver:
                 - convergence_history (List[float]): 收敛曲线，每轮迭代后的最优成本。
         """
         cur = self._initial_solution()
-        cur_cost, cur_dist, cur_pen = self._cal_fitness(cur, dis_matrix)
+        cur_cost, cur_dist, cur_pen = self._cal_fitness(cur, cost_mat)
         best_sol = cur.copy()
         best_cost, best_dist, best_pen = cur_cost, cur_dist, cur_pen
         conv = [best_cost]
@@ -354,8 +354,8 @@ class CASolver:
                 compress_factor = 1.0
 
             for _ in range(self.params['inner_iter']):
-                neighbor = self._get_neighbor(cur, iteration, max_iter, dis_matrix)
-                n_cost, n_dist, n_pen = self._cal_fitness(neighbor, dis_matrix)
+                neighbor = self._get_neighbor(cur, iteration, max_iter, cost_mat)
+                n_cost, n_dist, n_pen = self._cal_fitness(neighbor, cost_mat)
 
                 if use_comp:
                     # 压缩退火接受准则：距离差 + 压缩系数 × 惩罚差
@@ -378,8 +378,8 @@ class CASolver:
 
         # 最终 2-opt 精细化
         if best_sol:
-            refined = self._local_search_2opt(best_sol, dis_matrix, max_iter=30)
-            r_cost, r_dist, r_pen = self._cal_fitness(refined, dis_matrix)
+            refined = self._local_search_2opt(best_sol, cost_mat, max_iter=30)
+            r_cost, r_dist, r_pen = self._cal_fitness(refined, cost_mat)
             if r_cost < best_cost:
                 best_sol, best_cost, best_dist, best_pen = refined, r_cost, r_dist, r_pen
 

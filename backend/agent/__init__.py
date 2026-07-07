@@ -6,7 +6,7 @@
 # chat_stream(messages) -> Generator[str]                      SSE 流式聊天（Mock 或 DeepSeek）
 #
 # ---- commentator.py ----
-# generate_commentary(solution, spots, dist_mat) -> str        规则模板生成规划评语
+# generate_commentary(solution, spots, cost_mat) -> str        规则模板生成规划评语
 #
 # ---- planner.py ----
 # adjust_plan_days(spots_dict, cost_matrix, dist_matrix, new_n_days) -> dict  调整方案天数并重新规划

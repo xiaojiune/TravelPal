@@ -195,7 +195,7 @@ def build_real_data(poi_names, coords, delay=0.4):
         delay: API 调用间隔秒数，默认 0.4（高德 QPS 限制约 2-3 次/秒）。
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, dict]: cost_matrix_hours（小时）、dist_matrix_km、polylines_dict。
+        Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))
@@ -214,13 +214,13 @@ def build_real_data(poi_names, coords, delay=0.4):
                 continue
             d_km, dur, poly = _get_driving_data(coords[i], coords[j])
             if dur is not None:
-                cost[i][j] = round(dur / 3600.0, 2)
+                cost[i][j] = round(dur / 60.0, 2)
                 dist[i][j] = round(d_km, 2)
                 if poly:
                     polylines[(i, j)] = poly
             else:
                 print(f"警告：{i} -> {j} 驾车路径规划失败")
-                # -1 标记不可达，下游在计算路由时需跳过此类边
+                # -1 标记不可达（分钟级），下游在计算路由时需跳过此类边
                 cost[i][j] = -1
                 dist[i][j] = -1
             # 每次 API 调用后等待 delay 秒，控制 QPS 避免被高德限流

@@ -6,7 +6,7 @@
 import numpy as np
 
 
-def check_wait(solution, spots, dist_mat):
+def check_wait(solution, spots, cost_mat):
     """等待惩罚超过阈值时提醒早到。"""
     wait = solution.get("wait", 0)
     if wait > 50:
@@ -14,7 +14,7 @@ def check_wait(solution, spots, dist_mat):
     return None
 
 
-def check_late(solution, spots, dist_mat):
+def check_late(solution, spots, cost_mat):
     """迟到惩罚超过阈值时提醒安排太满。"""
     late = solution.get("late", 0)
     if late > 50:
@@ -22,7 +22,7 @@ def check_late(solution, spots, dist_mat):
     return None
 
 
-def check_density(solution, spots, dist_mat):
+def check_density(solution, spots, cost_mat):
     """单日景点过多时提醒行程紧凑。"""
     max_per_day = 5
     triggered = []
@@ -36,12 +36,12 @@ def check_density(solution, spots, dist_mat):
     return None
 
 
-def check_distance(solution, spots, dist_mat):
+def check_distance(solution, spots, cost_mat):
     """单日路程过长时提醒注意交通时间。"""
     threshold_km = 50
     triggered = []
     for di, route in enumerate(solution["routes"]):
-        day_dist = sum(dist_mat[route[i]][route[i + 1]] for i in range(len(route) - 1))
+        day_dist = sum(cost_mat[route[i]][route[i + 1]] for i in range(len(route) - 1))
         if day_dist > threshold_km:
             triggered.append((di + 1, int(day_dist)))
     if triggered:
@@ -50,7 +50,7 @@ def check_distance(solution, spots, dist_mat):
     return None
 
 
-def check_normal(solution, spots, dist_mat):
+def check_normal(solution, spots, cost_mat):
     """兜底：一切正常时给出正面评语。"""
     return "整体节奏适中，是个舒服的安排"
 
@@ -63,20 +63,20 @@ def polish_with_llm(text: str, enabled: bool = False) -> str:
     return text
 
 
-def generate_commentary(solution: dict, spots: dict, dist_mat: np.ndarray) -> str:
+def generate_commentary(solution: dict, spots: dict, cost_mat: np.ndarray) -> str:
     """遍历规则注册表生成评语，取前两条非空结果拼接。
 
     Args:
         solution: solve_groups 返回的结果，含 routes/total_cost/wait/late 等。
         spots: 景点字典。
-        dist_mat: 距离矩阵（km）。
+        cost_mat: 距离矩阵（km）。
 
     Returns:
         拼接后的评语文本。
     """
     parts = []
     for rule in RULES:
-        result = rule(solution, spots, dist_mat)
+        result = rule(solution, spots, cost_mat)
         if result:
             parts.append(result)
         if len(parts) >= 2:

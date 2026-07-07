@@ -21,7 +21,7 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
         lines = f.readlines()
 
     n = int(lines[0].strip())
-    dist_mat = np.array([
+    cost_mat = np.array([
         list(map(int, lines[i + 1].strip().split()))
         for i in range(n)
     ], dtype=np.float64)
@@ -32,7 +32,7 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
         tw = (float(parts[0]), float(parts[1]))
         time_windows.append(tw)
 
-    coords = _compute_mds_coords(dist_mat)
+    coords = _compute_mds_coords(cost_mat)
 
     basename = os.path.splitext(os.path.basename(filepath))[0]
     spots = {}
@@ -45,10 +45,10 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
             "y": coords[i, 1],
         }
 
-    return spots, dist_mat, n
+    return spots, cost_mat, n
 
 
-def _compute_mds_coords(dist_mat: np.ndarray) -> np.ndarray:
+def _compute_mds_coords(cost_mat: np.ndarray) -> np.ndarray:
     """通过 MDS 将距离矩阵降维为二维坐标，用于景点位置展示"""
     mds = MDS(
         n_components=2,
@@ -59,7 +59,7 @@ def _compute_mds_coords(dist_mat: np.ndarray) -> np.ndarray:
         normalized_stress=False,
         max_iter=1000,
     )
-    return mds.fit_transform(dist_mat)
+    return mds.fit_transform(cost_mat)
 
 
 def find_dataset(subdir: str, instance: int = 1) -> str:

@@ -25,6 +25,11 @@ const routes = [
     name: 'Agent',
     component: () => import('../pages/AgentPage.vue'),
   },
+  {
+    path: '/history',
+    name: 'History',
+    component: () => import('../pages/HistoryPage.vue'),
+  },
 ]
 
 const router = createRouter({

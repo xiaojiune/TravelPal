@@ -39,7 +39,7 @@
 
 <script setup>
 // ====== 状态定义 ======
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePlanStore } from '../stores/plan'
 import { patchPlanAdjust } from '../services/api'
 import AmapMap from '../components/AmapMap.vue'
@@ -48,6 +48,29 @@ import SchedulePanel from '../components/SchedulePanel.vue'
 const store = usePlanStore()
 const solution = computed(() => store.planResult.solution || {})
 const balancing = ref(false)
+
+// 收到新规划结果时写入 localStorage 历史记录
+function saveToHistory() {
+  const r = store.planResult
+  if (!r) return
+  const key = `plan_${Date.now()}`
+  const record = {
+    id: key,
+    city: r.city || store.city,
+    hotel: store.hotelName,
+    n_days: r.best_days,
+    cost: r.solution?.total_cost,
+    spots: store.spots.length,
+    time: new Date().toLocaleString(),
+  }
+  const raw = localStorage.getItem('travelpal_history')
+  const list = raw ? JSON.parse(raw) : []
+  list.unshift(record)
+  if (list.length > 10) list.length = 10
+  localStorage.setItem('travelpal_history', JSON.stringify(list))
+}
+
+watch(() => store.planResult, (val) => { if (val) saveToHistory() })
 
 // ====== 数据操作 ======
 async function doBalance() {

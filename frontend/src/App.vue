@@ -8,6 +8,7 @@
         <router-link to="/suggest">方案建议</router-link>
         <router-link to="/plan">规划结果</router-link>
         <router-link to="/agent">AI 助手</router-link>
+        <router-link to="/history">历史记录</router-link>
       </div>
     </nav>
     <main class="main-content">

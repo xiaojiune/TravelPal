@@ -79,68 +79,7 @@ def run_planning(poi_cache, city, hotel_name,
 
     dataset_name = f"{city}_{len(poi_names)-1}spots_{result['best_days']}日游"
 
-    daily_schedules = []
-    for day_idx, route in enumerate(solution["routes"]):
-        schedule = []
-        current_time = spots[0]["tw"][0]
-        for i in range(len(route) - 1):
-            from_node = route[i]
-            to_node = route[i + 1]
-            travel_time = dist_matrix[from_node][to_node]
-            arrival_time = round(current_time + travel_time)
-
-            if to_node != 0:
-                original_start, original_end = spots[to_node]["original_tw"]
-                effective_start, effective_end = spots[to_node]["tw"]
-                stay = spots[to_node]["stay"]
-
-                # 到达维度：早到需等待，晚到则违规；离开维度：若实际离开时间超过原始关门时间算晚归
-                wait_time = max(0, effective_start - arrival_time)
-                late_arrival = max(0, arrival_time - effective_end)
-                actual_start = max(arrival_time, effective_start)
-                departure_time = actual_start + stay
-                late_departure = max(0, departure_time - original_end)
-
-                late_arrival_int = int(late_arrival)
-                wait_time_int = int(wait_time)
-                late_departure_int = int(late_departure)
-
-                if late_arrival_int > 0:
-                    arrival_status = f"迟到 {late_arrival_int} 分钟"
-                elif wait_time_int > 0:
-                    arrival_status = f"早到 {wait_time_int} 分钟"
-                else:
-                    arrival_status = "正常到达"
-
-                if late_departure_int > 0:
-                    departure_status = f"迟到 {late_departure_int} 分钟离开"
-                else:
-                    departure_status = "正常离开"
-
-                tw_str = f"{int(original_start // 60):02d}:{int(original_start % 60):02d} - {int(original_end // 60):02d}:{int(original_end % 60):02d}"
-                stay_str = f"{stay} min" if stay > 0 else "-"
-
-                schedule.append({
-                    "name": spots[to_node]["name"],
-                    "arrival": arrival_time,
-                    "departure": departure_time,
-                    "tw": tw_str,
-                    "stay": stay_str,
-                    "arrival_status": arrival_status,
-                    "departure_status": departure_status
-                })
-                current_time = departure_time
-            else:
-                schedule.append({
-                    "name": "酒店（返回）",
-                    "arrival": arrival_time,
-                    "departure": 0,
-                    "tw": "-",
-                    "stay": "-",
-                    "arrival_status": "",
-                    "departure_status": ""
-                })
-        daily_schedules.append(schedule)
+    daily_schedules = _rebuild_schedule(solution["routes"], spots, dist_matrix)
 
     algo_time = time.time() - total_start
     print("所有任务完成。\n")
@@ -162,39 +101,19 @@ def run_planning(poi_cache, city, hotel_name,
     }
 
 
-def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustments):
-    """
-    对已有方案执行调整（均衡、重算天数、重算某天）。
-
-    从 routes 重构分组 → 按 adjustments 调整 → 重新求解 → 生成新每日行程。
+def _rebuild_schedule(routes, spots_dict, dist_matrix):
+    """从路径和景点字典重建每日行程表。
 
     Args:
-        spots_dict: 景点字典（与 run_planning 返回的 spots 格式一致）。
-        cost_matrix_list: 成本矩阵（2D list，前端传回）。
-        dist_matrix_list: 距离矩阵（2D list，前端传回）。
-        routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，如 {"balance": true}。
+        routes: 路径列表，每组含首尾 depot (0)。
+        spots_dict: 景点字典。
+        dist_matrix: 距离矩阵。
 
     Returns:
-        dict: 与 run_planning 相同格式的完整规划结果。
+        list[list[dict]]: 每日行程列表。
     """
-    cost_matrix = np.array(cost_matrix_list)
-    dist_matrix = np.array(dist_matrix_list)
-    core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
-
-    if adjustments.get("balance"):
-        balanced = balance_groups(core_groups, spots_dict)
-        core_groups = [g[1:-1] for g in balanced]
-
-    result = solve_groups(
-        core_groups, spots_dict, cost_matrix,
-        solver_type="CA",
-        travel_speed=TRAVEL_SPEED,
-    )
-    print(f"调整后总成本: {result['total_cost']:.1f}\n")
-
     daily_schedules = []
-    for day_idx, route in enumerate(result["routes"]):
+    for route in routes:
         schedule = []
         current_time = spots_dict[0]["tw"][0]
         for i in range(len(route) - 1):
@@ -250,14 +169,74 @@ def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustme
                     "departure_status": "",
                 })
         daily_schedules.append(schedule)
+    return daily_schedules
+
+
+def adjust_plan(spots_dict, cost_matrix_list, dist_matrix_list, routes, adjustments):
+    """
+    对已有方案执行调整（均衡、移除景点、改天数）。
+
+    从 routes 重构分组 → 按 adjustments 类型分发 → 重新求解 → 生成新每日行程。
+
+    Args:
+        spots_dict: 景点字典（与 run_planning 返回的 spots 格式一致）。
+        cost_matrix_list: 成本矩阵（2D list，前端传回）。
+        dist_matrix_list: 距离矩阵（2D list，前端传回）。
+        routes: 当前方案路径列表，每组含首尾 depot。
+        adjustments: 调整指令 dict，支持：
+            - {"balance": true}
+            - {"adjust_days": <int>}
+            - {"remove_poi": "<poi_name>"}
+
+    Returns:
+        dict: 与 run_planning 相同格式的完整规划结果。
+    """
+    cost_matrix = np.array(cost_matrix_list)
+    dist_matrix = np.array(dist_matrix_list)
+
+    if "adjust_days" in adjustments:
+        from backend.agent.planner import adjust_plan_days
+        plan = adjust_plan_days(
+            spots_dict, cost_matrix, dist_matrix,
+            adjustments["adjust_days"],
+        )
+        daily_schedules = plan["daily_schedules"]
+        result = plan["solution"]
+        best_days = plan["best_days"]
+        best_m = plan["best_m"]
+    elif "remove_poi" in adjustments:
+        from backend.agent.planner import remove_poi_from_plan
+        plan = remove_poi_from_plan(
+            spots_dict, cost_matrix, dist_matrix, routes,
+            adjustments["remove_poi"],
+        )
+        daily_schedules = plan["daily_schedules"]
+        result = plan["solution"]
+        best_days = plan["best_days"]
+        best_m = plan["best_m"]
+    else:
+        core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
+        if adjustments.get("balance"):
+            balanced = balance_groups(core_groups, spots_dict)
+            core_groups = [g[1:-1] for g in balanced]
+
+        result = solve_groups(
+            core_groups, spots_dict, cost_matrix,
+            solver_type="CA",
+            travel_speed=TRAVEL_SPEED,
+        )
+        print(f"调整后总成本: {result['total_cost']:.1f}\n")
+        daily_schedules = _rebuild_schedule(result["routes"], spots_dict, dist_matrix)
+        best_days = len(routes)
+        best_m = "balance"
 
     commentary = generate_commentary(result, spots_dict, dist_matrix)
 
     return {
         "solution": result,
         "mode": "adjust",
-        "best_days": len(routes),
-        "best_m": "balance",
+        "best_days": best_days,
+        "best_m": best_m,
         "spots": spots_dict,
         "dataset_name": "调整方案",
         "algo_time": 0,

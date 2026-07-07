@@ -1,4 +1,5 @@
 """Agent 工具函数：营业时间 LLM 解析 + 对话消息构建。"""
+import asyncio
 from datetime import datetime
 from openai import OpenAI
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
@@ -94,7 +95,7 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
     ]
 
 
-def mock_stream_chat(messages: list[dict]):
+async def mock_stream_chat(messages: list[dict]):
     """Mock SSE 流式聊天，模拟 1 条自然回复用于联调。
 
     Args:
@@ -106,11 +107,10 @@ def mock_stream_chat(messages: list[dict]):
     reply = "今天的安排不错，下午可以去附近的公园走走！"
     for char in reply:
         yield char
-        import time
-        time.sleep(0.05)
+        await asyncio.sleep(0.05)
 
 
-def stream_chat(messages: list[dict]):
+async def stream_chat(messages: list[dict]):
     """真实 DeepSeek SSE 流式聊天。
 
     Args:
@@ -131,12 +131,13 @@ def stream_chat(messages: list[dict]):
         delta = chunk.choices[0].delta if chunk.choices else None
         if delta and delta.content:
             yield delta.content
+            await asyncio.sleep(0)
 
 
 MOCK_MODE = True
 
 
-def chat_stream(messages: list[dict]):
+async def chat_stream(messages: list[dict]):
     """统一入口：MOCK_MODE=True 时模拟，否则调 DeepSeek。
 
     Args:
@@ -146,9 +147,11 @@ def chat_stream(messages: list[dict]):
         逐字符或逐 token 流式输出。
     """
     if MOCK_MODE:
-        yield from mock_stream_chat(messages)
+        async for token in mock_stream_chat(messages):
+            yield token
     else:
-        yield from stream_chat(messages)
+        async for token in stream_chat(messages):
+            yield token
 
 
 def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:

@@ -125,7 +125,7 @@ async def chat(req: ChatRequest):
         messages = build_chat_messages(req.message, req.plan_result)
 
         async def _stream():
-            for token in chat_stream(messages):
+            async for token in chat_stream(messages):
                 yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

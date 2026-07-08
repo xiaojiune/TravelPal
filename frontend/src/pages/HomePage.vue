@@ -118,6 +118,10 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 首页：城市/酒店/景点输入 → POI 搜索确认 → 管理表格编辑 → 获取方案建议。
+ * 通过 usePoiSearch + useEditTable 两个 composable 拆分交互逻辑。
+ */
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { computed } from 'vue'
@@ -126,7 +130,6 @@ import { usePlanStore } from '@/stores/plan'
 import { postSuggest } from '@/services/api'
 import { usePoiSearch } from '@/composables/usePoiSearch'
 import { useEditTable } from '@/composables/useEditTable'
-import type { SpotFormItem } from '@/types'
 
 const store = usePlanStore()
 const router = useRouter()
@@ -143,7 +146,10 @@ const canSuggest = computed(() => store.spots.length > 0)
 // ====== 管理表格 ======
 const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable(hasResults)
 
-// 获取方案建议：buildRequest(null) 中 null 表示自动检测天数（由引擎端 ca_suggest 自动推断）
+/**
+ * 获取方案建议：调 /api/suggest 后跳转 SuggestPage。
+ * buildRequest(null) 中 null 表示让引擎端自动检测天数。
+ */
 async function fetchSuggest() {
   store.loading = true
   try {

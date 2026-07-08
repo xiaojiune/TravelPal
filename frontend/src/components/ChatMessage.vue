@@ -8,14 +8,18 @@
 <script setup lang="ts">
 /**
  * 单条聊天气泡组件。
- *
  * role=user 靠右蓝色，role=assistant 靠左灰色。
  * content 由父组件通过 SSE 逐字符追加，支持打字机效果。
+ *
+ * Props:
+ *   role: 'user' | 'assistant'   — 消息角色
+ *   content: string               — 消息内容（父组件 SSE 追加）
  */
-defineProps({
-  role: { type: String, required: true },
-  content: { type: String, default: '' },
-})
+interface Props {
+  role: string
+  content: string
+}
+defineProps<Props>()
 </script>
 
 <style scoped>

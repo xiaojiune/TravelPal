@@ -37,7 +37,7 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     }
     store.spots.forEach(s => {
       rows.push({
-        isHotel: false, name: s.name, address: s.address,
+        isHotel: false, name: s.name, address: s.address || '',
         lon: s.lon, lat: s.lat,
         twStart: s.twStart, twEnd: s.twEnd,
         stay: s.stay, expectedArrival: s.expectedArrival ?? s.twStart, delete: false,

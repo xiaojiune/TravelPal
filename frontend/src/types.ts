@@ -84,6 +84,18 @@ export interface ChatMessage {
   content: string
 }
 
+/** 规划结果中的景点字典项（从后端 pipeline spots 反序列化） */
+export interface SpotDictItem {
+  name: string
+  x: number
+  y: number
+  lon?: number
+  lat?: number
+  tw?: [number, number]
+  stay?: number
+  original_tw?: [number, number]
+}
+
 /** 规划结果 */
 export interface PlanResult {
   type: string
@@ -93,7 +105,7 @@ export interface PlanResult {
   daily_schedules?: ScheduleItem[][]
   commentary?: string
   city?: string
-  spots?: Record<string, unknown>
+  spots?: Record<string, SpotDictItem>
   cost_matrix?: number[][]
   dist_matrix?: number[][]
   amap_api_key?: string

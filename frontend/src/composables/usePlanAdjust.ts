@@ -1,6 +1,7 @@
 /** 方案调整 composable：封装均衡/改天数/移除景点三种调整操作，
  *  共享 try-catch 模板，消除 PlanPage 的重复调用代码。 */
 import { ref } from 'vue'
+import { AxiosError } from 'axios'
 import { usePlanStore } from '@/stores/plan'
 import { patchPlanAdjust } from '@/services/api'
 
@@ -29,7 +30,7 @@ export function usePlanAdjust() {
       })
       store.planResult = data
     } catch (e: unknown) {
-      alert(`${label}失败: ` + ((e as any)?.response?.data?.detail || (e as Error)?.message))
+      alert(`${label}失败: ` + (e instanceof AxiosError ? (e.response?.data as { detail?: string })?.detail || e.message : (e as Error)?.message))
     }
   }
 

@@ -7,19 +7,27 @@
  * 高德地图 2D 可视化组件。
  * 接收路线、景点数据，在高德地图上渲染标记和折线。
  *
- * @param {Array} routes - 每日路径序列，每项为景点索引数组
- * @param {Object} spots - 景点字典 {idx: {name, x, y, ...}}
- * @param {number} highlightDay - 高亮某天（-1 为全部显示）
- * @param {string} amapKey - 高德 JS API Key
+ * Props:
+ *   routes: number[][]            — 每日路径序列，每项为景点索引数组
+ *   spots: Record<string, any>    — 景点字典 {idx: {name, x, y, ...}}
+ *   highlightDay: number          — 高亮某天（-1 全部显示）
+ *   amapKey: string               — 高德 JS API Key
  */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import type { ScheduleItem } from '@/types'
+import type { SpotDictItem } from '@/types'
 
-const props = defineProps({
-  routes: { type: Array, default: () => [] },
-  spots: { type: Object, default: () => ({}) },
-  highlightDay: { type: Number, default: -1 },
-  amapKey: { type: String, default: '' },
+interface Props {
+  routes?: number[][]
+  spots?: Record<string, SpotDictItem>
+  highlightDay?: number
+  amapKey?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  routes: () => [],
+  spots: () => ({}),
+  highlightDay: -1,
+  amapKey: '',
 })
 
 const container = ref<HTMLDivElement | null>(null)

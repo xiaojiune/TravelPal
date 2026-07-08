@@ -40,10 +40,11 @@
 <script setup lang="ts">
 /**
  * 每日行程面板组件。
- * 接收 dailySchedules 数据，以表格形式展示每日景点到达/离开/状态。
+ * 以表格形式展示每日景点到达/离开/状态。
  *
- * @param {Array} dailySchedules - 每日行程数组，每项含
- *   name/arrival/departure/tw/stay/arrival_status/departure_status
+ * Props:
+ *   dailySchedules: ScheduleItem[][]  — 每日行程，每项含 name/arrival/departure/tw/stay/status
+ *   onRemovePoi: ((name: string) => void) | null  — 移除景点回调，null 时不显示移除按钮
  */
 import type { ScheduleItem } from '@/types'
 

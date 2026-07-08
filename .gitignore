@@ -107,5 +107,8 @@ backend/data/chroma_db/
 docs/images/generated/*.png
 docs/images/generated/*.jpg
 
+# Sphinx 文档站构建产物
+docs/_build/
+
 # Windows 重定向残留
 nul

@@ -187,10 +187,7 @@ def adjust_plan(spots_dict: dict, cost_matrix_list: list, dist_matrix_list: list
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持：
-            - {"balance": true}
-            - {"adjust_days": <int>}
-            - {"remove_poi": "<poi_name>"}
+        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"} 之一。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。

@@ -32,6 +32,13 @@ package-mode = false
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.1.1"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^9"
+sphinx-rtd-theme = "^3"
+sphinx-autoapi = "^3"
+myst-parser = "^5"
+sphinxcontrib-redoc = "^1"
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

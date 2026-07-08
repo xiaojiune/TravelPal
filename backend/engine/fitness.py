@@ -1,4 +1,7 @@
-def analyze_solution(line, dis_matrix, spots_dict, travel_speed,
+# ================== 路径成本分析 ==================
+
+
+def analyze_solution(line, cost_mat, spots_dict, travel_speed,
                      early_wait_weight=0.1,
                      penalty_weight=100.0,
                      late_return_weight=50.0,
@@ -11,7 +14,7 @@ def analyze_solution(line, dis_matrix, spots_dict, travel_speed,
 
     Args:
         line: 路径列表（含起终点）。
-        dis_matrix: 距离/旅行时间矩阵。
+        cost_mat: 距离/旅行时间矩阵。
         spots_dict: 景点字典，每项含 {"tw": (start, end), "stay": float}。
         travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时无效。
         early_wait_weight: 早到等待惩罚权重。
@@ -35,7 +38,7 @@ def analyze_solution(line, dis_matrix, spots_dict, travel_speed,
 
     for i in range(len(line) - 1):
         fr, to = line[i], line[i + 1]
-        d = dis_matrix[fr][to]
+        d = cost_mat[fr][to]
         travel_sum += d
         travel_time = d if use_real_time_matrix else d / travel_speed
         arrival = current_time + travel_time

@@ -3,6 +3,7 @@ import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
 
+# ================== POI 坐标查询 ==================
 
 def get_poi_location(poi_name, city="北京"):
     """
@@ -30,8 +31,10 @@ def get_poi_location(poi_name, city="北京"):
         print(f"POI请求失败: {e}")
         return 116.4, 39.9
 
+# ---------- 工具函数 ----------
 
 def _parse_date(date_str, year):
+    """解析高德营业时间中的日期段，如 '04月01日' → datetime.date。成功返回 date，失败返回 None。"""
     date_str = date_str.replace('日', '').replace('月', '-')
     parts = date_str.split('-')
     if len(parts) == 2:
@@ -97,6 +100,7 @@ def _parse_opentime_to_tw(opentime_str):
                 continue
     return None
 
+# ================== POI 详细信息 ==================
 
 def get_poi_details(poi_name, city):
     """
@@ -133,6 +137,7 @@ def get_poi_details(poi_name, city):
         print(f"POI请求失败: {e}")
         return 116.4, 39.9, "", ""
 
+# ================== 驾车路径规划 ==================
 
 def _get_driving_data(origin, destination, max_retries=3):
     """
@@ -181,6 +186,7 @@ def _get_driving_data(origin, destination, max_retries=3):
                 print(f"驾车路径规划请求失败（已重试{max_retries}次）: {e}")
                 return None, None, None
 
+# ================== 批量构建成本矩阵 ==================
 
 def build_real_data(poi_names, coords, delay=0.4):
     """
@@ -195,7 +201,7 @@ def build_real_data(poi_names, coords, delay=0.4):
         delay: API 调用间隔秒数，默认 0.4（高德 QPS 限制约 2-3 次/秒）。
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, dict]: cost_matrix_hours（小时）、dist_matrix_km、polylines_dict。
+        Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))
@@ -214,13 +220,13 @@ def build_real_data(poi_names, coords, delay=0.4):
                 continue
             d_km, dur, poly = _get_driving_data(coords[i], coords[j])
             if dur is not None:
-                cost[i][j] = round(dur / 3600.0, 2)
+                cost[i][j] = round(dur / 60.0, 2)
                 dist[i][j] = round(d_km, 2)
                 if poly:
                     polylines[(i, j)] = poly
             else:
                 print(f"警告：{i} -> {j} 驾车路径规划失败")
-                # -1 标记不可达，下游在计算路由时需跳过此类边
+                # -1 标记不可达（分钟级），下游在计算路由时需跳过此类边
                 cost[i][j] = -1
                 dist[i][j] = -1
             # 每次 API 调用后等待 delay 秒，控制 QPS 避免被高德限流

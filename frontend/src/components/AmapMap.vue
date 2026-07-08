@@ -3,6 +3,15 @@
 </template>
 
 <script setup>
+/**
+ * 高德地图 2D 可视化组件。
+ * 接收路线、景点数据，在高德地图上渲染标记和折线。
+ *
+ * @param {Array} routes - 每日路径序列，每项为景点索引数组
+ * @param {Object} spots - 景点字典 {idx: {name, x, y, ...}}
+ * @param {number} highlightDay - 高亮某天（-1 为全部显示）
+ * @param {string} amapKey - 高德 JS API Key
+ */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
@@ -17,6 +26,10 @@ let map = null
 let overlays = []
 let amapLoaded = false
 
+/**
+ * 动态加载高德 JS API 脚本（首次加载后缓存）。
+ * 使用 Promise 保证异步加载完成后才初始化地图。
+ */
 function loadAmapScript() {
   return new Promise((resolve) => {
     if (window.AMap) { amapLoaded = true; resolve(); return }
@@ -27,11 +40,16 @@ function loadAmapScript() {
   })
 }
 
+/** 清除所有覆盖物（标记 + 折线），防止重复渲染。 */
 function clearOverlays() {
   overlays.forEach(o => map?.remove(o))
   overlays = []
 }
 
+/**
+ * 核心渲染函数：添加 POI 标记 → 绘制每日折线 → 自适应视野。
+ * 先清空旧覆盖物再重建，避免累积。
+ */
 function render() {
   if (!map || !props.routes.length || !Object.keys(props.spots).length) return
   clearOverlays()

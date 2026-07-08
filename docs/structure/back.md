@@ -40,6 +40,24 @@ backend/
 | `search.py` | 编排入口 | `ca_suggest()` / `cluster_and_solve()` / `solve_groups()` |
 | `pipeline.py` | 流程编排 | `run_planning()` |
 
+## POI 查找 → LLM 营业时间解析 数据流
+
+```
+用户输入城市+酒店+景点名列表
+       ↓
+POST /api/poi-lookup
+       ↓
+高德 POI API 批量查询 → (坐标, opentime2, 名称, 地址)
+       ↓
+datetime + holidays 计算当前日期/星期/节假日属性
+       ↓
+LLM 解析 opentime2 → (start_min, end_min)
+  ├── 成功 → 存入 spots_dict
+  └── 失败 → 回退默认值（酒店 360-1440，景点 480-1020）
+       ↓
+返回 POILookupItem[]（含 tw_start/tw_end）→ 前端展示
+```
+
 ## 引擎级调用链路
 
 ```

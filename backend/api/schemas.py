@@ -20,6 +20,9 @@ class POIItem(BaseModel):
     stay: float = Field(default=0, description="停留时间，分钟")
 
 
+# ================== 查询请求 / 响应 ==================
+
+
 class POILookupRequest(BaseModel):
     """POI 坐标/地址查询请求。
 
@@ -31,11 +34,17 @@ class POILookupRequest(BaseModel):
 
 
 class POILookupItem(BaseModel):
-    """单个 POI 查询结果。"""
+    """单个 POI 查询结果。
+
+    tw_start/tw_end 由 LLM 解析 opentime2 后返回，
+    前端不再硬编码默认营业时间。
+    """
     name: str
     lon: float
     lat: float
     address: str
+    tw_start: int | None = Field(default=None, description="营业开始分钟数，0-1440，LLM 解析")
+    tw_end: int | None = Field(default=None, description="营业结束分钟数，0-1440，LLM 解析")
 
 
 class POILookupResponse(BaseModel):
@@ -46,6 +55,9 @@ class POILookupResponse(BaseModel):
     """
     items: list[POILookupItem]
     failed: list[str]
+
+
+# ================== 规划请求 ==================
 
 
 class PlanRequest(BaseModel):
@@ -84,3 +96,33 @@ class PlanRequest(BaseModel):
                                      description="早到等待惩罚权重（默认 0.1）")
     late_return_weight: float = Field(default=50.0, ge=0,
                                       description="晚归惩罚权重（默认 50.0）")
+
+
+# ================== Agent 对话 ==================
+
+
+class ChatRequest(BaseModel):
+    """LLM Agent 对话请求。
+
+    message: 用户输入的消息。
+    plan_result: 可选的规划结果上下文，供 Agent 参考。
+    """
+    message: str = Field(min_length=1, description="用户输入的消息")
+    plan_result: dict | None = Field(default=None, description="规划结果上下文")
+
+
+# ================== 方案调整 ==================
+
+
+class PlanAdjustRequest(BaseModel):
+    """方案调整请求。
+
+    前端在查看方案后希望调整（如均衡天、改天数、重算某天）时调用。
+    暂只支持 balance，后续扩展 replan_day / change_days。
+    """
+    spots: dict
+    cost_matrix: list
+    dist_matrix: list
+    routes: list
+    adjustments: dict = Field(default_factory=lambda: {"balance": True},
+                               description="调整指令，如 {'balance': true}")

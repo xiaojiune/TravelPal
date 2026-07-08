@@ -156,7 +156,7 @@ def cluster_by_time_density(spots, depot, n_clusters):
     return groups
 
 
-def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
+def cluster_hybrid_optimized(spots, cost_mat, depot, n_clusters):
     """
     混合优化分组（时间窗排序 + 距离优化重分配）。
 
@@ -165,7 +165,7 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
 
     Args:
         spots: 景点字典。
-        dist_mat: 距离矩阵，用于评估交换收益。
+        cost_mat: 距离矩阵，用于评估交换收益。
         depot: depot 索引。
         n_clusters: 聚类组数。
 
@@ -204,7 +204,7 @@ def cluster_hybrid_optimized(spots, dist_mat, depot, n_clusters):
                     for a in g:
                         for b in g:
                             if a != b:
-                                s += dist_mat[a][b]
+                                s += cost_mat[a][b]
                                 cnt += 1
                     return s / max(1, cnt)
 
@@ -239,14 +239,14 @@ CLUSTER_METHODS = [
 ]
 
 
-def call_cluster(func, spots, depot, k, dist_mat=None):
+def call_cluster(func, spots, depot, k, cost_mat=None):
     """
     统一调用聚类方法。
 
-    cluster_hybrid_optimized 需要 dist_mat 参数，其余仅需 spots/depot/k。
+    cluster_hybrid_optimized 需要 cost_mat 参数，其余仅需 spots/depot/k。
     """
     if func.__name__ == 'cluster_hybrid_optimized':
-        return func(spots, dist_mat, depot, k)
+        return func(spots, cost_mat, depot, k)
     return func(spots, depot, k)
 
 

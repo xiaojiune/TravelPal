@@ -3,16 +3,20 @@ import numpy as np
 from backend.engine.fitness import analyze_solution
 
 
+# ================== 适应度函数 ==================
+
+
 class TestFitness:
     """适应度函数的成本分量与边界条件验证"""
 
+    # ---------- 基础成本 ----------
     def test_basic_cost_components(self, n20_dataset):
-        spots, dist_mat, _ = n20_dataset
+        spots, cost_mat, _ = n20_dataset
         depot = 0
         route = [0, 1, 2, 0]
 
         cost, dist, wait_pen, late_pen, violations = analyze_solution(
-            route, dist_mat, spots, travel_speed=1.0,
+            route, cost_mat, spots, travel_speed=1.0,
             early_wait_weight=0.1, penalty_weight=100.0,
             late_return_weight=50.0, depot=depot
         )
@@ -29,7 +33,7 @@ class TestFitness:
             1: {"name": "A", "tw": (10, 100), "stay": 5},
             2: {"name": "B", "tw": (20, 200), "stay": 10},
         }
-        dist_mat = np.array([
+        cost_mat = np.array([
             [0, 10, 1],
             [10, 0, 5],
             [1, 5, 0],
@@ -37,7 +41,7 @@ class TestFitness:
         route = [0, 1, 2, 0]
 
         cost, dist, wait_pen, late_pen, violations = analyze_solution(
-            route, dist_mat, spots, travel_speed=1.0,
+            route, cost_mat, spots, travel_speed=1.0,
             early_wait_weight=0.1, penalty_weight=100.0,
             late_return_weight=50.0, depot=0
         )
@@ -46,19 +50,20 @@ class TestFitness:
         assert late_pen == 0, f"不应有迟到惩罚: {late_pen}"
         assert len(violations) == 0, f"不应有违规: {violations}"
 
+    # ---------- 惩罚边界 ----------
     def test_early_arrival_incurs_wait_penalty(self):
         spots = {
             0: {"name": "depot", "tw": (0, 1000), "stay": 0},
             1: {"name": "A", "tw": (100, 200), "stay": 0},
         }
-        dist_mat = np.array([
+        cost_mat = np.array([
             [0, 1],
             [1, 0],
         ], dtype=np.float64)
         route = [0, 1, 0]
 
         _, _, wait_pen, _, _ = analyze_solution(
-            route, dist_mat, spots, travel_speed=1.0,
+            route, cost_mat, spots, travel_speed=1.0,
             early_wait_weight=0.5, penalty_weight=100.0,
             late_return_weight=50.0, depot=0
         )
@@ -74,14 +79,14 @@ class TestFitness:
             0: {"name": "depot", "tw": (0, 1000), "stay": 0},
             1: {"name": "A", "tw": (10, 20), "stay": 0},
         }
-        dist_mat = np.array([
+        cost_mat = np.array([
             [0, 50],
             [50, 0],
         ], dtype=np.float64)
         route = [0, 1, 0]
 
         _, _, _, late_pen, violations = analyze_solution(
-            route, dist_mat, spots, travel_speed=1.0,
+            route, cost_mat, spots, travel_speed=1.0,
             early_wait_weight=0.1, penalty_weight=50.0,
             late_return_weight=50.0, depot=0
         )
@@ -94,14 +99,14 @@ class TestFitness:
             0: {"name": "depot", "tw": (0, 1000), "stay": 0},
             1: {"name": "A", "tw": (10, 500), "stay": 10},
         }
-        dist_mat = np.array([
+        cost_mat = np.array([
             [0, 10],
             [10, 0],
         ], dtype=np.float64)
         route = [0, 1, 0]
 
         cost, dist, wait_pen, late_pen, violations = analyze_solution(
-            route, dist_mat, spots, travel_speed=1.0,
+            route, cost_mat, spots, travel_speed=1.0,
             early_wait_weight=0.1, penalty_weight=100.0,
             late_return_weight=50.0, depot=0
         )

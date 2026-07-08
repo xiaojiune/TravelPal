@@ -33,6 +33,7 @@ DATASET_IDS = [
 
 
 def _load(subdir, instance):
+    """按子目录和编号加载数据集，供 any_dataset 参数化 fixture 调用。"""
     return load_tsptw_dataset(find_dataset(subdir, instance))
 
 
@@ -42,6 +43,8 @@ def _load(subdir, instance):
     ("n100w20", 1),
     ("n200w40", 5),
 ], ids=DATASET_IDS)
+
+# ================== 内部函数 ==================
 def any_dataset(request):
     subdir, instance = request.param
     return _load(subdir, instance)

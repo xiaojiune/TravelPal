@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router
 
+# ================== 应用工厂 ==================
 
 def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用实例。
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+# ---------- 启动入口 ----------
 
 def main():
     import uvicorn

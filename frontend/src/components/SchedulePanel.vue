@@ -14,6 +14,7 @@
             <th>停留</th>
             <th>到达状态</th>
             <th>离开状态</th>
+            <th v-if="onRemovePoi"></th>
           </tr>
         </thead>
         <tbody>
@@ -25,6 +26,10 @@
             <td>{{ item.stay ?? '-' }}</td>
             <td>{{ statusClass(item.arrival_status) }}</td>
             <td>{{ statusClass(item.departure_status) }}</td>
+            <td v-if="onRemovePoi && item.name !== '酒店（返回）'">
+              <button class="btn-remove" @click="onRemovePoi(item.name)" title="移除景点">✕</button>
+            </td>
+            <td v-else-if="onRemovePoi"></td>
           </tr>
         </tbody>
       </table>
@@ -33,15 +38,23 @@
 </template>
 
 <script setup>
-// 每日行程表格组件
-//
-// Props:
-//   dailySchedules — 每日行程数组，每项含 name/arrival/departure/tw/stay/arrival_status/departure_status
-//
-// fmt(m)  将分钟数转换为 HH:MM 格式
-// statusClass(s)  准时/等待标记返回原文，违规标记添加 ⚠️ 前缀
-defineProps({ dailySchedules: { type: Array, default: () => [] } })
+/**
+ * 每日行程面板组件。
+ * 接收 dailySchedules 数据，以表格形式展示每日景点到达/离开/状态。
+ *
+ * @param {Array} dailySchedules - 每日行程数组，每项含
+ *   name/arrival/departure/tw/stay/arrival_status/departure_status
+ */
+defineProps({
+  dailySchedules: { type: Array, default: () => [] },
+  onRemovePoi: { type: Function, default: null },
+})
 
+/**
+ * 将分钟数转换为 HH:MM 格式。
+ * @param {number} m - 距午夜分钟数
+ * @returns {string} 格式如 "8:30"
+ */
 function fmt(m) {
   if (m == null || m <= 0) return '-'
   const h = Math.floor(m / 60)
@@ -49,6 +62,12 @@ function fmt(m) {
   return `${h}:${String(min).padStart(2, '0')}`
 }
 
+/**
+ * 将到达/离开状态文本加上违规标记。
+ * 准时/等待直接返回，违规行为加 ⚠️ 前缀。
+ * @param {string} s - 状态文本
+ * @returns {string}
+ */
 function statusClass(s) {
   if (!s) return '-'
   return s.includes('准时') || s.includes('等待') ? s : `⚠️ ${s}`
@@ -65,4 +84,11 @@ function statusClass(s) {
 .schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e0e0e0; color: #888; font-weight: 600; }
 .schedule-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }
 .depot-row td { color: #999; font-style: italic; }
+.btn-remove {
+  background: none; border: 1px solid #e0e0e0; border-radius: 4px;
+  cursor: pointer; color: #d32f2f; font-size: 12px; width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; padding: 0;
+}
+.btn-remove:hover { background: #ffebee; border-color: #d32f2f; }
 </style>

@@ -4,8 +4,46 @@ from backend.engine.vns import VNSSolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
 
+# ================== 分组求解 ==================
 
-def solve_groups(groups, spots, dist_mat, solver_type="CA",
+def balance_groups(groups, spots, depot=0):
+    """
+    强制均衡分组，确保每天的总停留时间接近。
+
+    将景点按停留时间贪心分配到当前负荷最小的天，
+    尽可能让每天的停留时间均匀分布。
+
+    Args:
+        groups: 原始分组（不含 depot），每组为景点索引列表。
+        spots: 景点字典，键为索引，值为含 stay 字段的属性。
+        depot: depot 索引，默认 0。
+
+    Returns:
+        均衡后的分组列表，每组含首尾 depot。
+    """
+    all_spots = []
+    for g in groups:
+        for node in g:
+            if node != depot and node not in all_spots:
+                all_spots.append(node)
+
+    k = len(groups)
+    new_groups = [[] for _ in range(k)]
+    day_loads = [0] * k
+
+    for spot in all_spots:
+        stay = spots[spot]["stay"]
+        min_idx = min(range(k), key=lambda i: day_loads[i])
+        new_groups[min_idx].append(spot)
+        day_loads[min_idx] += stay
+
+    balanced = [[depot] + core + [depot] for core in new_groups]
+    final_loads = [sum(spots[n]["stay"] for n in g if n != depot) for g in balanced]
+    print(f"  均衡后每日停留负荷: {final_loads}, 目标均值: {sum(final_loads)/k:.0f} min")
+    return balanced
+
+
+def solve_groups(groups, spots, cost_mat, solver_type="CA",
                  travel_speed=1.0, penalty_weight=100.0,
                  early_wait_weight=0.1, late_return_weight=50.0,
                  use_real_time_matrix=False):
@@ -18,7 +56,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
     Args:
         groups: 分组列表，每组为景点索引列表。
         spots: 景点字典，键为索引，值为景点属性。
-        dist_mat: 距离/成本矩阵。
+        cost_mat: 距离/成本矩阵。
         solver_type: "CA" 或 "VNS"。
         travel_speed: 行驶速度（标准数据集），默认 1.0。
         penalty_weight: 违规惩罚权重。
@@ -52,14 +90,14 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
                 late_return_weight=late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
-        res = solver.solve(dist_mat)
+        res = solver.solve(cost_mat)
         routes.append(res["best_solution"])
         histories.append(res["convergence_history"])
         total_cost += res["best_cost"]
         total_dist += res["best_distance"]
         # 求解器内部以 cost 为主，不直接暴露 wait/late 明细，因此重新调用 analyze_solution 提取详细指标
         _, _, w, l, _ = analyze_solution(
-            res["best_solution"], dist_mat, spots, travel_speed,
+            res["best_solution"], cost_mat, spots, travel_speed,
             early_wait_weight=early_wait_weight,
             penalty_weight=penalty_weight,
             late_return_weight=late_return_weight, depot=0,
@@ -86,6 +124,7 @@ def solve_groups(groups, spots, dist_mat, solver_type="CA",
 
 
 def _deduplicate(results):
+    """用 frozenset 对 results 按分组结构去重，保留顺序中首次出现的唯一解。"""
     seen = set()
     deduped = []
     for item in results:
@@ -96,8 +135,9 @@ def _deduplicate(results):
             deduped.append(item)
     return deduped
 
+# ================== CA 全参数搜索 ==================
 
-def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
+def ca_suggest(spots, depot, cost_mat, min_days=None, max_days=None,
                early_stop_gain_threshold=None, stop_consecutive_worse=None,
                travel_speed=1.0, penalty_weight=100.0,
                early_wait_weight=0.1, late_return_weight=50.0,
@@ -111,7 +151,7 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
     Args:
         spots: 景点字典。
         depot: depot 索引。
-        dist_mat: 距离/成本矩阵。
+        cost_mat: 距离/成本矩阵。
         min_days: 最小天数（默认 CA_DEFAULT_PARAMS["min_clusters"]）。
         max_days: 最大天数（默认 CA_DEFAULT_PARAMS["max_clusters"]）。
         early_stop_gain_threshold: 增益阈值百分比（默认 1.0%），低于此视为无效改善。
@@ -146,9 +186,9 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
         worse_count = 0
 
         for n_days in range(min_days, max_days + 1):
-            groups = call_cluster(method_func, spots, depot, n_days, dist_mat)
+            groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
             res = solve_groups(
-                groups, spots, dist_mat, "CA",
+                groups, spots, cost_mat, "CA",
                 travel_speed, penalty_weight,
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
@@ -194,8 +234,9 @@ def ca_suggest(spots, depot, dist_mat, min_days=None, max_days=None,
         "message": "请指定行程天数以获得最终方案",
     }
 
+# ================== 双模式分发 ==================
 
-def cluster_and_solve(spots, depot, dist_mat, mode="fast",
+def cluster_and_solve(spots, depot, cost_mat, mode="fast",
                       n_days=None, travel_speed=1.0,
                       penalty_weight=100.0, early_wait_weight=0.1,
                       late_return_weight=50.0,
@@ -210,7 +251,7 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
     Args:
         spots: 景点字典。
         depot: depot 索引。
-        dist_mat: 距离/成本矩阵。
+        cost_mat: 距离/成本矩阵。
         mode: "fast"（CA，秒级）或 "deep"（VNS，分钟级）。
         n_days: 行程天数。deep 模式必填。
         travel_speed: 行驶速度。
@@ -230,9 +271,9 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
         best_groups = None
 
         for method_name, method_func in CLUSTER_METHODS:
-            groups = call_cluster(method_func, spots, depot, n_days, dist_mat)
+            groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
             res = solve_groups(
-                groups, spots, dist_mat, solver_type,
+                groups, spots, cost_mat, solver_type,
                 travel_speed, penalty_weight,
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
@@ -254,7 +295,7 @@ def cluster_and_solve(spots, depot, dist_mat, mode="fast",
         raise ValueError("深度模式(VNS)需要指定 n_days，请先通过 ca_suggest() 获取建议")
 
     return ca_suggest(
-        spots, depot, dist_mat,
+        spots, depot, cost_mat,
         travel_speed=travel_speed,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,

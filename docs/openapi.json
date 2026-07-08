@@ -1,0 +1,560 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TravelPal API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/poi-lookup": {
+      "post": {
+        "summary": "Poi Lookup",
+        "description": "批量查询 POI 坐标和地址。\n\n前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，\n返回每个名称的坐标和地址。未找到的名称列入 failed 列表。",
+        "operationId": "poi_lookup_api_poi_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/POILookupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/POILookupResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/suggest": {
+      "post": {
+        "summary": "Suggest",
+        "description": "获取方案建议列表。\n\n不指定 n_days，run_planning 内部回退到 ca_suggest()，\n遍历多种聚类方法 × 天数，返回 top-5 建议。",
+        "operationId": "suggest_api_suggest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plan": {
+      "post": {
+        "summary": "Plan",
+        "description": "执行完整规划，返回 3D 地图 HTML 和每日行程。\n\nn_days 为必填，mode 可选 \"fast\"(CA) 或 \"deep\"(VNS)。",
+        "operationId": "plan_api_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "summary": "Chat",
+        "description": "LLM Agent 对话接口，SSE 流式输出。\n\nMock 模式返回死 token，方便前端联调。\n正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。",
+        "operationId": "chat_api_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/plan/adjust": {
+      "patch": {
+        "summary": "Plan Adjust",
+        "description": "调整已有方案（均衡、改天数等）。\n\n接收当前方案状态，按 adjustments 指令重新求解后返回新方案。",
+        "operationId": "plan_adjust_api_plan_adjust_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanAdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Message",
+            "description": "用户输入的消息"
+          },
+          "plan_result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Result",
+            "description": "规划结果上下文"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ChatRequest",
+        "description": "LLM Agent 对话请求。\n\nmessage: 用户输入的消息。\nplan_result: 可选的规划结果上下文，供 Agent 参考。"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "POIItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "tw_start": {
+            "type": "number",
+            "title": "Tw Start",
+            "description": "营业开始时间，距午夜分钟数",
+            "default": 480
+          },
+          "tw_end": {
+            "type": "number",
+            "title": "Tw End",
+            "description": "营业结束时间，距午夜分钟数",
+            "default": 1020
+          },
+          "stay": {
+            "type": "number",
+            "title": "Stay",
+            "description": "停留时间，分钟",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lon",
+          "lat"
+        ],
+        "title": "POIItem",
+        "description": "单个景点数据模型。\n\nAttributes:\n    name: 景点名称（用于显示和 API 查询）。\n    lon: 经度（GCJ-02 坐标系，与高德 API 一致）。\n    lat: 纬度。\n    tw_start: 时间窗开始，距午夜分钟数（默认 480 = 8:00）。\n    tw_end: 时间窗结束，距午夜分钟数（默认 1020 = 17:00）。\n    stay: 建议停留时长（分钟），影响时间窗有效结束时间。"
+      },
+      "POILookupItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lon": {
+            "type": "number",
+            "title": "Lon"
+          },
+          "lat": {
+            "type": "number",
+            "title": "Lat"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "tw_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tw Start",
+            "description": "营业开始分钟数，0-1440，LLM 解析"
+          },
+          "tw_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tw End",
+            "description": "营业结束分钟数，0-1440，LLM 解析"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lon",
+          "lat",
+          "address"
+        ],
+        "title": "POILookupItem",
+        "description": "单个 POI 查询结果。\n\ntw_start/tw_end 由 LLM 解析 opentime2 后返回，\n前端不再硬编码默认营业时间。"
+      },
+      "POILookupRequest": {
+        "properties": {
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Names",
+            "description": "POI 名称列表（酒店+景点）"
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "names"
+        ],
+        "title": "POILookupRequest",
+        "description": "POI 坐标/地址查询请求。\n\n调用高德 POI 搜索 API 批量获取坐标和地址。\n酒店也作为普通 POI 查询，前端根据名称匹配区分。"
+      },
+      "POILookupResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/POILookupItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "failed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "failed"
+        ],
+        "title": "POILookupResponse",
+        "description": "POI 查询响应。\n\nitems: 查询成功的 POI 列表。\nfailed: 未找到的 POI 名称列表。"
+      },
+      "PlanAdjustRequest": {
+        "properties": {
+          "spots": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Spots"
+          },
+          "cost_matrix": {
+            "items": {},
+            "type": "array",
+            "title": "Cost Matrix"
+          },
+          "dist_matrix": {
+            "items": {},
+            "type": "array",
+            "title": "Dist Matrix"
+          },
+          "routes": {
+            "items": {},
+            "type": "array",
+            "title": "Routes"
+          },
+          "adjustments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Adjustments",
+            "description": "调整指令，如 {'balance': true}"
+          }
+        },
+        "type": "object",
+        "required": [
+          "spots",
+          "cost_matrix",
+          "dist_matrix",
+          "routes"
+        ],
+        "title": "PlanAdjustRequest",
+        "description": "方案调整请求。\n\n前端在查看方案后希望调整（如均衡天、改天数、重算某天）时调用。\n暂只支持 balance，后续扩展 replan_day / change_days。"
+      },
+      "PlanRequest": {
+        "properties": {
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "hotel_name": {
+            "type": "string",
+            "title": "Hotel Name"
+          },
+          "hotel_lon": {
+            "type": "number",
+            "title": "Hotel Lon"
+          },
+          "hotel_lat": {
+            "type": "number",
+            "title": "Hotel Lat"
+          },
+          "hotel_tw_start": {
+            "type": "number",
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Hotel Tw Start",
+            "description": "酒店开放时间开始，距午夜分钟数（默认 360 = 6:00）",
+            "default": 360
+          },
+          "hotel_tw_end": {
+            "type": "number",
+            "maximum": 1440.0,
+            "minimum": 0.0,
+            "title": "Hotel Tw End",
+            "description": "酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）",
+            "default": 1440
+          },
+          "spots": {
+            "items": {
+              "$ref": "#/components/schemas/POIItem"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Spots",
+            "description": "景点列表，至少 1 个"
+          },
+          "n_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N Days",
+            "description": "行程天数，None 时返回建议"
+          },
+          "mode": {
+            "type": "string",
+            "pattern": "^(fast|deep)$",
+            "title": "Mode",
+            "description": "求解模式：fast(CA) 或 deep(VNS)",
+            "default": "fast"
+          },
+          "penalty_weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Penalty Weight",
+            "description": "迟到惩罚权重（默认 100.0）",
+            "default": 100.0
+          },
+          "early_wait_weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Early Wait Weight",
+            "description": "早到等待惩罚权重（默认 0.1）",
+            "default": 0.1
+          },
+          "late_return_weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Late Return Weight",
+            "description": "晚归惩罚权重（默认 50.0）",
+            "default": 50.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "hotel_name",
+          "hotel_lon",
+          "hotel_lat",
+          "spots"
+        ],
+        "title": "PlanRequest",
+        "description": "统一请求模型，适用于 /api/suggest 和 /api/plan。\n\n包含酒店信息、景点列表和算法参数。\nn_days 为 None 时返回方案建议（ca_suggest），否则返回完整方案。\n\nAttributes:\n    city: 城市名（用于文件命名和显示）。\n    hotel_name: 酒店名称。\n    hotel_lon/lat: 酒店坐标（GCJ-02）。\n    hotel_tw_start/end: 酒店时间窗（默认 6:00~24:00）。\n    spots: 景点列表，至少 1 个。\n    n_days: 行程天数。None 时走建议模式，有值时走规划模式。\n    mode: \"fast\"(CA) 或 \"deep\"(VNS)。\n    penalty_weight: 迟到惩罚权重。\n    early_wait_weight: 早到等待惩罚权重。\n    late_return_weight: 晚归惩罚权重。"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

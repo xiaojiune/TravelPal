@@ -1,10 +1,8 @@
 {
   "userIgnoreFilters": [
-    "src/",
-    "tests/",
+    "backend/",
     "frontend/",
-    "data/chroma_db/",
-    "data/DataSets/"
+    "tests/"
   ],
   "promptDelete": true,
   "alwaysUpdateLinks": true,

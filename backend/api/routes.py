@@ -1,12 +1,16 @@
+import json
 import traceback
 from fastapi import APIRouter, HTTPException
-from backend.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem
-from backend.engine.pipeline import run_planning
+from backend.api.schemas import PlanRequest, PlanAdjustRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
+from backend.engine.pipeline import run_planning, adjust_plan
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY
+from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
+from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
+# ================== 辅助函数 ==================
 
 def _build_poi_cache(req: PlanRequest):
     """将 PlanRequest 转换为 run_planning 所需的 poi_cache 格式。
@@ -33,6 +37,7 @@ def _build_poi_cache(req: PlanRequest):
     ]
     return {"hotel": hotel, "spots": spots}
 
+# ================== 路由端点 ==================
 
 @router.post("/api/poi-lookup", response_model=POILookupResponse)
 async def poi_lookup(req: POILookupRequest):
@@ -51,12 +56,19 @@ async def poi_lookup(req: POILookupRequest):
             if abs(lon - 116.4) < 0.01 and abs(lat - 39.9) < 0.01:
                 failed.append(name)
             else:
-                items.append(POILookupItem(name=name, lon=lon, lat=lat, address=address))
+                parsed = parse_biz_hours(biz_hours) if biz_hours else None
+                tw_start = parsed[0] if parsed else None
+                tw_end = parsed[1] if parsed else None
+                items.append(POILookupItem(
+                    name=name, lon=lon, lat=lat, address=address,
+                    tw_start=tw_start, tw_end=tw_end,
+                ))
         except Exception:
             failed.append(name)
 
     return POILookupResponse(items=items, failed=failed)
 
+# ---------- 规划相关 ----------
 
 @router.post("/api/suggest")
 async def suggest(req: PlanRequest):
@@ -104,11 +116,49 @@ async def plan(req: PlanRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ---------- Agent 对话 ----------
 
 @router.post("/api/chat")
-async def chat():
-    """LLM Agent 对话接口（预留）。
+async def chat(req: ChatRequest):
+    """LLM Agent 对话接口，SSE 流式输出。
 
-    TODO: 后续接入 LLM Agent，支持 SSE 流式输出。
+    Mock 模式返回死 token，方便前端联调。
+    正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
     """
-    return {"status": "not_implemented", "message": "LLM Agent 功能尚未接入"}
+    try:
+        messages = build_chat_messages(req.message, req.plan_result)
+
+        async def _stream():
+            """SSE 生成器：逐 token 推送 chat_stream 输出，最后发 done 信号。"""
+            async for token in chat_stream(messages):
+                yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+        return StreamingResponse(
+            _stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch("/api/plan/adjust")
+async def plan_adjust(req: PlanAdjustRequest):
+    """调整已有方案（均衡、改天数等）。
+
+    接收当前方案状态，按 adjustments 指令重新求解后返回新方案。
+    """
+    try:
+        result = adjust_plan(
+            req.spots, req.cost_matrix, req.dist_matrix,
+            req.routes, req.adjustments,
+        )
+        return result
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

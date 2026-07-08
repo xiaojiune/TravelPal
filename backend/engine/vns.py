@@ -39,7 +39,7 @@ WEIGHT_REWARD_FACTOR = 1.02
 # ================== Numba 适应度内核 ==================
 
 @njit(cache=True)
-def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
+def _cal_fitness_numba(line, cost_mat, travel_speed, penalty_weight,
                        early_wait_weight, late_return_weight, depot_index,
                        spots_start, spots_end, spots_stay,
                        use_real_time_matrix=False):
@@ -55,7 +55,7 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
 
     Args:
         line: 路径数组（含起终点的完整路径）。
-        dis_matrix: 距离/旅行时间矩阵。
+        cost_mat: 距离/旅行时间矩阵。
         travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时该参数无效。
         penalty_weight: 迟到惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
@@ -82,7 +82,7 @@ def _cal_fitness_numba(line, dis_matrix, travel_speed, penalty_weight,
     for i in range(len(line) - 1):
         fr = line[i]
         to = line[i + 1]
-        d = dis_matrix[fr][to]
+        d = cost_mat[fr][to]
         travel_sum += d
         travel_time = d if use_real_time_matrix else d / travel_speed
         arrival = current_time + travel_time
@@ -167,7 +167,7 @@ class VNSSolver:
         self.spots_stay  = np.array([spots_dict[i]["stay"] for i in range(n)], dtype=np.float64)
 
         # 适应度缓存：避免同一解重复触发 Numba 调用的开销
-        # 警告：key 使用 id(dis_matrix) 而非矩阵哈希（避免哈希开销），
+        # 警告：key 使用 id(cost_mat) 而非矩阵哈希（避免哈希开销），
         # 若矩阵对象内容被修改则缓存不会失效，可能返回错误结果
         # 另：当前无容量限制，长迭代场景下存在内存膨胀风险；小规模景点数（<200）下可忽略
         self.fitness_cache = {}
@@ -179,21 +179,21 @@ class VNSSolver:
 
     # ---------- 适应度（带缓存） ----------
 
-    def _cal_fitness(self, line, dis_matrix):
+    def _cal_fitness(self, line, cost_mat):
         """带缓存的适应度计算，避免重复触发 Numba 调用的开销
 
         Args:
             line: 路径列表（含起终点的完整路径）。
-            dis_matrix: 距离/旅行时间矩阵。
+            cost_mat: 距离/旅行时间矩阵。
 
         Returns:
             Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
         """
-        key = (tuple(line), id(dis_matrix))
+        key = (tuple(line), id(cost_mat))
         if key in self.fitness_cache:
             return self.fitness_cache[key]
         line_arr = np.array(line, dtype=np.int32)
-        dis_arr = np.asarray(dis_matrix, dtype=np.float64)
+        dis_arr = np.asarray(cost_mat, dtype=np.float64)
         result = _cal_fitness_numba(
             line_arr, dis_arr,
             self.travel_speed, self.penalty_weight,
@@ -207,13 +207,20 @@ class VNSSolver:
 
     # ---------- 初始解生成 ----------
 
-    def _init_nearest_neighbor(self, dis_matrix):
-        """最近邻贪心初始解"""
+    def _init_nearest_neighbor(self, cost_mat):
+        """最近邻贪心初始解：从未访问节点中选成本最小的加入路径。
+
+        Args:
+            cost_mat: 成本矩阵。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         unvisited = set(self.city_indices)
         route = [self.depot_index]
         cur = self.depot_index
         while unvisited:
-            best = min(unvisited, key=lambda n: dis_matrix[cur][n] if dis_matrix is not None else 999999)
+            best = min(unvisited, key=lambda n: cost_mat[cur][n] if cost_mat is not None else 999999)
             route.append(best)
             unvisited.remove(best)
             cur = best
@@ -221,7 +228,11 @@ class VNSSolver:
         return route
 
     def _init_time_window(self):
-        """按时间窗起始时间排序的初始解"""
+        """按时间窗起始时间排序的初始解：早开门的景点优先访问。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
             cities_with_time.sort(key=lambda x: x[1])
@@ -229,7 +240,11 @@ class VNSSolver:
         return [self.depot_index, self.depot_index]
 
     def _init_random(self):
-        """随机排列初始解"""
+        """随机排列初始解：提供种群多样性，防止陷入局部最优。
+
+        Returns:
+            List[int]: 含起终点的路径序列。
+        """
         route = self.city_indices.copy()
         random.shuffle(route)
         return [self.depot_index] + route + [self.depot_index]
@@ -237,7 +252,14 @@ class VNSSolver:
     # ---------- 邻域算子 ----------
 
     def _swap(self, route):
-        """Swap 算子：交换内部两点位置"""
+        """Swap 算子：交换内部两点位置，改变节点访问顺序。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -247,7 +269,14 @@ class VNSSolver:
         return r
 
     def _inversion(self, route):
-        """Inversion 算子：反转内部一段子序列"""
+        """Inversion 算子：反转内部一段子序列，改变路径拓扑。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -258,7 +287,14 @@ class VNSSolver:
         return r
 
     def _insert(self, route):
-        """Insert 算子：随机删除一个节点并插入到另一位置"""
+        """Insert 算子：随机删除一个节点并插入到另一位置，改变路径结构。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 2: return r
@@ -272,7 +308,14 @@ class VNSSolver:
         return r
 
     def _2opt(self, route):
-        """2-opt 算子：反转内部两个切割点之间的子序列"""
+        """2-opt 算子：反转内部两个切割点之间的子序列，消除路径交叉。
+
+        Args:
+            route: 当前路径。
+
+        Returns:
+            List[int]: 扰动后的路径。
+        """
         r = route.copy()
         inner = r[1:-1]
         if len(inner) < 3: return r
@@ -284,7 +327,7 @@ class VNSSolver:
 
     # ---------- Shaking（抖动） ----------
 
-    def _shaking(self, solution, k, dis_matrix, iter_ratio=0.5):
+    def _shaking(self, solution, k, cost_mat, iter_ratio=0.5):
         """
         执行 k 步抖动。
 
@@ -294,7 +337,7 @@ class VNSSolver:
         Args:
             solution: 当前解路径。
             k: 抖动步数。
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
             iter_ratio: 当前迭代进度比例（0~1）。
 
         Returns:
@@ -306,9 +349,9 @@ class VNSSolver:
         # 收集违规节点
         # 注意：analyze_solution（Python 版）与 _cal_fitness_numba（Numba 版）逻辑需同步
         violators = []
-        if iter_ratio < EARLY_EXPLORE_RATIO and dis_matrix is not None:
+        if iter_ratio < EARLY_EXPLORE_RATIO and cost_mat is not None:
             _, _, _, _, violations = analyze_solution(
-                sol, dis_matrix, self.spots_dict, self.travel_speed,
+                sol, cost_mat, self.spots_dict, self.travel_speed,
                 self.early_wait_weight, self.penalty_weight,
                 self.late_return_weight, self.depot_index,
                 use_real_time_matrix=self.use_real_time_matrix
@@ -367,7 +410,7 @@ class VNSSolver:
 
     # ---------- VND 局部搜索 ----------
 
-    def _local_search(self, solution, dis_matrix, move_type):
+    def _local_search(self, solution, cost_mat, move_type):
         """
         指定邻域类型的第一改善型局部搜索。
 
@@ -375,14 +418,14 @@ class VNSSolver:
 
         Args:
             solution: 当前解路径。
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
             move_type (str): 邻域类型，可选 'swap'/'inversion'/'insert'/'2opt'。
 
         Returns:
             List[int]: 局部搜索后的路径。
         """
         best_sol = solution.copy()
-        best_cost, _, _ = self._cal_fitness(best_sol, dis_matrix)
+        best_cost, _, _ = self._cal_fitness(best_sol, cost_mat)
         inner = best_sol[1:-1]
         n = len(inner)
 
@@ -392,7 +435,7 @@ class VNSSolver:
                     new_inner = inner.copy()
                     new_inner[i], new_inner[j] = new_inner[j], new_inner[i]
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
-                    c, _, _ = self._cal_fitness(new_sol, dis_matrix)
+                    c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
         elif move_type == 'inversion':
@@ -400,7 +443,7 @@ class VNSSolver:
                 for j in range(i + 2, n):
                     new_inner = inner[:i] + inner[i:j+1][::-1] + inner[j+1:]
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
-                    c, _, _ = self._cal_fitness(new_sol, dis_matrix)
+                    c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
         elif move_type == 'insert':
@@ -411,7 +454,7 @@ class VNSSolver:
                     val = new_inner.pop(i)
                     new_inner.insert(j, val)
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
-                    c, _, _ = self._cal_fitness(new_sol, dis_matrix)
+                    c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
         elif move_type == '2opt':
@@ -419,12 +462,12 @@ class VNSSolver:
                 for j in range(i + 2, n):
                     new_inner = inner[:i] + inner[i:j+1][::-1] + inner[j+1:]
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
-                    c, _, _ = self._cal_fitness(new_sol, dis_matrix)
+                    c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
         return best_sol
 
-    def _vnd(self, solution, dis_matrix):
+    def _vnd(self, solution, cost_mat):
         """
         变邻域下降（Variable Neighborhood Descent）。
 
@@ -433,7 +476,7 @@ class VNSSolver:
 
         Args:
             solution: 当前解路径。
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
 
         Returns:
             List[int]: VND 优化后的路径。
@@ -443,9 +486,9 @@ class VNSSolver:
         neighborhoods = ['swap', 'inversion', 'insert', '2opt']
 
         while k < len(neighborhoods):
-            sol_new = self._local_search(sol, dis_matrix, neighborhoods[k])
-            new_cost, _, _ = self._cal_fitness(sol_new, dis_matrix)
-            old_cost, _, _ = self._cal_fitness(sol, dis_matrix)
+            sol_new = self._local_search(sol, cost_mat, neighborhoods[k])
+            new_cost, _, _ = self._cal_fitness(sol_new, cost_mat)
+            old_cost, _, _ = self._cal_fitness(sol, cost_mat)
             if new_cost < old_cost:
                 sol = sol_new
                 k = 0
@@ -456,7 +499,12 @@ class VNSSolver:
     # ---------- 精英池管理 ----------
 
     def _update_elite(self, solution, cost):
-        """将解加入精英池，超出容量时替换最差者"""
+        """将解加入精英池，超出容量时替换最差者。
+
+        Args:
+            solution: 当前解路径。
+            cost: 当前解成本。
+        """
         if len(self.elite_pool) < self.params['elite_size']:
             self.elite_pool.append((solution.copy(), cost))
         else:
@@ -470,12 +518,12 @@ class VNSSolver:
 
     # ---------- 主求解入口 ----------
 
-    def solve(self, dis_matrix, initial_solution=None):
+    def solve(self, cost_mat, initial_solution=None):
         """
         执行 VNS 主循环。
 
         Args:
-            dis_matrix: 距离矩阵。
+            cost_mat: 距离矩阵。
             initial_solution: 可选的初始解，None 则自动择优选取。
 
         Returns:
@@ -491,13 +539,13 @@ class VNSSolver:
             cur_sol = initial_solution
         else:
             candidates = [
-                self._init_nearest_neighbor(dis_matrix),
+                self._init_nearest_neighbor(cost_mat),
                 self._init_time_window(),
                 self._init_random()
             ]
-            cur_sol = min(candidates, key=lambda s: self._cal_fitness(s, dis_matrix)[0])
+            cur_sol = min(candidates, key=lambda s: self._cal_fitness(s, cost_mat)[0])
 
-        cur_cost, cur_dist, cur_pen = self._cal_fitness(cur_sol, dis_matrix)
+        cur_cost, cur_dist, cur_pen = self._cal_fitness(cur_sol, cost_mat)
         best_sol = cur_sol.copy()
         best_cost, best_dist, best_pen = cur_cost, cur_dist, cur_pen
         conv = [best_cost]
@@ -517,10 +565,10 @@ class VNSSolver:
             k = random.randint(1, dynamic_max)
 
             # Shake → VND
-            x_shake, self.last_operator = self._shaking(cur_sol, k, dis_matrix, iter_ratio)
-            x_local = self._vnd(x_shake, dis_matrix)
+            x_shake, self.last_operator = self._shaking(cur_sol, k, cost_mat, iter_ratio)
+            x_local = self._vnd(x_shake, cost_mat)
 
-            new_cost, new_dist, new_pen = self._cal_fitness(x_local, dis_matrix)
+            new_cost, new_dist, new_pen = self._cal_fitness(x_local, cost_mat)
             delta = new_cost - cur_cost
 
             # SA 接收准则
@@ -556,14 +604,14 @@ class VNSSolver:
 
         # ***** 最终精细化：对最优解和精英池中的解额外执行 VND，提升最终解的质量稳定性 *****
         for _ in range(self.params['final_vnd_rounds']):
-            refined = self._vnd(best_sol, dis_matrix)
-            r_cost, _, _ = self._cal_fitness(refined, dis_matrix)
+            refined = self._vnd(best_sol, cost_mat)
+            r_cost, _, _ = self._cal_fitness(refined, cost_mat)
             if r_cost < best_cost:
                 best_sol, best_cost = refined, r_cost
 
         for elite_sol, _ in self.elite_pool:
-            refined = self._vnd(elite_sol, dis_matrix)
-            r_cost, r_dist, r_pen = self._cal_fitness(refined, dis_matrix)
+            refined = self._vnd(elite_sol, cost_mat)
+            r_cost, r_dist, r_pen = self._cal_fitness(refined, cost_mat)
             if r_cost < best_cost:
                 best_sol, best_cost, best_dist, best_pen = refined, r_cost, r_dist, r_pen
 

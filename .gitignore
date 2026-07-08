@@ -112,3 +112,6 @@ docs/_build/
 
 # Windows 重定向残留
 docs_buildhtml/
+
+# openapi-typescript 中间产物
+frontend/openapi.json

@@ -274,39 +274,287 @@ VNS_DEFAULT_PARAMS = { ... }
 
 ### 注释四级体系
 
-```text
-// TODO: 前端部分待填充——四级体系定义（P0-P3）同后端，示例使用 JSDoc 格式
-```
+| 等级 | 特征 | 目标 |
+|------|------|------|
+| P0 不合格 | 无注释 / 组件无规约 / Props 无 type | 不允许 |
+| P1 合格 | 组件职责说明 + Props JSDoc + 关键逻辑 Why | 底线要求 |
+| P2 优秀 | 设计意图 + 边界约定 + 异常行为 | 追求目标 |
+| P3 详尽 | 逐行解释复杂交互逻辑 | 仅核心组件 |
 
 ### 接口变更工具流
 
-```text
-// TODO: 前端部分待填充——组件 Props 变更 / 事件 emit 变更 / Router 变更流程
-```
+修改组件 API 或新增路由时，遵循以下顺序：
+
+**Props/Emits 变更**：
+1. **先更新组件 Props 定义**（`defineProps` 的 type + default）
+2. **再更新**父组件的传参调用
+3. **若组件被多个父组件使用**，全局搜索引用逐一适配
+
+**路由变更**：
+1. **先在 `router/index.js` 注册路由**（含 `path` + `name` + 懒加载）
+2. **再实现**对应的页面组件
+3. **最后更新**导航链接（`router.push` / `<router-link>`）
+
+**Store 变更**：
+1. **先在 store 中新增状态/方法**（setup store 的 `return` 中暴露）
+2. **再更新**使用该 store 的组件
 
 ### 编码约定
 
+**语法**：使用 `<script setup>` + Composition API。状态用 `ref()` 而非 `reactive()`，派生值用 `computed()`。
+
+**命名风格**：
+- 组件文件：`PascalCase.vue`（如 `SchedulePanel.vue`）
+- 页面文件：`PascalCase.vue`（如 `HomePage.vue`）
+- 目录：全小写（`stores/`、`services/`、`components/`、`pages/`）
+- 导出函数/变量：`camelCase`
+- Pinia store：`use` 前缀 + `Store` 后缀（`usePlanStore`）
+
+**导入顺序**：Vue/Pinia → 第三方库 → 项目内部模块，各组之间空一行。
+
 ```text
-// TODO: 前端部分待填充——Vue 3 Composition API / TypeScript / 命名风格 / 组件文件组织
+import { ref, computed, watch } from 'vue'
+import { useRouter } from 'vue-router'
+
+import { usePlanStore } from '../stores/plan'
+import { postSuggest } from '../services/api'
+
+import AmapMap from '../components/AmapMap.vue'
 ```
+
+**Composition API 结构约定**（`<script setup>` 内按序排列）：
+
+```text
+// 1. 外部导入（import）
+
+// 2. Store / Router
+const planStore = usePlanStore()
+const router = useRouter()
+
+// 3. Props / Emits
+const props = defineProps({ routes: Array, amapKey: String })
+
+// 4. 响应式状态
+const loading = ref(false)
+const error = ref('')
+
+// 5. 计算属性
+const hasResult = computed(() => planStore.result !== null)
+
+// 6. 生命周期
+onMounted(() => { ... })
+onBeforeUnmount(() => { ... })
+
+// 7. 事件处理 / 方法
+function handleSubmit() { ... }
+function onRemove(index) { ... }
+
+// 8. 侦听器（watch 放在最后）
+watch(() => props.routes, (val) => { ... }, { deep: true })
+```
+
+**Props 定义**：必须同时声明 `type` 和 `default`，数组/对象用工厂函数。
+
+```js
+const props = defineProps({
+  dailySchedules: { type: Array, default: () => [] },
+  highlightDay: { type: Number, default: 0 },
+  onRemovePoi: { type: Function, default: null },
+})
+```
+
+**父子通信**：使用回调函数 prop 而非 `defineEmits`（当前项目约定）。
+
+**API 服务**：使用 axios 实例，`baseURL: '/api'`，在 service 层解包 `response.data`。
+
+```js
+import axios from 'axios'
+const http = axios.create({ baseURL: '/api' })
+
+export function postPoiLookup(city, names) {
+  return http.post('/poi-lookup', { city, names }).then(r => r.data)
+}
+```
+
+**组件 Props 直接绑定**：使用 `v-bind` 逐个传递而非对象展开。
+
+- 组件根节点：根元素为 class 挂钩时，模板中保持可读的 `template`，不混入逻辑
 
 ### 接口清单规范
 
-```text
-// TODO: 前端部分待填充——组件 Props 清单 / Emits 清单 / 页面路由清单
+**组件级清单**：在组件定义处使用注释块声明公开 API。
+
+```js
+// SchedulePanel.vue 公开接口
+// Props:
+//   dailySchedules: 每日行程数组 [{day, spots, ...}]
+//   onRemovePoi:    删除景点回调 (dayIndex, spotId) => void
+```
+
+**路由清单**：路由集中定义在 `router/index.js`，所有页面懒加载。
+
+```js
+const routes = [
+  { path: '/', name: 'Home', component: () => import('../pages/HomePage.vue') },
+  { path: '/suggest', name: 'Suggest', component: () => import('../pages/SuggestPage.vue') },
+  { path: '/plan', name: 'Plan', component: () => import('../pages/PlanPage.vue') },
+]
+```
+
+**Store 清单**：Pinia store 通过 `return` 显式暴露的接口即为公开 API。
+
+```js
+return { city, spots, planResult, buildRequest, reset }
 ```
 
 ### 注释规范
 
-```text
-// TODO: 前端部分待填充——JSDoc 格式 / Props 注释 / 页面段注释（pages/ 目录）
-// 注释深度参照后端 P0/P1/P2 分层标准：
-// - P0 等价钱（核心组件 AmapMap.vue、AgentChat.vue）：JSDoc + 行内 Why
-// - P1 等价钱（管道组件 SchedulePanel.vue）：JSDoc
-// - P2 等价钱（基础组件 DayCard.vue）：行内 Why
-// - 页面级文件使用段注释：
-//   // ====== 状态定义 ======
-//   // ====== 计算属性 ======
-//   // ====== 数据操作 ======
-//   // ====== 生命周期 ======
+#### 注释优先级分层
+
+按文件重要性分三级：
+
+| 层级 | 范围 | 注释要求 |
+|------|------|---------|
+| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 |
+| **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why |
+| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.js） | P1 标准：组件职责 + 行内 Why |
+
+#### 按文件类型注释策略
+
+##### `.vue` 文件
+
+页面级（`pages/`）使用段注释区分逻辑区域：
+
+```html
+<script setup>
+// ====== 状态定义 ======
+const loading = ref(false)
+const error = ref('')
+
+// ====== 计算属性 ======
+const totalDays = computed(() => planStore.planResult?.days ?? 0)
+
+// ====== 数据操作 ======
+function handleSearch() { ... }
+function handleAdjust(day, spots) { ... }
+
+// ====== 生命周期 ======
+onMounted(() => { ... })
+</script>
 ```
+
+组件级（`components/`）使用 JSDoc + 行内 Why：
+
+```html
+<script setup>
+/**
+ * AmapMap — 高德 2D 地图视图
+ *
+ * 职责：接收规划结果中的每日路径数据，在地图上渲染折线和景点标记。
+ * 设计说明：路由数组为空时显示空白地图（非加载态），
+ * 便于父组件分步加载数据时保持地图实例不销毁。
+ */
+const props = defineProps({
+  /** 每日路径数组 [{day, route, duration, ...}] */
+  routes: { type: Array, default: () => [] },
+  /** 景点字典 {index: {name, x, y, ...}} */
+  spots: { type: Object, default: () => ({}) },
+  /** 高亮某一天（-1 表示全部） */
+  highlightDay: { type: Number, default: -1 },
+  /** 高德 JS API Key */
+  amapKey: { type: String, required: true },
+})
+</script>
+```
+
+##### `services/*.js` 文件
+
+函数级 JSDoc：
+
+```js
+/**
+ * 查询景点 POI 坐标。
+ * @param {string} city - 城市名
+ * @param {string[]} names - 景点名称列表
+ * @returns {Promise<Array<{name, x, y}>>}
+ */
+export function postPoiLookup(city, names) {
+  return http.post('/poi-lookup', { city, names }).then(r => r.data)
+}
+```
+
+##### `stores/*.js` 文件
+
+Store 职责说明 + 关键方法 JSDoc：
+
+```text
+/**
+ * planStore — 规划流程状态管理
+ *
+ * 职责：承载从输入到结果的完整数据流，跨页面共享。
+ * 生命周期：HomePage 写入 → SuggestPage/PlanPage 读取
+ */
+export const usePlanStore = defineStore('plan', () => {
+  const city = ref('')
+  const spots = ref([])
+  // ...
+
+  /** 构造请求参数，nDays 为 null 时走 suggest 模式 */
+  function buildRequest(nDays) { ... }
+
+  return { city, spots, planResult, buildRequest, reset }
+})
+```
+
+##### `router/index.js`
+
+Router 配置无需 JSDoc，路由 path 和 name 自文档化。
+
+#### 行内注释
+
+与后端一致，传达设计意图（Why）而非描述行为（What）：
+
+```js
+// 路由为空时保持地图实例，避免反复销毁重建
+const hasRoutes = computed(() => props.routes.length > 0)
+
+// 深度监听 route 变化，避免引用变更漏更新
+watch(() => props.routes, renderRoutes, { deep: true })
+
+// 高德 API 在组件卸载时必须销毁，否则内存泄漏
+onBeforeUnmount(() => mapRef.value?.destroy())
+```
+
+#### 不需要注释的情况
+
+- 模板中 `v-if`/`v-for` 等 Vue 内置指令
+- 标准 Pinia 调用（`store.xxx` 赋值）
+- 标准 Router 调用（`router.push`）
+
+#### 模板注释
+
+模板中仅当逻辑分支意图不明显时加注释：
+
+```html
+<!-- 优先展示建议列表，无数据时显示空态提示 -->
+<div v-if="suggestions.length" class="suggestion-list">
+  <SuggestionCard v-for="s in suggestions" :key="s.id" ... />
+</div>
+<p v-else class="empty-hint">暂无建议，请调整输入后重试</p>
+```
+
+#### Props 默认值注释（P2）
+
+复杂默认值或特殊约定在 Props 定义处附带说明：
+
+```js
+highlightDay: {
+  type: Number,
+  default: -1,
+  // -1 表示全部显示，0/1/2... 指定某一天
+},
+onRemovePoi: {
+  type: Function,
+  // 不传则隐藏删除按钮（纯展示模式）
+  default: null,
+},

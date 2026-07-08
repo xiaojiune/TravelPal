@@ -1,26 +1,27 @@
 import pytest
+import numpy as np
 from tests.dataset_loader import load_tsptw_dataset, find_dataset
 
 # 数据集 fixture 覆盖四种规模：n20（小）、n60（中）、n100（中大）、n200（大）
 
 
 @pytest.fixture(scope="session")
-def n20_dataset():
+def n20_dataset() -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset("n20w20", 1))
 
 
 @pytest.fixture(scope="session")
-def n60_dataset():
+def n60_dataset() -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset("n60w60", 3))
 
 
 @pytest.fixture(scope="session")
-def n100_dataset():
+def n100_dataset() -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset("n100w20", 1))
 
 
 @pytest.fixture(scope="session")
-def n200_dataset():
+def n200_dataset() -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset("n200w40", 5))
 
 
@@ -32,7 +33,7 @@ DATASET_IDS = [
 ]
 
 
-def _load(subdir, instance):
+def _load(subdir: str, instance: int) -> tuple[dict, np.ndarray, int]:
     """按子目录和编号加载数据集，供 any_dataset 参数化 fixture 调用。"""
     return load_tsptw_dataset(find_dataset(subdir, instance))
 
@@ -45,6 +46,6 @@ def _load(subdir, instance):
 ], ids=DATASET_IDS)
 
 # ================== 内部函数 ==================
-def any_dataset(request):
+def any_dataset(request: pytest.FixtureRequest) -> tuple[dict, np.ndarray, int]:
     subdir, instance = request.param
     return _load(subdir, instance)

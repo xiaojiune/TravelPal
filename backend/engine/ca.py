@@ -115,10 +115,11 @@ class CASolver:
     - 2-opt 精细化：主循环结束后对最优解执行 First Improvement 2-opt 局部搜索
     """
 
-    def __init__(self, city_indices, spots_dict, travel_speed=1.0,
-                 penalty_weight=100.0, early_wait_weight=0.1,
-                 late_return_weight=50.0, depot_index=0,
-                 use_real_time_matrix=False, **kwargs):
+    def __init__(self, city_indices: list[int], spots_dict: dict,
+                 travel_speed: float = 1.0,
+                 penalty_weight: float = 100.0, early_wait_weight: float = 0.1,
+                 late_return_weight: float = 50.0, depot_index: int = 0,
+                 use_real_time_matrix: bool = False, **kwargs):
         """
         初始化压缩退火求解器。
 
@@ -154,7 +155,7 @@ class CASolver:
 
     # ---------- 适应度计算 ----------
 
-    def _cal_fitness(self, line, cost_mat):
+    def _cal_fitness(self, line: list[int], cost_mat: np.ndarray):
         """直接调用 Numba 内核评估路径成本
 
         CA 单次运行中几乎不会重复评估同一解，故不设缓存。
@@ -179,7 +180,7 @@ class CASolver:
 
     # ---------- 初始解 ----------
 
-    def _initial_solution(self):
+    def _initial_solution(self) -> list[int]:
         """按时间窗起始时间排序生成初始解（启发式效果优于随机）"""
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
@@ -189,7 +190,7 @@ class CASolver:
 
     # ---------- 标准邻域生成 ----------
 
-    def _standard_neighbor(self, solution, temp_ratio):
+    def _standard_neighbor(self, solution: list[int], temp_ratio: float):
         """
         标准邻域生成器。
 
@@ -224,7 +225,7 @@ class CASolver:
 
     # ---------- 时间窗引导邻域 ----------
 
-    def _time_window_guided_neighbor(self, solution, cost_mat, temp_ratio):
+    def _time_window_guided_neighbor(self, solution: list[int], cost_mat: np.ndarray, temp_ratio: float):
         """
         时间窗引导邻域生成。
 
@@ -267,7 +268,7 @@ class CASolver:
         inner.insert(new_pos, city)
         return [self.depot_index] + inner + [self.depot_index]
 
-    def _get_neighbor(self, solution, iteration, max_iter, cost_mat):
+    def _get_neighbor(self, solution: list[int], iteration: int, max_iter: int, cost_mat: np.ndarray):
         """混合邻域选择：50% 概率使用时间窗引导，50% 使用标准邻域
 
         Args:
@@ -286,7 +287,7 @@ class CASolver:
 
     # ---------- 2-opt 局部搜索 ----------
 
-    def _local_search_2opt(self, solution, cost_mat, max_iter=20):
+    def _local_search_2opt(self, solution: list[int], cost_mat: np.ndarray, max_iter: int = 20):
         """
         2-opt 局部搜索（First Improvement）。
 
@@ -317,7 +318,7 @@ class CASolver:
 
     # ---------- 主求解入口 ----------
 
-    def solve(self, cost_mat):
+    def solve(self, cost_mat: np.ndarray):
         """
         执行压缩退火主循环。
 

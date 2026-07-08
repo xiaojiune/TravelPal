@@ -1,7 +1,7 @@
 <template>
   <div class="page-suggest">
     <h2>方案建议</h2>
-    <p class="subtitle" v-if="store.suggestions.length">共 {{ store.suggestions.length }} 个方案，点击选择天数并生成规划</p>
+    <p v-if="store.suggestions.length" class="subtitle">共 {{ store.suggestions.length }} 个方案，点击选择天数并生成规划</p>
 
     <div v-if="!store.suggestions.length" class="empty-state">
       <p>暂无方案建议，请先在首页输入规划参数。</p>
@@ -24,26 +24,28 @@
       </div>
     </div>
 
-    <div class="form-actions" v-if="store.suggestions.length">
+    <div v-if="store.suggestions.length" class="form-actions">
       <div class="form-row inline">
         <label>天数</label>
         <select v-model.number="customDays">
           <option v-for="d in availableDays" :key="d" :value="d">{{ d }} 天</option>
         </select>
       </div>
-      <button class="btn btn-primary" @click="generatePlan" :disabled="store.loading">
+      <button class="btn btn-primary" :disabled="store.loading" @click="generatePlan">
         {{ store.loading ? '规划中...' : '生成规划' }}
       </button>
     </div>
   </div>
 </template>
 
-<script setup>
+/** 方案建议页：展示引擎返回的多组候选方案卡片，用户选择天数后生成最终规划。 */
+
+<script setup lang="ts">
 // ====== 状态定义 ======
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlanStore } from '../stores/plan'
-import { postPlan } from '../services/api'
+import { usePlanStore } from '@/stores/plan'
+import { postPlan } from '@/services/api'
 
 const store = usePlanStore()
 const router = useRouter()
@@ -51,16 +53,19 @@ const router = useRouter()
 const selectedIndex = ref(0)
 const customDays = ref(store.suggestions[0]?.n_days || 3)
 
+/** 从所有建议中提取去重后的天数列表，供下拉选择。 */
 const availableDays = computed(() => {
   const days = new Set(store.suggestions.map(s => s.n_days))
   return [...days].sort((a, b) => a - b)
 })
 
-function select(i) {
+/** 选中某张方案卡片，同步更新下拉框的天数。 */
+function select(i: number) {
   selectedIndex.value = i
   customDays.value = store.suggestions[i].n_days
 }
 
+/** 按选定天数调用 /api/plan 生成最终方案，成功后跳转 PlanPage。 */
 async function generatePlan() {
   store.loading = true
   store.selectedNDays = customDays.value
@@ -69,8 +74,8 @@ async function generatePlan() {
     const data = await postPlan(store.buildRequest(customDays.value))
     store.planResult = data
     router.push('/plan')
-  } catch (e) {
-    alert('规划失败: ' + (e.response?.data?.detail || e.message))
+  } catch (e: unknown) {
+    alert('规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
   } finally {
     store.loading = false
   }

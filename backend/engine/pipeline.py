@@ -8,6 +8,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 from backend.data.amap_loader import build_real_data
 from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
 from backend.agent.commentator import generate_commentary
+from backend.types import PoiCache, SpotDict, PlanResult, ScheduleItem, RouteResult
 
 # ================== 常量 ==================
 
@@ -15,9 +16,9 @@ TRAVEL_SPEED = 1.0
 
 # ================== 主入口 ==================
 
-def run_planning(poi_cache: dict, city: str, hotel_name: str,
+def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
                  penalty_weight: float, early_wait_weight: float, late_return_weight: float,
-                 mode: str = "fast", n_days: int | None = None) -> dict:
+                 mode: str = "fast", n_days: int | None = None) -> PlanResult | dict:
     """
     双阶段流程编排入口。
 
@@ -46,7 +47,7 @@ def run_planning(poi_cache: dict, city: str, hotel_name: str,
     cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
     print("成本矩阵构建完成。\n")
 
-    spots = {0: {"name": hotel_name, "tw": poi_cache["hotel"]["tw"], "stay": 0,
+    spots: dict[int, SpotDict] = {0: {"name": hotel_name, "tw": poi_cache["hotel"]["tw"], "stay": 0,
                  "x": poi_cache["hotel"]["lon"], "y": poi_cache["hotel"]["lat"],
                  "original_tw": poi_cache["hotel"]["tw"]}}
     for i, spot in enumerate(poi_cache["spots"], start=1):
@@ -64,7 +65,7 @@ def run_planning(poi_cache: dict, city: str, hotel_name: str,
 
     depot = 0
 
-    result = cluster_and_solve(
+    result: PlanResult | dict = cluster_and_solve(
         spots, depot, cost_matrix, mode=mode,
         n_days=n_days,
         travel_speed=TRAVEL_SPEED,
@@ -104,7 +105,7 @@ def run_planning(poi_cache: dict, city: str, hotel_name: str,
 
 # ================== 工具函数 ==================
 
-def _rebuild_schedule(routes: list, spots_dict: dict, dist_matrix: np.ndarray) -> list:
+def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], dist_matrix: np.ndarray) -> list[list[ScheduleItem]]:
     """从路径和景点字典重建每日行程表。
 
     Args:
@@ -176,7 +177,7 @@ def _rebuild_schedule(routes: list, spots_dict: dict, dist_matrix: np.ndarray) -
 
 # ================== 方案调整 ==================
 
-def adjust_plan(spots_dict: dict, cost_matrix_list: list, dist_matrix_list: list, routes: list, adjustments: dict) -> dict:
+def adjust_plan(spots_dict: dict[int, SpotDict], cost_matrix_list: list, dist_matrix_list: list, routes: list, adjustments: dict) -> PlanResult:
     """
     对已有方案执行调整（均衡、移除景点、改天数）。
 
@@ -187,7 +188,7 @@ def adjust_plan(spots_dict: dict, cost_matrix_list: list, dist_matrix_list: list
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"} 之一。
+        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、{"add_poi": {name, lon, lat, tw_start, tw_end, stay}} 之一。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。
@@ -215,7 +216,44 @@ def adjust_plan(spots_dict: dict, cost_matrix_list: list, dist_matrix_list: list
         result = plan["solution"]
         best_days = plan["best_days"]
         best_m = plan["best_m"]
-    else:
+    elif "add_poi" in adjustments:
+        from backend.agent.planner import add_poi_to_plan
+        from backend.data.amap_loader import _get_driving_data
+
+        poi = adjustments["add_poi"]
+        new_idx = max(spots_dict.keys()) + 1
+        spots_dict[new_idx] = {
+            "name": poi["name"],
+            "x": poi["lon"], "y": poi["lat"],
+            "tw": (poi["tw_start"], poi["tw_end"]),
+            "stay": poi["stay"],
+        }
+
+        new_n = len(spots_dict)
+        new_cost = np.full((new_n, new_n), -1, dtype=np.float64)
+        new_cost[:new_n-1, :new_n-1] = cost_matrix
+        new_dist = np.full((new_n, new_n), -1, dtype=np.float64)
+        new_dist[:new_n-1, :new_n-1] = dist_matrix
+
+        for i, spot in spots_dict.items():
+            if i == new_idx:
+                new_cost[i][i] = 0
+                new_dist[i][i] = 0
+                continue
+            d_km, dur, _ = _get_driving_data((poi["lon"], poi["lat"]), (spot["x"], spot["y"]))
+            if dur is not None:
+                new_cost[new_idx][i] = new_cost[i][new_idx] = round(dur / 60.0, 2)
+                new_dist[new_idx][i] = new_dist[i][new_idx] = round(d_km, 2)
+            else:
+                new_cost[new_idx][i] = new_cost[i][new_idx] = -1
+                new_dist[new_idx][i] = new_dist[i][new_idx] = -1
+            time.sleep(0.4)
+
+        plan = add_poi_to_plan(spots_dict, new_cost, new_dist, routes)
+        daily_schedules = plan["daily_schedules"]
+        result = plan["solution"]
+        best_days = plan["best_days"]
+        best_m = "add_poi"
         core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
         if adjustments.get("balance"):
             balanced = balance_groups(core_groups, spots_dict)

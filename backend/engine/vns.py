@@ -1,7 +1,9 @@
 
 import random
 import math
+from typing import Tuple, List
 import numpy as np
+from backend.types import SpotDict
 from numba import njit
 from backend.engine.fitness import analyze_solution
 
@@ -39,10 +41,12 @@ WEIGHT_REWARD_FACTOR = 1.02
 # ================== Numba 适应度内核 ==================
 
 @njit(cache=True)
-def _cal_fitness_numba(line, cost_mat, travel_speed, penalty_weight,
-                       early_wait_weight, late_return_weight, depot_index,
-                       spots_start, spots_end, spots_stay,
-                       use_real_time_matrix=False):
+def _cal_fitness_numba(line: np.ndarray, cost_mat: np.ndarray, travel_speed: float,
+                       penalty_weight: float, early_wait_weight: float,
+                       late_return_weight: float, depot_index: int,
+                       spots_start: np.ndarray, spots_end: np.ndarray,
+                       spots_stay: np.ndarray,
+                       use_real_time_matrix: bool = False) -> Tuple[float, float, float]:
     """
     Numba JIT 编译的适应度计算内核。
 
@@ -129,10 +133,11 @@ class VNSSolver:
     - 精英池后优化：主循环结束后对精英池中的多组候选解执行 VND，提升最终解稳定性
     """
 
-    def __init__(self, city_indices, spots_dict, travel_speed=1.0,
-                 penalty_weight=100.0, early_wait_weight=0.1,
-                 late_return_weight=50.0, depot_index=0,
-                 use_real_time_matrix=False, **kwargs):
+    def __init__(self, city_indices: list[int], spots_dict: dict[int, SpotDict],
+                 travel_speed: float = 1.0, penalty_weight: float = 100.0,
+                 early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
+                 depot_index: int = 0, use_real_time_matrix: bool = False,
+                 **kwargs) -> None:
         """
         初始化 VNS 求解器。
 
@@ -179,7 +184,7 @@ class VNSSolver:
 
     # ---------- 适应度（带缓存） ----------
 
-    def _cal_fitness(self, line, cost_mat):
+    def _cal_fitness(self, line: list[int], cost_mat: np.ndarray) -> Tuple[float, float, float]:
         """带缓存的适应度计算，避免重复触发 Numba 调用的开销
 
         Args:
@@ -207,15 +212,8 @@ class VNSSolver:
 
     # ---------- 初始解生成 ----------
 
-    def _init_nearest_neighbor(self, cost_mat):
-        """最近邻贪心初始解：从未访问节点中选成本最小的加入路径。
-
-        Args:
-            cost_mat: 成本矩阵。
-
-        Returns:
-            List[int]: 含起终点的路径序列。
-        """
+    def _init_nearest_neighbor(self, cost_mat: np.ndarray) -> list[int]:
+        """最近邻贪心初始解：从未访问节点中选成本最小的加入路径。"""
         unvisited = set(self.city_indices)
         route = [self.depot_index]
         cur = self.depot_index
@@ -227,32 +225,23 @@ class VNSSolver:
         route.append(self.depot_index)
         return route
 
-    def _init_time_window(self):
-        """按时间窗起始时间排序的初始解：早开门的景点优先访问。
-
-        Returns:
-            List[int]: 含起终点的路径序列。
-        """
+    def _init_time_window(self) -> list[int]:
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
             cities_with_time.sort(key=lambda x: x[1])
             return [self.depot_index] + [c for c, _ in cities_with_time] + [self.depot_index]
         return [self.depot_index, self.depot_index]
 
-    def _init_random(self):
-        """随机排列初始解：提供种群多样性，防止陷入局部最优。
-
-        Returns:
-            List[int]: 含起终点的路径序列。
-        """
+    def _init_random(self) -> list[int]:
+        """随机排列初始解：提供种群多样性，防止陷入局部最优。"""
         route = self.city_indices.copy()
         random.shuffle(route)
         return [self.depot_index] + route + [self.depot_index]
 
     # ---------- 邻域算子 ----------
 
-    def _swap(self, route):
-        """Swap 算子：交换内部两点位置，改变节点访问顺序。
+    def _swap(self, route: list[int]) -> list[int]:
+        """Swap 算子：随机交换两个内部节点，改变路径结构。
 
         Args:
             route: 当前路径。
@@ -268,7 +257,7 @@ class VNSSolver:
         r[1:-1] = inner
         return r
 
-    def _inversion(self, route):
+    def _inversion(self, route: list[int]) -> list[int]:
         """Inversion 算子：反转内部一段子序列，改变路径拓扑。
 
         Args:
@@ -286,7 +275,7 @@ class VNSSolver:
         r[1:-1] = inner
         return r
 
-    def _insert(self, route):
+    def _insert(self, route: list[int]) -> list[int]:
         """Insert 算子：随机删除一个节点并插入到另一位置，改变路径结构。
 
         Args:
@@ -307,7 +296,7 @@ class VNSSolver:
         r[1:-1] = inner
         return r
 
-    def _2opt(self, route):
+    def _2opt(self, route: list[int]) -> list[int]:
         """2-opt 算子：反转内部两个切割点之间的子序列，消除路径交叉。
 
         Args:

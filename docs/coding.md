@@ -125,11 +125,27 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 
 按函数重要性分三级，不同层级投入不同注释深度：
 
-| 层级 | 范围 | 注释要求 |
-|------|------|---------|
-| **L0** | 核心算法（vns.py、ca.py、clustering.py、fitness.py） | P2~P3 标准：参数设计说明 + Google docstring + 行内 Why |
-| **L1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | P1~P2 标准：Google docstring + 关键逻辑 Why |
-| **L2** | 测试/config（tests/*.py、config.py） | P0~P1 标准：行内 Why 即可 |
+| 层级 | 范围 | 注释要求 | 数据方案 |
+|------|------|---------|---------|
+| **L0** | 核心算法（vns.py、ca.py、clustering.py、fitness.py） | P2~P3 标准：参数设计说明 + Google docstring + 行内 Why | TypedDict |
+| **L1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | P1~P2 标准：Google docstring + 关键逻辑 Why | TypedDict |
+| **L2** | 测试/config（tests/*.py、config.py） | P0~P1 标准：行内 Why 即可 | dict 无需约束 |
+
+### 数据模型选型
+
+按运行时需求分层，API 边界用 Pydantic，内部传递用 TypedDict：
+
+| 场景 | 推荐方案 | 运行时校验 | 说明 |
+|------|---------|:---------:|------|
+| API 请求/响应（schemas.py） | Pydantic BaseModel | ✅ | FastAPI 原生支持，自动生成 OpenAPI 文档 |
+| 内部数据结构（spots_dict、poi_cache） | TypedDict | ❌ | 轻量，零运行时开销，只做类型约束 |
+| 跨模块业务对象（PlanResult） | Pydantic Model | ✅ | 多处传递/校验时更安全 |
+| 配置/环境变量 | Pydantic BaseSettings | ✅ | 可自动加载 .env |
+| 函数参数/返回值 | TypedDict 或 Pydantic | 按需 | 取决于是否需要运行时校验 |
+
+**命名约定**：内部用 `XxxDict`（如 `SpotDict`、`PoiCache`），API 用 `XxxModel`（如 `PlanRequest` 等已有 Pydantic 类不动）。
+
+**升级路径**：TypedDict → Pydantic Model 是平滑的，只需替换类型声明。初始化建议先用 TypedDict，有校验需求时再升级。
 
 #### 段落分隔线
 
@@ -413,11 +429,11 @@ return { city, spots, planResult, buildRequest, reset }
 
 按文件重要性分三级：
 
-| 层级 | 范围 | 注释要求 |
-|------|------|---------|
-| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 |
-| **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why |
-| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.js） | P1 标准：组件职责 + 行内 Why |
+| 层级 | 范围 | 注释要求 | 数据方案 |
+|------|------|---------|---------|
+| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 | TypedDict/Pydantic |
+| **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why | TypedDict |
+| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.ts） | P1 标准：组件职责 + 行内 Why | Interface |
 
 #### 按文件类型注释策略
 
@@ -547,14 +563,44 @@ onBeforeUnmount(() => mapRef.value?.destroy())
 
 复杂默认值或特殊约定在 Props 定义处附带说明：
 
-```js
-highlightDay: {
-  type: Number,
-  default: -1,
-  // -1 表示全部显示，0/1/2... 指定某一天
-},
-onRemovePoi: {
-  type: Function,
-  // 不传则隐藏删除按钮（纯展示模式）
-  default: null,
-},
+```ts
+interface Props {
+  /** 高亮某一天（-1 表示全部显示，0/1/2... 指定某一天） */
+  highlightDay?: number
+  /** 不传则隐藏删除按钮（纯展示模式） */
+  onRemovePoi?: (dayIndex: number, spotId: number) => void
+}
+const props = withDefaults(defineProps<Props>(), {
+  highlightDay: -1,
+  onRemovePoi: undefined,
+})
+```
+
+### 组件粒度与逻辑复用
+
+**SFC 拆分原则**：
+- 模板超过 150 行 → 考虑拆分
+- 有独立状态管理逻辑 → 考虑拆分
+- 可被多个页面复用 → 必须拆分
+- 与父组件强耦合且仅使用一次 → 可保持内联
+
+**Composable 提取原则**：
+- 相同业务逻辑出现 2 次以上 → 提取为 composable
+- 命名以 `use` 开头，如 `usePlanning`、`usePoiSearch`
+
+**命名规范**：
+- 组件文件：`PascalCase.vue`
+- 服务/工具文件：`camelCase.ts`
+- 目录名：`kebab-case`
+
+### 反模式 / 不推荐
+
+以下做法与项目约定冲突，应避免：
+
+- **`reactive()` 包裹对象**：使用 `ref()` + 对象解构，更易追踪变更
+- **`defineEmits` 声明事件**：当前项目统一使用回调 prop 通信
+- **组件 Props 用 `v-bind="obj"` 对象展开**：逐一传递各 prop，调用处可读
+- **组件内 `async setup`**：异步初始化放在 `onMounted` 中处理
+- **Pinia store 中引用其他 store 实例**：store 之间通过参数传值而非直接 `useXxxStore`
+- **模板中混入复杂表达式**：计算逻辑放入 `computed`，模板只做渲染
+- **`@` 别名导入**：统一使用相对路径 `../` 导入

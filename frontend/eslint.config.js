@@ -1,26 +1,35 @@
 import pluginVue from 'eslint-plugin-vue'
+import tseslint from 'typescript-eslint'
+import prettier from 'eslint-config-prettier'
 
-export default [
+export default tseslint.config(
+  { ignores: ['node_modules', 'dist'] },
+
+  // JS / TS 文件
+  ...tseslint.configs.recommended.map(c => ({
+    ...c,
+    files: ['**/*.{ts,mts,js,mjs}'],
+  })),
+
+  // Vue 文件
+  ...pluginVue.configs['flat/recommended'].map(c => ({
+    ...c,
+    files: ['**/*.vue'],
+  })),
   {
-    ignores: ['node_modules', 'dist'],
-  },
-  {
-    files: ['**/*.js', '**/*.vue'],
+    files: ['**/*.vue'],
     languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: 'module',
-      globals: {
-        browser: true,
-        node: true,
+      parserOptions: {
+        parser: tseslint.parser,
+        sourceType: 'module',
       },
     },
-    plugins: {
-      vue: pluginVue,
-    },
     rules: {
-      semi: ['error', 'never'],
-      quotes: ['error', 'single'],
+      'vue/multi-word-component-names': 'off',
+      'vue/require-v-for-key': 'warn',
     },
   },
-  ...pluginVue.configs['flat/essential'],
-]
+
+  // 关闭与 Prettier 冲突的规则
+  prettier,
+)

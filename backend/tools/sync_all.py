@@ -14,7 +14,11 @@ import os
 BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+# ================== AST 解析 ==================
+
+
 def _collect_names(source: str) -> list[str]:
+    """解析源码中所有 from X import Y 语句，收集公开名称。"""
     tree = ast.parse(source)
     names = []
     for node in ast.walk(tree):
@@ -23,6 +27,9 @@ def _collect_names(source: str) -> list[str]:
                 if not alias.name.startswith("_"):
                     names.append(alias.asname or alias.name)
     return names
+
+
+# ================== __all__ 生成 ==================
 
 
 def _rebuild(source: str, names: list[str]) -> str:
@@ -65,7 +72,11 @@ def _rebuild(source: str, names: list[str]) -> str:
     return "".join(result)
 
 
+# ================== 文件写入 ==================
+
+
 def sync_file(path: str) -> bool:
+    """对单个 __init__.py 执行同步：解析 import 行 → 生成 __all__ → 写回文件。"""
     with open(path, encoding="utf-8", newline="") as f:
         source = f.read()
 
@@ -82,7 +93,11 @@ def sync_file(path: str) -> bool:
     return True
 
 
+# ================== CLI 入口 ==================
+
+
 def main():
+    """扫描 backend/ 下所有 __init__.py，同步 __all__ 后输出变更清单。"""
     changed = []
     for root, _dirs, files in os.walk(BACKEND):
         if "__init__.py" in files:

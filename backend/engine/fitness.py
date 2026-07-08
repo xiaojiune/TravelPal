@@ -1,7 +1,10 @@
 # ================== 路径成本分析 ==================
 
 
-def analyze_solution(line, cost_mat, spots_dict, travel_speed,
+import numpy as np
+
+
+def analyze_solution(line: list, cost_mat: np.ndarray, spots_dict: dict, travel_speed: float,
                      early_wait_weight=0.1,
                      penalty_weight=100.0,
                      late_return_weight=50.0,

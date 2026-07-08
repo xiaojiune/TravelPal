@@ -117,8 +117,8 @@ class ChatRequest(BaseModel):
 class PlanAdjustRequest(BaseModel):
     """方案调整请求。
 
-    前端在查看方案后希望调整（如均衡天、改天数、重算某天）时调用。
-    暂只支持 balance，后续扩展 replan_day / change_days。
+    前端在查看方案后希望调整（如均衡天、改天数、移除/添加景点）时调用。
+    支持 balance / adjust_days / remove_poi / add_poi。
     """
     spots: dict
     cost_matrix: list

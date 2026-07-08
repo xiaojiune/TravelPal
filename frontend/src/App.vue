@@ -17,5 +17,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+// 根组件：全局导航栏 + <router-view> 页面出口。
+// 导航链接覆盖全部 5 个页面，样式内联于 <style> 中无外部依赖。
 </script>

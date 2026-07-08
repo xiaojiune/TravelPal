@@ -111,4 +111,7 @@ docs/images/generated/*.jpg
 docs/_build/
 
 # Windows 重定向残留
-nul
+docs_buildhtml/
+
+# openapi-typescript 中间产物
+frontend/openapi.json

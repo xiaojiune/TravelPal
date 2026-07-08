@@ -120,11 +120,12 @@
 <script setup lang="ts">
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { postSuggest } from '@/services/api'
 import { usePoiSearch } from '@/composables/usePoiSearch'
+import { useEditTable } from '@/composables/useEditTable'
 import type { SpotFormItem } from '@/types'
 
 const store = usePlanStore()
@@ -136,95 +137,11 @@ const {
   searchHotel, searchSpots, confirmPoi, clearSearchResults,
 } = usePoiSearch()
 
-// ====== 管理表格状态 ======
-interface EditRow {
-  isHotel: boolean; name: string; address: string
-  lon: number; lat: number
-  twStart: number; twEnd: number; stay: number; expectedArrival: number; delete: boolean
-}
-
-const editRows = ref<EditRow[]>([])
-const editHint = ref('')
-
 // ====== 计算属性 ======
-// 管理表格显隐逻辑：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。
-const showManagement = computed(() => {
-  if (hasResults.value) return false
-  if (store.spots.length > 0) return true
-  if (store.hotelName && store.hotelLon) return true
-  return false
-})
 const canSuggest = computed(() => store.spots.length > 0)
 
-// ====== 编辑表格构建 ======
-// 构建编辑态行数据：与 store 源数据解耦，用户点击确认后再统一回写，避免中途修改污染全局状态
-function rebuildEditRows() {
-  const rows = []
-  if (store.hotelName && store.hotelLon) {
-    rows.push({
-      isHotel: true, name: store.hotelName, address: store.hotelAddress,
-      lon: store.hotelLon, lat: store.hotelLat,
-      twStart: store.hotelTwStart, twEnd: store.hotelTwEnd,
-      stay: 0, expectedArrival: store.hotelTwStart, delete: false,
-    })
-  }
-  store.spots.forEach(s => {
-    rows.push({
-      isHotel: false, name: s.name, address: s.address,
-      lon: s.lon, lat: s.lat,
-      twStart: s.twStart, twEnd: s.twEnd,
-      stay: s.stay, expectedArrival: s.expectedArrival ?? s.twStart, delete: false,
-    })
-  })
-  editRows.value = rows
-}
-
-watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
-
-function formatBiz(start: number, end: number) {
-  const s = `${Math.floor(start / 60)}:${String(start % 60).padStart(2, '0')}`
-  const e = `${Math.floor(end / 60)}:${String(end % 60).padStart(2, '0')}`
-  return `${s}-${e}`
-}
-
-// ====== 编辑表格操作 ======
-function deleteSelectedRows() {
-  const remaining = editRows.value.filter(r => !r.delete)
-  if (remaining.length === editRows.value.length) {
-    editHint.value = '没有选中要删除的行'
-    return
-  }
-  const hotelRow = remaining.find(r => r.isHotel)
-  if (!hotelRow) {
-    store.hotelName = ''
-    store.hotelLon = 0
-    store.hotelLat = 0
-    store.hotelAddress = ''
-  }
-  store.spots = remaining.filter(r => !r.isHotel).map(r => ({
-    name: r.name, lon: r.lon, lat: r.lat,
-    twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
-    address: r.address,
-  }))
-  editHint.value = ''
-  rebuildEditRows()
-}
-
-function applyEdits() {
-  const hotelRow = editRows.value.find(r => r.isHotel)
-  if (hotelRow) {
-    store.hotelTwStart = hotelRow.twStart
-    store.hotelTwEnd = hotelRow.twEnd
-  }
-  store.spots = editRows.value.filter(r => !r.isHotel).map(r => ({
-    name: r.name, lon: r.lon, lat: r.lat,
-    twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
-    address: r.address,
-  }))
-  editHint.value = '参数已保存'
-  setTimeout(() => { editHint.value = '' }, 2000)
-  rebuildEditRows()
-}
+// ====== 管理表格 ======
+const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable(hasResults)
 
 // 获取方案建议：buildRequest(null) 中 null 表示自动检测天数（由引擎端 ca_suggest 自动推断）
 async function fetchSuggest() {

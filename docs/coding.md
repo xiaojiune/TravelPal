@@ -125,11 +125,27 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 
 按函数重要性分三级，不同层级投入不同注释深度：
 
-| 层级 | 范围 | 注释要求 |
-|------|------|---------|
-| **L0** | 核心算法（vns.py、ca.py、clustering.py、fitness.py） | P2~P3 标准：参数设计说明 + Google docstring + 行内 Why |
-| **L1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | P1~P2 标准：Google docstring + 关键逻辑 Why |
-| **L2** | 测试/config（tests/*.py、config.py） | P0~P1 标准：行内 Why 即可 |
+| 层级 | 范围 | 注释要求 | 数据方案 |
+|------|------|---------|---------|
+| **L0** | 核心算法（vns.py、ca.py、clustering.py、fitness.py） | P2~P3 标准：参数设计说明 + Google docstring + 行内 Why | TypedDict |
+| **L1** | 编排/管道/工具（search.py、pipeline.py、amap_loader.py） | P1~P2 标准：Google docstring + 关键逻辑 Why | TypedDict |
+| **L2** | 测试/config（tests/*.py、config.py） | P0~P1 标准：行内 Why 即可 | dict 无需约束 |
+
+### 数据模型选型
+
+按运行时需求分层，API 边界用 Pydantic，内部传递用 TypedDict：
+
+| 场景 | 推荐方案 | 运行时校验 | 说明 |
+|------|---------|:---------:|------|
+| API 请求/响应（schemas.py） | Pydantic BaseModel | ✅ | FastAPI 原生支持，自动生成 OpenAPI 文档 |
+| 内部数据结构（spots_dict、poi_cache） | TypedDict | ❌ | 轻量，零运行时开销，只做类型约束 |
+| 跨模块业务对象（PlanResult） | Pydantic Model | ✅ | 多处传递/校验时更安全 |
+| 配置/环境变量 | Pydantic BaseSettings | ✅ | 可自动加载 .env |
+| 函数参数/返回值 | TypedDict 或 Pydantic | 按需 | 取决于是否需要运行时校验 |
+
+**命名约定**：内部用 `XxxDict`（如 `SpotDict`、`PoiCache`），API 用 `XxxModel`（如 `PlanRequest` 等已有 Pydantic 类不动）。
+
+**升级路径**：TypedDict → Pydantic Model 是平滑的，只需替换类型声明。初始化建议先用 TypedDict，有校验需求时再升级。
 
 #### 段落分隔线
 
@@ -413,11 +429,11 @@ return { city, spots, planResult, buildRequest, reset }
 
 按文件重要性分三级：
 
-| 层级 | 范围 | 注释要求 |
-|------|------|---------|
-| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 |
-| **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why |
-| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.js） | P1 标准：组件职责 + 行内 Why |
+| 层级 | 范围 | 注释要求 | 数据方案 |
+|------|------|---------|---------|
+| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 | TypedDict/Pydantic |
+| **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why | TypedDict |
+| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.ts） | P1 标准：组件职责 + 行内 Why | Interface |
 
 #### 按文件类型注释策略
 

@@ -25,6 +25,27 @@
             {{ adjusting ? '调整中...' : '📅 调整天数' }}
           </button>
         </div>
+        <div class="metric metric-action metric-days">
+          <button class="btn btn-outline" @click="showAddPoi = !showAddPoi">
+            {{ showAddPoi ? '✕ 关闭' : '➕ 添加景点' }}
+          </button>
+        </div>
+      </div>
+
+      <div v-if="showAddPoi" class="add-poi-panel">
+        <div class="form-row">
+          <input v-model="addPoiInput" placeholder="输入景点名称" @keydown.enter="searchAddPoi" />
+          <button class="btn btn-outline" :disabled="addingPoi || !addPoiInput.trim()" @click="searchAddPoi">
+            {{ addingPoi ? '搜索中...' : '🔍 搜索' }}
+          </button>
+        </div>
+        <div v-if="addPoiSearchResult" class="result-row">
+          <span class="coord">{{ addPoiSearchResult.lon.toFixed(4) }}, {{ addPoiSearchResult.lat.toFixed(4) }}</span>
+          <span class="addr">{{ addPoiSearchResult.name }}</span>
+          <button class="btn btn-primary btn-sm" @click="confirmAddPoi">✅ 确认添加</button>
+          <button class="btn btn-outline btn-sm" @click="resetAddPoi">取消</button>
+        </div>
+        <div v-else-if="addPoiSearchFailed" class="hint error">⚠️ 未找到该景点</div>
       </div>
 
       <div v-if="store.planResult?.commentary" class="commentary">
@@ -54,8 +75,9 @@ import type { PlanResultSolution } from '@/types'
 
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
-const { balancing, adjusting, doBalance, doAdjustDays, doRemovePoi } = usePlanAdjust()
+const { balancing, adjusting, doBalance, doAdjustDays, doRemovePoi, addingPoi, addPoiInput, addPoiSearchResult, addPoiSearchFailed, searchAddPoi, confirmAddPoi, resetAddPoi } = usePlanAdjust()
 const newDays = ref(1)
+const showAddPoi = ref(false)
 
 watch(() => store.planResult?.best_days, (val) => {
   if (val) newDays.value = val
@@ -118,4 +140,11 @@ async function onAdjustDays() {
 .btn-primary { background: #1a73e8; color: #fff; }
 .metric-days { gap: 6px; }
 .days-input { width: 52px; text-align: center; padding: 6px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+.add-poi-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+.add-poi-panel .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.add-poi-panel .form-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+.add-poi-panel .result-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.add-poi-panel .result-row .coord { font-family: monospace; color: #333; }
+.add-poi-panel .hint.error { color: #e74c3c; font-size: 13px; }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
 </style>

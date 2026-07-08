@@ -60,7 +60,7 @@ function render() {
   })
   const DAY_COLORS = ['#FF0000', '#FF8C00', '#FFD700', '#00CC00', '#1E90FF', '#8A2BE2', '#00CED1', '#FF1493']
   const spotIds = Object.keys(coords)
-  // 添加标记
+  // 添加标记：酒店用红色标 (index=0)，景点用蓝色标，icon 源自高德 CDN
   Object.entries(coords).forEach(([key, coord]) => {
     const isHotel = Number(key) === 0
     const marker = new AMap.Marker({
@@ -74,7 +74,7 @@ function render() {
     overlays.push(marker)
     map.add(marker)
   })
-  // 绘制每日路线
+  // 绘制每日路线：每天一种颜色取自 fixed 8 色调色板，高亮模式下非当天路线半透明
   ;(props.routes as number[][]).forEach((route, di) => {
     const pts = route.map(idx => coords[idx]).filter(Boolean)
     if (pts.length < 2) return
@@ -91,7 +91,7 @@ function render() {
     overlays.push(polyline)
     map.add(polyline)
   })
-  // 自适应视野
+  // 自适应视野：setFitView 自动计算中心点和缩放使所有覆盖物可见，4 个 60px padding 留出边界
   map.setFitView(null, false, [60, 60, 60, 60])
 }
 

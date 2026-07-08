@@ -1,3 +1,4 @@
+/** POI 搜索 composable：封装高德 POI 查询 + 确认添加的逻辑，与 UI 解耦。 */
 import { ref, computed } from 'vue'
 import { AxiosError } from 'axios'
 import { usePlanStore } from '@/stores/plan'
@@ -24,8 +25,10 @@ export function usePoiSearch() {
 
   const canSearchHotel = computed(() => !!store.city && store.hotelName.trim().length > 0)
   const canSearchSpots = computed(() => !!store.city && spotText.value.trim().length > 0)
+  /** 是否有搜索结果（酒店或景点任一项找到），控制搜索结果表格的显隐。 */
   const hasResults = computed(() => !!hotelResult.value || spotResults.value.length > 0)
 
+  /** 合并酒店+景点为统一列表，支持勾选状态，供搜索结果表格渲染。 */
   const allResults = computed(() => {
     const list: PoiResult[] = []
     if (hotelResult.value) list.push({ ...hotelResult.value, checked: true, isHotel: true })
@@ -33,6 +36,7 @@ export function usePoiSearch() {
     return list
   })
 
+  /** 搜索酒店坐标。结果存入 hotelResult，失败时设 hotelFailed。 */
   async function searchHotel() {
     loading.value = true
     hotelResult.value = null
@@ -52,6 +56,7 @@ export function usePoiSearch() {
     }
   }
 
+  /** 批量搜索景点坐标。结果存入 spotResults，未找到的名录写入 spotFailed。 */
   async function searchSpots() {
     loading.value = true
     spotResults.value = []
@@ -69,6 +74,11 @@ export function usePoiSearch() {
     }
   }
 
+  /**
+   * 确认添加：将勾选的搜索结果写入 store。
+   * 酒店写入 hotelLon/Lat/Address/TwStart/TwEnd，景点追加到 spots。
+   * 已有名称的景点跳过（去重）。最后清空搜索结果。
+   */
   function confirmPoi() {
     const hotel = allResults.value.find(item => item.isHotel && item.checked)
     if (hotel) {
@@ -89,6 +99,7 @@ export function usePoiSearch() {
       })
     }
 
+    // 确认后清空搜索结果，管理表格（useEditTable）自动接管
     spotText.value = ''
     hotelResult.value = null
     hotelFailed.value = false
@@ -96,6 +107,7 @@ export function usePoiSearch() {
     spotFailed.value = []
   }
 
+  /** 清空搜索结果但不影响已确认的点位。用于切换输入时重置搜索面板。 */
   function clearSearchResults() {
     hotelResult.value = null
     hotelFailed.value = false

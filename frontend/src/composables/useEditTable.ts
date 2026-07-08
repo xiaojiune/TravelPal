@@ -1,3 +1,4 @@
+/** 规划点管理表格 composable：维护编辑行数据，提供确认/删除操作，与 store 数据解耦。 */
 import { ref, computed, watch } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 
@@ -7,11 +8,15 @@ interface EditRow {
   twStart: number; twEnd: number; stay: number; expectedArrival: number; delete: boolean
 }
 
+/**
+ * @param hasResults - 是否有 POI 搜索结果（由 usePoiSearch 传入），控制管理表格是否隐藏
+ */
 export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
 
+  /** 管理表格显隐：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。 */
   const showManagement = computed(() => {
     if (hasResults.value) return false
     if (store.spots.length > 0) return true
@@ -19,6 +24,7 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     return false
   })
 
+  /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
   function rebuildEditRows() {
     const rows: EditRow[] = []
     if (store.hotelName && store.hotelLon) {
@@ -42,12 +48,14 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
 
   watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
 
+  /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */
   function formatBiz(start: number, end: number) {
     const s = `${Math.floor(start / 60)}:${String(start % 60).padStart(2, '0')}`
     const e = `${Math.floor(end / 60)}:${String(end % 60).padStart(2, '0')}`
     return `${s}-${e}`
   }
 
+  /** 删除勾选行。酒店行被删则清空 store 酒店信息；景点行直接移除。 */
   function deleteSelectedRows() {
     const remaining = editRows.value.filter(r => !r.delete)
     if (remaining.length === editRows.value.length) {
@@ -70,6 +78,7 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     rebuildEditRows()
   }
 
+  /** 将编辑行数据回写 store（时间窗/停留/预计到达），触发重建。 */
   function applyEdits() {
     const hotelRow = editRows.value.find(r => r.isHotel)
     if (hotelRow) {

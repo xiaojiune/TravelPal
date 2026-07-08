@@ -1,3 +1,4 @@
+/** 路由表：5 个页面组件，所有路由使用懒加载（动态 import）。首页 /suggest /plan /agent /history。 */
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 

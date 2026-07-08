@@ -38,6 +38,8 @@
   </div>
 </template>
 
+/** 方案建议页：展示引擎返回的多组候选方案卡片，用户选择天数后生成最终规划。 */
+
 <script setup lang="ts">
 // ====== 状态定义 ======
 import { ref, computed } from 'vue'
@@ -51,16 +53,19 @@ const router = useRouter()
 const selectedIndex = ref(0)
 const customDays = ref(store.suggestions[0]?.n_days || 3)
 
+/** 从所有建议中提取去重后的天数列表，供下拉选择。 */
 const availableDays = computed(() => {
   const days = new Set(store.suggestions.map(s => s.n_days))
   return [...days].sort((a, b) => a - b)
 })
 
+/** 选中某张方案卡片，同步更新下拉框的天数。 */
 function select(i: number) {
   selectedIndex.value = i
   customDays.value = store.suggestions[i].n_days
 }
 
+/** 按选定天数调用 /api/plan 生成最终方案，成功后跳转 PlanPage。 */
 async function generatePlan() {
   store.loading = true
   store.selectedNDays = customDays.value

@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+// ====== 状态定义 ======
 import { ref, nextTick } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
@@ -38,6 +39,8 @@ const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
 // 打字机速度 30ms/字，适合 Mock 流式节奏
 const { displayText, append, reset, stop } = useTypewriter({ speed: 30 })
+
+// ====== 聊天逻辑 ======
 
 /**
  * 发送用户消息，读取 SSE 流式响应并逐字打字机渲染。
@@ -105,6 +108,8 @@ async function send() {
   loading.value = false
   scrollToBottom()
 }
+
+// ====== 工具函数 ======
 
 function scrollToBottom() {
   if (historyRef.value) {

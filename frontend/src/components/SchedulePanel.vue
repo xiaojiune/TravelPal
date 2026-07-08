@@ -47,6 +47,8 @@
  */
 import type { ScheduleItem } from '@/types'
 
+// ====== 工具函数 ======
+
 defineProps<{
   dailySchedules?: ScheduleItem[][]
   onRemovePoi?: ((name: string) => void) | null

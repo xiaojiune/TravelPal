@@ -85,6 +85,7 @@ function saveToHistory() {
 watch(() => store.planResult, (val) => { if (val) saveToHistory() })
 
 // ====== 数据操作 ======
+/** 调整天数：composable 需要数字参数，模板传 newDays。 */
 async function onAdjustDays() {
   await doAdjustDays(newDays.value)
 }

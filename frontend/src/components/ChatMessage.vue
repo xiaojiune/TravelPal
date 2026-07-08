@@ -6,7 +6,12 @@
 </template>
 
 <script setup lang="ts">
-// role 区分用户(右侧蓝色)和助手(左侧灰)，content 由父组件通过 SSE 逐字符追加
+/**
+ * 单条聊天气泡组件。
+ *
+ * role=user 靠右蓝色，role=assistant 靠左灰色。
+ * content 由父组件通过 SSE 逐字符追加，支持打字机效果。
+ */
 defineProps({
   role: { type: String, required: true },
   content: { type: String, default: '' },

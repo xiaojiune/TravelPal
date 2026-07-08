@@ -1,3 +1,4 @@
+/** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult } from '@/types'
@@ -27,6 +28,7 @@ export const usePlanStore = defineStore('plan', () => {
 
   // ====== 方法 ======
 
+  /** 构建 POST /api/plan 或 /api/suggest 请求体。nDays=null 时引擎端自动推断。 */
   function buildRequest(nDays: number | null): PlanRequestPayload {
     return {
       city: city.value,
@@ -51,6 +53,7 @@ export const usePlanStore = defineStore('plan', () => {
     }
   }
 
+  /** 重置全部状态至初始值。用于开始新规划或清空当前会话。 */
   function reset() {
     city.value = ''
     hotelName.value = ''

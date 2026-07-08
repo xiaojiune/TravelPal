@@ -2,7 +2,7 @@
   <div class="schedule-panel">
     <h3>每日行程</h3>
     <div v-if="!dailySchedules?.length" class="empty">暂无行程数据</div>
-    <div v-else v-for="(day, di) in dailySchedules" :key="di" class="day-section">
+    <div v-for="(day, di) in dailySchedules" v-else :key="di" class="day-section">
       <h4 class="day-title">第 {{ di + 1 }} 天</h4>
       <table class="schedule-table">
         <thead>
@@ -27,7 +27,7 @@
             <td>{{ statusClass(item.arrival_status) }}</td>
             <td>{{ statusClass(item.departure_status) }}</td>
             <td v-if="onRemovePoi && item.name !== '酒店（返回）'">
-              <button class="btn-remove" @click="onRemovePoi(item.name)" title="移除景点">✕</button>
+              <button class="btn-remove" title="移除景点" @click="onRemovePoi(item.name)">✕</button>
             </td>
             <td v-else-if="onRemovePoi"></td>
           </tr>
@@ -37,7 +37,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * 每日行程面板组件。
  * 接收 dailySchedules 数据，以表格形式展示每日景点到达/离开/状态。
@@ -45,17 +45,19 @@
  * @param {Array} dailySchedules - 每日行程数组，每项含
  *   name/arrival/departure/tw/stay/arrival_status/departure_status
  */
-defineProps({
-  dailySchedules: { type: Array, default: () => [] },
-  onRemovePoi: { type: Function, default: null },
-})
+import type { ScheduleItem } from '@/types'
+
+defineProps<{
+  dailySchedules?: ScheduleItem[][]
+  onRemovePoi?: ((name: string) => void) | null
+}>()
 
 /**
  * 将分钟数转换为 HH:MM 格式。
  * @param {number} m - 距午夜分钟数
  * @returns {string} 格式如 "8:30"
  */
-function fmt(m) {
+function fmt(m: number | null | undefined) {
   if (m == null || m <= 0) return '-'
   const h = Math.floor(m / 60)
   const min = Math.floor(m % 60)
@@ -68,7 +70,7 @@ function fmt(m) {
  * @param {string} s - 状态文本
  * @returns {string}
  */
-function statusClass(s) {
+function statusClass(s: string | null | undefined) {
   if (!s) return '-'
   return s.includes('准时') || s.includes('等待') ? s : `⚠️ ${s}`
 }

@@ -22,7 +22,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // 从 localStorage 读取历史规划记录列表，仅展示摘要信息
 import { ref } from 'vue'
 // 完整规划结果不在 localStorage 中（避免大对象溢出），查看时提示跳转首页
@@ -32,7 +32,7 @@ function loadRecords() {
 }
 const records = ref(loadRecords())
 
-function viewRecord(r) {
+function viewRecord(r: { city: string; n_days: number; cost: number; hotel: string; spots: number; time: string }) {
   if (confirm(`查看 ${r.city} ${r.n_days} 日游的方案？\n建议先返回首页重新搜索。`)) {
     // 清空现有结果，提示用户重新搜索
     localStorage.removeItem('travelpal_history_record')

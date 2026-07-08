@@ -547,14 +547,44 @@ onBeforeUnmount(() => mapRef.value?.destroy())
 
 复杂默认值或特殊约定在 Props 定义处附带说明：
 
-```js
-highlightDay: {
-  type: Number,
-  default: -1,
-  // -1 表示全部显示，0/1/2... 指定某一天
-},
-onRemovePoi: {
-  type: Function,
-  // 不传则隐藏删除按钮（纯展示模式）
-  default: null,
-},
+```ts
+interface Props {
+  /** 高亮某一天（-1 表示全部显示，0/1/2... 指定某一天） */
+  highlightDay?: number
+  /** 不传则隐藏删除按钮（纯展示模式） */
+  onRemovePoi?: (dayIndex: number, spotId: number) => void
+}
+const props = withDefaults(defineProps<Props>(), {
+  highlightDay: -1,
+  onRemovePoi: undefined,
+})
+```
+
+### 组件粒度与逻辑复用
+
+**SFC 拆分原则**：
+- 模板超过 150 行 → 考虑拆分
+- 有独立状态管理逻辑 → 考虑拆分
+- 可被多个页面复用 → 必须拆分
+- 与父组件强耦合且仅使用一次 → 可保持内联
+
+**Composable 提取原则**：
+- 相同业务逻辑出现 2 次以上 → 提取为 composable
+- 命名以 `use` 开头，如 `usePlanning`、`usePoiSearch`
+
+**命名规范**：
+- 组件文件：`PascalCase.vue`
+- 服务/工具文件：`camelCase.ts`
+- 目录名：`kebab-case`
+
+### 反模式 / 不推荐
+
+以下做法与项目约定冲突，应避免：
+
+- **`reactive()` 包裹对象**：使用 `ref()` + 对象解构，更易追踪变更
+- **`defineEmits` 声明事件**：当前项目统一使用回调 prop 通信
+- **组件 Props 用 `v-bind="obj"` 对象展开**：逐一传递各 prop，调用处可读
+- **组件内 `async setup`**：异步初始化放在 `onMounted` 中处理
+- **Pinia store 中引用其他 store 实例**：store 之间通过参数传值而非直接 `useXxxStore`
+- **模板中混入复杂表达式**：计算逻辑放入 `computed`，模板只做渲染
+- **`@` 别名导入**：统一使用相对路径 `../` 导入

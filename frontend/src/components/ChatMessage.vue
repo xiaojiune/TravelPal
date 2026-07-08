@@ -5,7 +5,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // role 区分用户(右侧蓝色)和助手(左侧灰)，content 由父组件通过 SSE 逐字符追加
 defineProps({
   role: { type: String, required: true },

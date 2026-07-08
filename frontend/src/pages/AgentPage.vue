@@ -1,6 +1,6 @@
 <template>
   <div class="agent-page">
-    <div class="chat-history" ref="historyRef">
+    <div ref="historyRef" class="chat-history">
       <div v-if="messages.length === 0" class="welcome">
         <h2>👋 你好！我是你的旅行伴侣</h2>
         <p>聊聊天吧——可以聊聊今天的规划，或者让我给点建议～</p>
@@ -26,15 +26,16 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import ChatMessage from '../components/ChatMessage.vue'
-import { useTypewriter } from '../composables/useTypewriter'
+import ChatMessage from '@/components/ChatMessage.vue'
+import { useTypewriter } from '@/composables/useTypewriter'
+import type { ChatMessage as ChatMessageType } from '@/types'
 
-const historyRef = ref(null)
+const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
 const loading = ref(false)
-const messages = ref([])
+const messages = ref<ChatMessageType[]>([])
 // 打字机速度 30ms/字，适合 Mock 流式节奏
 const { displayText, append, reset, stop } = useTypewriter({ speed: 30 })
 
@@ -67,7 +68,9 @@ async function send() {
       return
     }
     // SSE 手动解析：逐 chunk 读取字节流，拼行长尾后按 \n 分割
-    const reader = resp.body.getReader()
+    const body = resp.body
+    if (!body) { messages.value[msgIndex].content = '响应体为空'; loading.value = false; return }
+    const reader = body.getReader()
     const decoder = new TextDecoder()
     let partial = ''
     while (true) {

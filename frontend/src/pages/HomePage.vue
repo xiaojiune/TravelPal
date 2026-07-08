@@ -14,7 +14,7 @@
       <h3>酒店</h3>
       <div class="form-row">
         <input v-model="store.hotelName" placeholder="如：北京饭店" />
-        <button class="btn btn-outline" @click="searchHotel" :disabled="!canSearchHotel || loading">
+        <button class="btn btn-outline" :disabled="!canSearchHotel || loading" @click="searchHotel">
           {{ loading ? '搜索中...' : '🏨 搜索酒店坐标' }}
         </button>
       </div>
@@ -29,13 +29,13 @@
       <h3>景点名称</h3>
       <div class="form-row">
         <textarea v-model="spotText" rows="6" placeholder="每行一个景点&#10;故宫&#10;颐和园&#10;天坛" />
-        <button class="btn btn-outline btn-self-start" @click="searchSpots" :disabled="!canSearchSpots || loading">
+        <button class="btn btn-outline btn-self-start" :disabled="!canSearchSpots || loading" @click="searchSpots">
           {{ loading ? '搜索中...' : '🔍 搜索景点坐标' }}
         </button>
       </div>
     </section>
 
-    <section class="form-section" v-if="hasResults">
+    <section v-if="hasResults" class="form-section">
       <h3>搜索结果（勾选要添加的点）</h3>
       <table class="poi-table">
         <thead>
@@ -50,7 +50,7 @@
         </thead>
         <tbody>
           <tr v-for="(item, i) in allResults" :key="i">
-            <td style="text-align:center"><input type="checkbox" v-model="item.checked" /></td>
+            <td style="text-align:center"><input v-model="item.checked" type="checkbox" /></td>
             <td>{{ item.isHotel ? '🏨酒店' : '📍景点' }}</td>
             <td>{{ item.name }}</td>
             <td>{{ item.lon?.toFixed(4) }}</td>
@@ -59,7 +59,7 @@
           </tr>
         </tbody>
       </table>
-      <div class="hint" v-if="spotFailed.length">⚠️ 未找到：{{ spotFailed.join('、') }}</div>
+      <div v-if="spotFailed.length" class="hint">⚠️ 未找到：{{ spotFailed.join('、') }}</div>
       <div class="form-actions">
         <button class="btn btn-primary" @click="confirmPoi">✅ 确认添加选中的点</button>
       </div>
@@ -82,14 +82,14 @@
         </thead>
         <tbody>
           <tr v-for="(row, i) in editRows" :key="i" :class="{ 'row-hotel': row.isHotel }">
-            <td style="text-align:center"><input type="checkbox" v-model="row.delete" /></td>
+            <td style="text-align:center"><input v-model="row.delete" type="checkbox" /></td>
             <td>{{ row.isHotel ? '🏨 ' : '' }}{{ row.name }}</td>
             <td class="addr">{{ row.address }}</td>
             <td class="biz-hours">{{ formatBiz(row.twStart, row.twEnd) }}</td>
-            <td><input type="number" v-model.number="row.twStart" min="0" max="1440" class="num-input" /></td>
-            <td><input type="number" v-model.number="row.twEnd" min="0" max="1440" class="num-input" /></td>
-            <td><input type="number" v-model.number="row.stay" min="0" class="num-input" /></td>
-            <td><input type="number" v-model.number="row.expectedArrival" min="0" max="1440" class="num-input" /></td>
+            <td><input v-model.number="row.twStart" type="number" min="0" max="1440" class="num-input" /></td>
+            <td><input v-model.number="row.twEnd" type="number" min="0" max="1440" class="num-input" /></td>
+            <td><input v-model.number="row.stay" type="number" min="0" class="num-input" /></td>
+            <td><input v-model.number="row.expectedArrival" type="number" min="0" max="1440" class="num-input" /></td>
           </tr>
         </tbody>
       </table>
@@ -97,7 +97,7 @@
         <button class="btn btn-outline btn-sm" @click="applyEdits">✅ 确认规划点参数</button>
         <button class="btn btn-danger btn-sm" @click="deleteSelectedRows">🗑️ 删除选中行</button>
       </div>
-      <div class="hint" v-if="editHint">💡 {{ editHint }}</div>
+      <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
     </section>
 
     <details class="form-section">
@@ -110,38 +110,43 @@
     </details>
 
     <div class="form-actions">
-      <button class="btn btn-primary btn-lg" @click="fetchSuggest" :disabled="!canSuggest">
+      <button class="btn btn-primary btn-lg" :disabled="!canSuggest" @click="fetchSuggest">
         {{ store.loading ? '计算中...' : '🚀 获取方案建议' }}
       </button>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlanStore } from '../stores/plan'
-import { postPoiLookup, postSuggest } from '../services/api'
+import { usePlanStore } from '@/stores/plan'
+import { postSuggest } from '@/services/api'
+import { usePoiSearch } from '@/composables/usePoiSearch'
+import type { SpotFormItem } from '@/types'
 
 const store = usePlanStore()
 const router = useRouter()
 
-const spotText = ref('')
-const hotelResult = ref(null)
-const hotelFailed = ref(false)
-const spotResults = ref([])
-const spotFailed = ref([])
-const loading = ref(false)
+const {
+  spotText, hotelResult, hotelFailed, spotResults, spotFailed, loading,
+  canSearchHotel, canSearchSpots, hasResults, allResults,
+  searchHotel, searchSpots, confirmPoi, clearSearchResults,
+} = usePoiSearch()
 
-const editRows = ref([])
+// ====== 管理表格状态 ======
+interface EditRow {
+  isHotel: boolean; name: string; address: string
+  lon: number; lat: number
+  twStart: number; twEnd: number; stay: number; expectedArrival: number; delete: boolean
+}
+
+const editRows = ref<EditRow[]>([])
 const editHint = ref('')
 
 // ====== 计算属性 ======
-const canSearchHotel = computed(() => store.city && store.hotelName.trim())
-const canSearchSpots = computed(() => store.city && spotText.value.trim())
-const hasResults = computed(() => hotelResult.value || spotResults.value.length > 0)
 // 管理表格显隐逻辑：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。
 const showManagement = computed(() => {
   if (hasResults.value) return false
@@ -150,13 +155,6 @@ const showManagement = computed(() => {
   return false
 })
 const canSuggest = computed(() => store.spots.length > 0)
-
-const allResults = computed(() => {
-  const list = []
-  if (hotelResult.value) list.push({ ...hotelResult.value, checked: true, isHotel: true })
-  spotResults.value.forEach(item => list.push({ ...item, isHotel: false }))
-  return list
-})
 
 // ====== 编辑表格构建 ======
 // 构建编辑态行数据：与 store 源数据解耦，用户点击确认后再统一回写，避免中途修改污染全局状态
@@ -183,80 +181,13 @@ function rebuildEditRows() {
 
 watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
 
-function formatBiz(start, end) {
+function formatBiz(start: number, end: number) {
   const s = `${Math.floor(start / 60)}:${String(start % 60).padStart(2, '0')}`
   const e = `${Math.floor(end / 60)}:${String(end % 60).padStart(2, '0')}`
   return `${s}-${e}`
 }
 
-// ====== 数据操作 ======
-async function searchHotel() {
-  loading.value = true
-  hotelResult.value = null
-  hotelFailed.value = false
-  try {
-    const data = await postPoiLookup(store.city, [store.hotelName.trim()])
-    if (data.items.length) {
-      hotelResult.value = data.items[0]
-    } else {
-      hotelFailed.value = true
-    }
-  } catch (e) {
-    alert('搜索酒店失败: ' + (e.response?.data?.detail || e.message))
-  } finally {
-    loading.value = false
-  }
-}
-
-async function searchSpots() {
-  loading.value = true
-  spotResults.value = []
-  spotFailed.value = []
-  try {
-    const names = spotText.value.split('\n').map(s => s.trim()).filter(Boolean)
-    const data = await postPoiLookup(store.city, names)
-    spotResults.value = data.items.map(item => ({ ...item, checked: true }))
-    spotFailed.value = data.failed || []
-  } catch (e) {
-    alert('搜索景点失败: ' + (e.response?.data?.detail || e.message))
-  } finally {
-    loading.value = false
-  }
-}
-
-// 确认选中 POI → 更新 store → 清空搜索状态 → 重建编辑表格
-function confirmPoi() {
-  // 酒店单独处理：取第一个勾选项，直接覆盖 store 中的酒店坐标
-  const hotel = allResults.value.find(item => item.isHotel && item.checked)
-  if (hotel) {
-    store.hotelLon = hotel.lon
-    store.hotelLat = hotel.lat
-    store.hotelAddress = hotel.address
-    if (hotel.tw_start != null) store.hotelTwStart = hotel.tw_start
-    if (hotel.tw_end != null) store.hotelTwEnd = hotel.tw_end
-  }
-
-  // 景点按名称去重，避免重复添加
-  const selectedSpots = allResults.value.filter(item => !item.isHotel && item.checked)
-  const existingNames = new Set(store.spots.map(s => s.name))
-  const newSpots = selectedSpots.filter(item => !existingNames.has(item.name))
-  for (const item of newSpots) {
-    store.spots.push({
-      name: item.name, lon: item.lon, lat: item.lat,
-      twStart: item.tw_start ?? 480, twEnd: item.tw_end ?? 1020, stay: 60,
-      address: item.address,
-    })
-  }
-
-  editHint.value = ''
-  spotText.value = ''
-  hotelResult.value = null
-  hotelFailed.value = false
-  spotResults.value = []
-  spotFailed.value = []
-  rebuildEditRows()
-}
-
+// ====== 编辑表格操作 ======
 function deleteSelectedRows() {
   const remaining = editRows.value.filter(r => !r.delete)
   if (remaining.length === editRows.value.length) {
@@ -302,8 +233,8 @@ async function fetchSuggest() {
     const data = await postSuggest(store.buildRequest(null))
     store.suggestions = data.suggestions || []
     router.push('/suggest')
-  } catch (e) {
-    alert('获取建议失败: ' + (e.response?.data?.detail || e.message))
+  } catch (e: unknown) {
+    alert('获取建议失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
   } finally {
     store.loading = false
   }

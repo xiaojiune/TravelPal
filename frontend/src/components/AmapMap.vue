@@ -2,7 +2,7 @@
   <div ref="container" class="amap-container"></div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 /**
  * 高德地图 2D 可视化组件。
  * 接收路线、景点数据，在高德地图上渲染标记和折线。
@@ -13,6 +13,7 @@
  * @param {string} amapKey - 高德 JS API Key
  */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import type { ScheduleItem } from '@/types'
 
 const props = defineProps({
   routes: { type: Array, default: () => [] },
@@ -21,9 +22,9 @@ const props = defineProps({
   amapKey: { type: String, default: '' },
 })
 
-const container = ref(null)
-let map = null
-let overlays = []
+const container = ref<HTMLDivElement | null>(null)
+let map: any = null
+let overlays: any[] = []
 let amapLoaded = false
 
 /**
@@ -31,7 +32,7 @@ let amapLoaded = false
  * 使用 Promise 保证异步加载完成后才初始化地图。
  */
 function loadAmapScript() {
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     if (window.AMap) { amapLoaded = true; resolve(); return }
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${props.amapKey}`
@@ -53,8 +54,8 @@ function clearOverlays() {
 function render() {
   if (!map || !props.routes.length || !Object.keys(props.spots).length) return
   clearOverlays()
-  const coords = {} // index → [lng, lat]
-  Object.entries(props.spots).forEach(([key, s]) => {
+  const coords: Record<string, [number, number]> = {}
+  Object.entries(props.spots).forEach(([key, s]: [string, any]) => {
     coords[key] = [s.x || s.lon || 0, s.y || s.lat || 0]
   })
   const DAY_COLORS = ['#FF0000', '#FF8C00', '#FFD700', '#00CC00', '#1E90FF', '#8A2BE2', '#00CED1', '#FF1493']
@@ -74,7 +75,7 @@ function render() {
     map.add(marker)
   })
   // 绘制每日路线
-  props.routes.forEach((route, di) => {
+  ;(props.routes as number[][]).forEach((route, di) => {
     const pts = route.map(idx => coords[idx]).filter(Boolean)
     if (pts.length < 2) return
     const color = DAY_COLORS[di % DAY_COLORS.length]

@@ -1,7 +1,7 @@
 <template>
   <div class="page-suggest">
     <h2>方案建议</h2>
-    <p class="subtitle" v-if="store.suggestions.length">共 {{ store.suggestions.length }} 个方案，点击选择天数并生成规划</p>
+    <p v-if="store.suggestions.length" class="subtitle">共 {{ store.suggestions.length }} 个方案，点击选择天数并生成规划</p>
 
     <div v-if="!store.suggestions.length" class="empty-state">
       <p>暂无方案建议，请先在首页输入规划参数。</p>
@@ -24,26 +24,26 @@
       </div>
     </div>
 
-    <div class="form-actions" v-if="store.suggestions.length">
+    <div v-if="store.suggestions.length" class="form-actions">
       <div class="form-row inline">
         <label>天数</label>
         <select v-model.number="customDays">
           <option v-for="d in availableDays" :key="d" :value="d">{{ d }} 天</option>
         </select>
       </div>
-      <button class="btn btn-primary" @click="generatePlan" :disabled="store.loading">
+      <button class="btn btn-primary" :disabled="store.loading" @click="generatePlan">
         {{ store.loading ? '规划中...' : '生成规划' }}
       </button>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // ====== 状态定义 ======
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlanStore } from '../stores/plan'
-import { postPlan } from '../services/api'
+import { usePlanStore } from '@/stores/plan'
+import { postPlan } from '@/services/api'
 
 const store = usePlanStore()
 const router = useRouter()
@@ -56,7 +56,7 @@ const availableDays = computed(() => {
   return [...days].sort((a, b) => a - b)
 })
 
-function select(i) {
+function select(i: number) {
   selectedIndex.value = i
   customDays.value = store.suggestions[i].n_days
 }
@@ -69,8 +69,8 @@ async function generatePlan() {
     const data = await postPlan(store.buildRequest(customDays.value))
     store.planResult = data
     router.push('/plan')
-  } catch (e) {
-    alert('规划失败: ' + (e.response?.data?.detail || e.message))
+  } catch (e: unknown) {
+    alert('规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
   } finally {
     store.loading = false
   }

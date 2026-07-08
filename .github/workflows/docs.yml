@@ -39,9 +39,6 @@ jobs:
       - name: Install dependencies
         run: poetry install --with docs
 
-      - name: Generate openapi.json
-        run: poetry run python docs/_scripts/gen_openapi.py
-
       - name: Build Sphinx docs
         run: poetry run sphinx-build docs docs/_build/html
 

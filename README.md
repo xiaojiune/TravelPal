@@ -2,6 +2,8 @@
 
 基于双引擎（CA/VNS）+ LLM Agent 的智能旅行规划系统。
 
+📖 文档站：https://xiaojiune.github.io/TravelPal/
+
 ## 技术栈
 
 ### 后端
@@ -66,4 +68,3 @@ poetry run uvicorn backend.api.server:app --reload
 # 启动前端开发服务器（新终端）
 cd frontend && npm run dev
 ```
-

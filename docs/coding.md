@@ -117,7 +117,7 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 **净化规则**：
 - `__all__` 不得包含下划线开头的私有函数，如 `data/__init__.py` 的 `_parse_opentime_to_tw` 应移除
 
-> 当前接口清单以手动注释块维护。未来如引入 Sphinx 等文档工具，可考虑从函数/类 Docstring 中自动提取接口文档，配合 `sphinx-apidoc` 生成，减少人工维护成本。
+> Sphinx + autoapi 已在 `conf.py` 中配置，自动从 `__all__` + docstring 生成 API 参考。手动清单不再维护。
 
 ### 注释规范
 
@@ -291,7 +291,7 @@ VNS_DEFAULT_PARAMS = { ... }
 3. **若组件被多个父组件使用**，全局搜索引用逐一适配
 
 **路由变更**：
-1. **先在 `router/index.js` 注册路由**（含 `path` + `name` + 懒加载）
+1. **先在 `router/index.ts` 注册路由**（含 `path` + `name` + 懒加载）
 2. **再实现**对应的页面组件
 3. **最后更新**导航链接（`router.push` / `<router-link>`）
 
@@ -309,6 +309,8 @@ VNS_DEFAULT_PARAMS = { ... }
 - 目录：全小写（`stores/`、`services/`、`components/`、`pages/`）
 - 导出函数/变量：`camelCase`
 - Pinia store：`use` 前缀 + `Store` 后缀（`usePlanStore`）
+- 常量：`UPPER_SNAKE_CASE`
+- 事件处理函数：`handle` 前缀（如 `handleSubmit`、`handleRemove`）
 
 **导入顺序**：Vue/Pinia → 第三方库 → 项目内部模块，各组之间空一行。
 
@@ -322,7 +324,7 @@ import { postSuggest } from '../services/api'
 import AmapMap from '../components/AmapMap.vue'
 ```
 
-**Composition API 结构约定**（`<script setup>` 内按序排列）：
+**Composition API 结构约定**（`<script setup lang="ts">` 内按序排列）：
 
 ```text
 // 1. 外部导入（import）
@@ -332,7 +334,8 @@ const planStore = usePlanStore()
 const router = useRouter()
 
 // 3. Props / Emits
-const props = defineProps({ routes: Array, amapKey: String })
+interface Props { routes: Route[]; amapKey: string }
+const props = defineProps<Props>()
 
 // 4. 响应式状态
 const loading = ref(false)
@@ -347,31 +350,47 @@ onBeforeUnmount(() => { ... })
 
 // 7. 事件处理 / 方法
 function handleSubmit() { ... }
-function onRemove(index) { ... }
+function onRemove(index: number) { ... }
 
 // 8. 侦听器（watch 放在最后）
 watch(() => props.routes, (val) => { ... }, { deep: true })
 ```
 
-**Props 定义**：必须同时声明 `type` 和 `default`，数组/对象用工厂函数。
+**Props 定义**：使用 TypeScript 泛型声明 `defineProps<Props>()`。类型接口与组件同文件定义，复杂类型可抽取到 `src/types/` 目录按组件名分文件管理。
 
-```js
-const props = defineProps({
-  dailySchedules: { type: Array, default: () => [] },
-  highlightDay: { type: Number, default: 0 },
-  onRemovePoi: { type: Function, default: null },
+```text
+<script setup lang="ts">
+interface Props {
+  dailySchedules: Spot[]
+  highlightDay?: number    // 可选，默认 -1 表示全部
+  onRemovePoi?: (dayIndex: number, spotId: number) => void
+  amapKey: string          // 必填
+}
+const props = withDefaults(defineProps<Props>(), {
+  dailySchedules: () => [],
+  highlightDay: -1,
+  onRemovePoi: undefined,
 })
+</script>
 ```
 
-**父子通信**：使用回调函数 prop 而非 `defineEmits`（当前项目约定）。
+**Props 进阶约定**：
+- 必填参数不加 `?`，可选参数加 `?`
+- 默认值通过 `withDefaults` 编译器宏声明，数组/对象用工厂函数
+- 回调 prop 统一 `on` 开头命名（如 `onRemovePoi`、`onSelect`）
+
+**父子通信**：使用回调函数 prop 而非 `defineEmits`（当前项目约定）。适用场景：父子组件一对一通信，且父组件需要同步处理结果。不适用于跨层级事件冒泡。
 
 **API 服务**：使用 axios 实例，`baseURL: '/api'`，在 service 层解包 `response.data`。
 
-```js
+```ts
 import axios from 'axios'
+
 const http = axios.create({ baseURL: '/api' })
 
-export function postPoiLookup(city, names) {
+interface PoiResult { name: string; x: number; y: number }
+
+export function postPoiLookup(city: string, names: string[]): Promise<PoiResult[]> {
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 ```
@@ -380,20 +399,28 @@ export function postPoiLookup(city, names) {
 
 - 组件根节点：根元素为 class 挂钩时，模板中保持可读的 `template`，不混入逻辑
 
+**魔术数字与硬编码约束**：与后端一致，避免硬编码数值，用常量命名。参考本章后端"魔术数字"节（第58-64行）。
+
+**TODO/FIXME 格式**：与后端一致，统一使用 `// TODO: xxx` / `// FIXME: xxx`，禁止其他变体。参考本章后端"TODO/FIXME 格式"节（第79行）。
+
 ### 接口清单规范
 
-**组件级清单**：在组件定义处使用注释块声明公开 API。
+**组件级清单**：在组件定义处使用注释块声明公开 API，按 Props / Emits / Slots 分类列出。
 
-```js
-// SchedulePanel.vue 公开接口
+```ts
+// AmapMap.vue 公开接口
 // Props:
-//   dailySchedules: 每日行程数组 [{day, spots, ...}]
-//   onRemovePoi:    删除景点回调 (dayIndex, spotId) => void
+//   routes:       Route[]            每日路径数组
+//   spots:        Record<number, Spot>  景点字典
+//   highlightDay: number             高亮某一天（-1 表示全部）
+//   amapKey:      string             高德 JS API Key
+// Emits: 无（使用回调 prop）
+// Slots: 无
 ```
 
-**路由清单**：路由集中定义在 `router/index.js`，所有页面懒加载。
+**路由清单**：路由集中定义在 `router/index.ts`，所有页面懒加载。
 
-```js
+```ts
 const routes = [
   { path: '/', name: 'Home', component: () => import('../pages/HomePage.vue') },
   { path: '/suggest', name: 'Suggest', component: () => import('../pages/SuggestPage.vue') },
@@ -401,9 +428,9 @@ const routes = [
 ]
 ```
 
-**Store 清单**：Pinia store 通过 `return` 显式暴露的接口即为公开 API。
+**Store 清单**：Pinia store 通过 `return` 显式暴露的接口即为公开 API。`return` 中未列出的 ref/函数属于内部实现，外部组件不可直接引用。
 
-```js
+```ts
 return { city, spots, planResult, buildRequest, reset }
 ```
 
@@ -417,7 +444,7 @@ return { city, spots, planResult, buildRequest, reset }
 |------|------|---------|
 | **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 |
 | **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why |
-| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.js） | P1 标准：组件职责 + 行内 Why |
+| **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.ts） | P1 标准：组件职责 + 行内 Why |
 
 #### 按文件类型注释策略
 
@@ -426,7 +453,7 @@ return { city, spots, planResult, buildRequest, reset }
 页面级（`pages/`）使用段注释区分逻辑区域：
 
 ```html
-<script setup>
+<script setup lang="ts">
 // ====== 状态定义 ======
 const loading = ref(false)
 const error = ref('')
@@ -446,7 +473,7 @@ onMounted(() => { ... })
 组件级（`components/`）使用 JSDoc + 行内 Why：
 
 ```html
-<script setup>
+<script setup lang="ts">
 /**
  * AmapMap — 高德 2D 地图视图
  *
@@ -454,59 +481,59 @@ onMounted(() => { ... })
  * 设计说明：路由数组为空时显示空白地图（非加载态），
  * 便于父组件分步加载数据时保持地图实例不销毁。
  */
-const props = defineProps({
+interface Props {
   /** 每日路径数组 [{day, route, duration, ...}] */
-  routes: { type: Array, default: () => [] },
+  routes: Route[]
   /** 景点字典 {index: {name, x, y, ...}} */
-  spots: { type: Object, default: () => ({}) },
+  spots: Record<number, Spot>
   /** 高亮某一天（-1 表示全部） */
-  highlightDay: { type: Number, default: -1 },
+  highlightDay?: number
   /** 高德 JS API Key */
-  amapKey: { type: String, required: true },
+  amapKey: string
+}
+const props = withDefaults(defineProps<Props>(), {
+  routes: () => [],
+  spots: () => ({}),
+  highlightDay: -1,
 })
 </script>
 ```
 
-##### `services/*.js` 文件
+##### `services/*.ts` 文件
 
-函数级 JSDoc：
+函数级类型签名 + JSDoc：
 
-```js
-/**
- * 查询景点 POI 坐标。
- * @param {string} city - 城市名
- * @param {string[]} names - 景点名称列表
- * @returns {Promise<Array<{name, x, y}>>}
- */
-export function postPoiLookup(city, names) {
+```ts
+interface PoiResult { name: string; x: number; y: number }
+
+/** 查询景点 POI 坐标 */
+export function postPoiLookup(city: string, names: string[]): Promise<PoiResult[]> {
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 ```
 
-##### `stores/*.js` 文件
+##### `stores/*.ts` 文件
 
-Store 职责说明 + 关键方法 JSDoc：
+Store 职责说明 + 类型标注：
 
 ```text
-/**
- * planStore — 规划流程状态管理
- *
- * 职责：承载从输入到结果的完整数据流，跨页面共享。
- * 生命周期：HomePage 写入 → SuggestPage/PlanPage 读取
- */
+interface Spot { name: string; x: number; y: number; tw: [number, number]; stay: number }
+interface PlanResult { days: DayPlan[]; cost: number }
+
+/** planStore — 规划流程状态管理 */
 export const usePlanStore = defineStore('plan', () => {
   const city = ref('')
-  const spots = ref([])
-  // ...
+  const spots = ref<Spot[]>([])
+  const planResult = ref<PlanResult | null>(null)
 
-  /** 构造请求参数，nDays 为 null 时走 suggest 模式 */
-  function buildRequest(nDays) { ... }
+  function buildRequest(nDays: number | null) { ... }
+  function reset() { ... }
 
   return { city, spots, planResult, buildRequest, reset }
 })
 ```
 
-##### `router/index.js`
+##### `router/index.ts`
 
 Router 配置无需 JSDoc，路由 path 和 name 自文档化。
 
@@ -514,7 +541,7 @@ Router 配置无需 JSDoc，路由 path 和 name 自文档化。
 
 与后端一致，传达设计意图（Why）而非描述行为（What）：
 
-```js
+```ts
 // 路由为空时保持地图实例，避免反复销毁重建
 const hasRoutes = computed(() => props.routes.length > 0)
 
@@ -533,7 +560,13 @@ onBeforeUnmount(() => mapRef.value?.destroy())
 
 #### 模板注释
 
-模板中仅当逻辑分支意图不明显时加注释：
+与后端行内注释一致，传达意图（Why）而非描述行为（What）：
+
+| 模式 | 差（What） | 好（Why） |
+|------|-----------|----------|
+| v-if 分支 | `<!-- 无数据时 -->` | `<!-- 优先展示列表，无数据时显示空态提示 -->` |
+| 加载中 | `<!-- 加载 -->` | `<!-- 首次加载骨架屏，避免白屏闪烁 -->` |
+| 条件展示 | `<!-- 管理员按钮 -->` | `<!-- 仅管理员可见：编辑/删除操作列 -->` |
 
 ```html
 <!-- 优先展示建议列表，无数据时显示空态提示 -->
@@ -547,14 +580,27 @@ onBeforeUnmount(() => mapRef.value?.destroy())
 
 复杂默认值或特殊约定在 Props 定义处附带说明：
 
-```js
-highlightDay: {
-  type: Number,
-  default: -1,
-  // -1 表示全部显示，0/1/2... 指定某一天
-},
-onRemovePoi: {
-  type: Function,
-  // 不传则隐藏删除按钮（纯展示模式）
-  default: null,
-},
+```ts
+interface Props {
+  /** 高亮某一天（-1 表示全部显示，0/1/2... 指定某一天） */
+  highlightDay?: number
+  /** 不传则隐藏删除按钮（纯展示模式） */
+  onRemovePoi?: (dayIndex: number, spotId: number) => void
+}
+const props = withDefaults(defineProps<Props>(), {
+  highlightDay: -1,
+  onRemovePoi: undefined,
+})
+```
+
+### 反模式 / 不推荐
+
+以下做法与项目约定冲突，应避免：
+
+- **`reactive()` 包裹对象**：使用 `ref()` + 对象解构，更易追踪变更
+- **`defineEmits` 声明事件**：当前项目统一使用回调 prop 通信
+- **组件 Props 用 `v-bind="obj"` 对象展开**：逐一传递各 prop，调用处可读
+- **组件内 `async setup`**：异步初始化放在 `onMounted` 中处理
+- **Pinia store 中引用其他 store 实例**：store 之间通过参数传值而非直接 `useXxxStore`
+- **模板中混入复杂表达式**：计算逻辑放入 `computed`，模板只做渲染
+- **`@` 别名导入**：统一使用相对路径 `../` 导入

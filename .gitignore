@@ -111,4 +111,4 @@ docs/images/generated/*.jpg
 docs/_build/
 
 # Windows 重定向残留
-nul
+nuldocs_buildhtml/

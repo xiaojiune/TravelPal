@@ -40,6 +40,6 @@ jobs:
         run: poetry run sphinx-build docs docs/_build/html
 
       - name: Deploy to GitHub Pages
-        uses: actions/gh-pages@v4
+        uses: actions/gh-pages@v3
         with:
           folder: docs/_build/html

@@ -551,7 +551,7 @@ onBeforeUnmount(() => mapRef.value?.destroy())
 
 模板中仅当逻辑分支意图不明显时加注释：
 
-```html
+```vue
 <!-- 优先展示建议列表，无数据时显示空态提示 -->
 <div v-if="suggestions.length" class="suggestion-list">
   <SuggestionCard v-for="s in suggestions" :key="s.id" ... />

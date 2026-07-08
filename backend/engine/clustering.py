@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 
 # ================== 聚类方法 ==================
 
-def cluster_by_distance_kmeans(spots, depot, n_clusters):
+def cluster_by_distance_kmeans(spots: dict, depot: int, n_clusters: int):
     """
     基于地理坐标的 K-means 聚类。
 
@@ -31,7 +31,7 @@ def cluster_by_distance_kmeans(spots, depot, n_clusters):
     return groups
 
 
-def cluster_by_time_window(spots, depot, n_clusters):
+def cluster_by_time_window(spots: dict, depot: int, n_clusters: int):
     """
     基于时间窗特征的 K-means 聚类。
 
@@ -61,7 +61,8 @@ def cluster_by_time_window(spots, depot, n_clusters):
     return groups
 
 
-def cluster_by_spatiotemporal(spots, depot, n_clusters, sp_w=0.5, tp_w=0.5):
+def cluster_by_spatiotemporal(spots: dict, depot: int, n_clusters: int,
+                                sp_w: float = 0.5, tp_w: float = 0.5):
     """
     时空联合聚类（距离 + 时间窗）。
 
@@ -94,7 +95,7 @@ def cluster_by_spatiotemporal(spots, depot, n_clusters, sp_w=0.5, tp_w=0.5):
     return groups
 
 
-def cluster_by_time_overlap(spots, depot, n_clusters):
+def cluster_by_time_overlap(spots: dict, depot: int, n_clusters: int):
     """
     时间窗重叠启发式分组。
 
@@ -128,7 +129,7 @@ def cluster_by_time_overlap(spots, depot, n_clusters):
     return groups
 
 
-def cluster_by_time_density(spots, depot, n_clusters):
+def cluster_by_time_density(spots: dict, depot: int, n_clusters: int):
     """
     基于时间窗密度的 K-means 聚类。
 
@@ -156,7 +157,7 @@ def cluster_by_time_density(spots, depot, n_clusters):
     return groups
 
 
-def cluster_hybrid_optimized(spots, cost_mat, depot, n_clusters):
+def cluster_hybrid_optimized(spots: dict, cost_mat: np.ndarray, depot: int, n_clusters: int):
     """
     混合优化分组（时间窗排序 + 距离优化重分配）。
 
@@ -239,7 +240,7 @@ CLUSTER_METHODS = [
 ]
 
 
-def call_cluster(func, spots, depot, k, cost_mat=None):
+def call_cluster(func: callable, spots: dict, depot: int, k: int, cost_mat: np.ndarray | None = None) -> list[list[int]]:
     """
     统一调用聚类方法。
 
@@ -250,7 +251,7 @@ def call_cluster(func, spots, depot, k, cost_mat=None):
     return func(spots, depot, k)
 
 
-def pure_name(full_name):
+def pure_name(full_name: str) -> str:
     """从带编号的全称中提取纯方法名，如 '1. xxx' → 'xxx'
 
     Returns:
@@ -259,7 +260,7 @@ def pure_name(full_name):
     return full_name.split(". ", 1)[1] if ". " in full_name else full_name
 
 
-def find_method_func(name):
+def find_method_func(name: str):
     """通过方法名查找对应的函数对象
 
     Args:

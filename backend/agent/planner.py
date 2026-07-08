@@ -1,8 +1,9 @@
 import numpy as np
 from backend.engine.search import cluster_and_solve, solve_groups
+from backend.types import SpotDict, RouteResult
 
 
-def adjust_plan_days(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:
+def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:
     """调整方案天数，保持景点不变，用新 n_days 重新规划。
 
     Args:
@@ -42,7 +43,7 @@ def adjust_plan_days(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix: np.
 # ================== 移除景点 ==================
 
 
-def remove_poi_from_plan(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix: np.ndarray, routes: list, poi_name: str) -> dict:
+def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, routes: list, poi_name: str) -> dict:
     """从方案中移除指定景点并重新求解。
 
     Args:
@@ -54,6 +55,9 @@ def remove_poi_from_plan(spots_dict: dict, cost_matrix: np.ndarray, dist_matrix:
 
     Returns:
         dict: 与 adjust_plan_days 格式一致的新方案。
+
+    Raises:
+        ValueError: 未在 spots 中找到名称为 poi_name 的景点。
     """
     from backend.engine.pipeline import _rebuild_schedule
 

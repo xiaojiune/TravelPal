@@ -5,7 +5,7 @@ from backend.config import AMAP_API_KEY
 
 # ================== POI 坐标查询 ==================
 
-def get_poi_location(poi_name, city="北京"):
+def get_poi_location(poi_name: str, city: str = "北京") -> tuple[float, float]:
     """
     通过高德地点搜索 API 获取 POI 坐标。
 
@@ -33,7 +33,7 @@ def get_poi_location(poi_name, city="北京"):
 
 # ---------- 工具函数 ----------
 
-def _parse_date(date_str, year):
+def _parse_date(date_str: str, year: int) -> datetime.date | None:
     """解析高德营业时间中的日期段，如 '04月01日' → datetime.date。成功返回 date，失败返回 None。"""
     date_str = date_str.replace('日', '').replace('月', '-')
     parts = date_str.split('-')
@@ -44,7 +44,7 @@ def _parse_date(date_str, year):
     return None
 
 
-def _parse_opentime_to_tw(opentime_str):
+def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
     """
     解析高德营业时间字符串为时间窗元组。
 
@@ -102,7 +102,7 @@ def _parse_opentime_to_tw(opentime_str):
 
 # ================== POI 详细信息 ==================
 
-def get_poi_details(poi_name, city):
+def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str]:
     """
     获取 POI 详细信息（坐标 + 营业时间 + 地址）。
 
@@ -139,7 +139,7 @@ def get_poi_details(poi_name, city):
 
 # ================== 驾车路径规划 ==================
 
-def _get_driving_data(origin, destination, max_retries=3):
+def _get_driving_data(origin: tuple[float, float], destination: tuple[float, float], max_retries: int = 3):
     """
     调用高德驾车路径规划 API 获取距离、耗时、轨迹折线。
 
@@ -188,7 +188,7 @@ def _get_driving_data(origin, destination, max_retries=3):
 
 # ================== 批量构建成本矩阵 ==================
 
-def build_real_data(poi_names, coords, delay=0.4):
+def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], delay: float = 0.4):
     """
     调用高德 API 构建完整的驾车成本矩阵。
 

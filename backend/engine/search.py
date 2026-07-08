@@ -3,10 +3,11 @@ from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 from backend.engine.vns import VNSSolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
+from backend.types import SpotDict, RouteResult
 
 # ================== 分组求解 ==================
 
-def balance_groups(groups, spots, depot=0):
+def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> list:
     """
     强制均衡分组，确保每天的总停留时间接近。
 
@@ -43,10 +44,10 @@ def balance_groups(groups, spots, depot=0):
     return balanced
 
 
-def solve_groups(groups, spots, cost_mat, solver_type="CA",
-                 travel_speed=1.0, penalty_weight=100.0,
-                 early_wait_weight=0.1, late_return_weight=50.0,
-                 use_real_time_matrix=False):
+def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray, solver_type: str = "CA",
+                 travel_speed: float = 1.0, penalty_weight: float = 100.0,
+                 early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
+                 use_real_time_matrix: bool = False) -> RouteResult:
     """
     对已分组的路径逐一求解。
 
@@ -123,7 +124,7 @@ def solve_groups(groups, spots, cost_mat, solver_type="CA",
     }
 
 
-def _deduplicate(results):
+def _deduplicate(results: list) -> list:
     """用 frozenset 对 results 按分组结构去重，保留顺序中首次出现的唯一解。"""
     seen = set()
     deduped = []
@@ -137,11 +138,13 @@ def _deduplicate(results):
 
 # ================== CA 全参数搜索 ==================
 
-def ca_suggest(spots, depot, cost_mat, min_days=None, max_days=None,
-               early_stop_gain_threshold=None, stop_consecutive_worse=None,
-               travel_speed=1.0, penalty_weight=100.0,
-               early_wait_weight=0.1, late_return_weight=50.0,
-               use_real_time_matrix=False):
+def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
+               min_days: int | None = None, max_days: int | None = None,
+               early_stop_gain_threshold: float | None = None,
+               stop_consecutive_worse: int | None = None,
+               travel_speed: float = 1.0, penalty_weight: float = 100.0,
+               early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
+               use_real_time_matrix: bool = False) -> dict:
     """
     全参数搜索，输出 top-5 建议。
 
@@ -236,11 +239,11 @@ def ca_suggest(spots, depot, cost_mat, min_days=None, max_days=None,
 
 # ================== 双模式分发 ==================
 
-def cluster_and_solve(spots, depot, cost_mat, mode="fast",
-                      n_days=None, travel_speed=1.0,
-                      penalty_weight=100.0, early_wait_weight=0.1,
-                      late_return_weight=50.0,
-                      use_real_time_matrix=False):
+def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
+                      mode: str = "fast", n_days: int | None = None,
+                      travel_speed: float = 1.0, penalty_weight: float = 100.0,
+                      early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
+                      use_real_time_matrix: bool = False) -> dict:
     """
     双阶段路由入口。
 
@@ -262,6 +265,9 @@ def cluster_and_solve(spots, depot, cost_mat, mode="fast",
 
     Returns:
         dict: type="suggestion"（未指定天数时）或 type="solution"（已指定天数时）。
+
+    Raises:
+        ValueError: mode="deep" 且未指定 n_days 时。
     """
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"

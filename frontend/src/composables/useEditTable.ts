@@ -5,24 +5,17 @@ import { usePlanStore } from '@/stores/plan'
 interface EditRow {
   isHotel: boolean; name: string; address: string
   lon: number; lat: number
-  twStart: number; twEnd: number; stay: number; expectedArrival: number; delete: boolean
+  twStart: number; twEnd: number; stay: number
+  expectedArrival: number; delete: boolean
 }
 
-/**
- * @param hasResults - 是否有 POI 搜索结果（由 usePoiSearch 传入），控制管理表格是否隐藏
- */
-export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
+export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
 
-  /** 管理表格显隐：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。 */
-  const showManagement = computed(() => {
-    if (hasResults.value) return false
-    if (store.spots.length > 0) return true
-    if (store.hotelName && store.hotelLon) return true
-    return false
-  })
+  /** 已有确认点位时展示管理表格。 */
+  const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
 
   /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
   function rebuildEditRows() {
@@ -72,6 +65,7 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     store.spots = remaining.filter(r => !r.isHotel).map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
+      expectedArrival: r.expectedArrival,
       address: r.address,
     }))
     editHint.value = ''
@@ -88,6 +82,7 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     store.spots = editRows.value.filter(r => !r.isHotel).map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
+      expectedArrival: r.expectedArrival,
       address: r.address,
     }))
     editHint.value = '参数已保存'

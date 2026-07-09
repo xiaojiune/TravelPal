@@ -18,7 +18,8 @@ TRAVEL_SPEED = 1.0
 
 def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
                  penalty_weight: float, early_wait_weight: float, late_return_weight: float,
-                 mode: str = "fast", n_days: int | None = None) -> PlanResult | dict:
+                 mode: str = "fast", n_days: int | None = None,
+                 day_start: int = 0) -> PlanResult | dict:
     """
     双阶段流程编排入口。
 
@@ -33,6 +34,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         late_return_weight: 晚归惩罚权重。
         mode: "fast" 或 "deep"。
         n_days: 行程天数（可选）。
+        day_start: 每天最早出发时间（0-1440），默认 0（午夜）。
 
     Returns:
         dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
@@ -47,15 +49,19 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
     cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
     print("成本矩阵构建完成。\n")
 
-    spots: dict[int, SpotDict] = {0: {"name": hotel_name, "tw": poi_cache["hotel"]["tw"], "stay": 0,
+    hotel_tw = poi_cache["hotel"]["tw"]
+    effective_hotel_start = max(hotel_tw[0], day_start)
+    spots: dict[int, SpotDict] = {0: {"name": hotel_name,
+                 "tw": (effective_hotel_start, hotel_tw[1]),
+                 "stay": 0,
                  "x": poi_cache["hotel"]["lon"], "y": poi_cache["hotel"]["lat"],
-                 "original_tw": poi_cache["hotel"]["tw"]}}
+                 "original_tw": hotel_tw}}
     for i, spot in enumerate(poi_cache["spots"], start=1):
         tw_start = spot["tw"][0]
         tw_end = spot["tw"][1]
-        # 将时间窗收缩为实际可用时段：到达之后才开放、关闭之前需留足停留时间
+        # 将时间窗收缩为实际可用时段：启程后才有空、到达之后才开放、关闭之前需留足停留时间
         expected_arrival = spot.get("expected_arrival", tw_start)
-        effective_start = max(tw_start, expected_arrival)
+        effective_start = max(tw_start, expected_arrival, day_start)
         effective_end = tw_end - spot["stay"]
         spots[i] = {"name": spot["name"],
                     "tw": (effective_start, effective_end),

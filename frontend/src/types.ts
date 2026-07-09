@@ -58,8 +58,8 @@ export interface SpotFormItem {
   twStart: number
   twEnd: number
   stay: number
-  address?: string
   expectedArrival?: number
+  address?: string
 }
 
 /** 行程项 */

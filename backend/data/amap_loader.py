@@ -3,34 +3,6 @@ import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
 
-# ================== POI 坐标查询 ==================
-
-def get_poi_location(poi_name: str, city: str = "北京") -> tuple[float, float]:
-    """
-    通过高德地点搜索 API 获取 POI 坐标。
-
-    Args:
-        poi_name: 景点名称。
-        city: 城市名，默认北京。
-
-    Returns:
-        Tuple[float, float]: (经度, 纬度)，失败时返回 (116.4, 39.9)。
-    """
-    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY}
-    try:
-        resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
-        data = resp.json()
-        if data["status"] == "1" and int(data["count"]) > 0:
-            loc = data["pois"][0]["location"]
-            lon, lat = map(float, loc.split(','))
-            return lon, lat
-        else:
-            print(f"警告：未找到 '{poi_name}'，使用默认坐标")
-            return 116.4, 39.9
-    except Exception as e:
-        print(f"POI请求失败: {e}")
-        return 116.4, 39.9
-
 # ---------- 工具函数 ----------
 
 def _parse_date(date_str: str, year: int) -> datetime.date | None:
@@ -102,18 +74,21 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
 
 # ================== POI 详细信息 ==================
 
-def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str]:
+def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str] | None:
     """
-    获取 POI 详细信息（坐标 + 营业时间 + 地址）。
+    获取 POI 详细信息（坐标 + 营业时间 + 地址 + 省/市名 + 实际名称）。
 
     Args:
         poi_name: 景点名称。
         city: 城市名。
 
     Returns:
-        Tuple[float, float, str, str]: (经度, 纬度, 营业时间字符串, 完整地址)。失败返回默认值。
+        tuple[float, float, str, str, str, str, str] | None:
+        (经度, 纬度, 营业时间, 完整地址, 省份, 城市名, 实际名称)。
+        失败返回 None。
     """
-    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY, "extensions": "all"}
+    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
+              "extensions": "all", "city_limit": True, "types": "风景名胜"}
     try:
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
         data = resp.json()
@@ -129,13 +104,25 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str]:
             adname = poi.get("adname", "")
             street = poi.get("address", "")
             full_address = f"{pname}{cityname}{adname}{street}"
-            return lon, lat, biz_hours, full_address
+            actual_name = poi.get("name", poi_name)
+            return lon, lat, biz_hours, full_address, pname, cityname, actual_name
         else:
-            print(f"\n警告：未找到 '{poi_name}' 的信息，请尝试更换搜索词")
-            return 116.4, 39.9, "", ""
+            # city_limit 搜不到时去除限制再搜一次，获取全国结果用于建议
+            relax_params = {k: v for k, v in params.items() if k != "city_limit"}
+            resp2 = requests.get("https://restapi.amap.com/v3/place/text", params=relax_params, timeout=10)
+            data2 = resp2.json()
+            if data2["status"] == "1" and int(data2["count"]) > 0:
+                poi = data2["pois"][0]
+                pname = poi.get("pname", "")
+                cityname = poi.get("cityname", "")
+                adname = poi.get("adname", "")
+                print(f"警告：'{poi_name}' 不在 {city}，可能在 {pname}{cityname}")
+                return None
+            print(f"警告：未找到 '{poi_name}' 的信息")
+            return None
     except Exception as e:
         print(f"POI请求失败: {e}")
-        return 116.4, 39.9, "", ""
+        return None
 
 # ================== 驾车路径规划 ==================
 

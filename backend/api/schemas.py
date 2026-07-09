@@ -11,6 +11,7 @@ class POIItem(BaseModel):
         tw_start: 时间窗开始，距午夜分钟数（默认 480 = 8:00）。
         tw_end: 时间窗结束，距午夜分钟数（默认 1020 = 17:00）。
         stay: 建议停留时长（分钟），影响时间窗有效结束时间。
+        expected_arrival: 用户期望到达时间，可为空。
     """
     name: str
     lon: float
@@ -18,6 +19,7 @@ class POIItem(BaseModel):
     tw_start: float = Field(default=480, description="营业开始时间，距午夜分钟数")
     tw_end: float = Field(default=1020, description="营业结束时间，距午夜分钟数")
     stay: float = Field(default=0, description="停留时间，分钟")
+    expected_arrival: float | None = Field(default=None, description="预期到达时间，距午夜分钟数")
 
 
 # ================== 查询请求 / 响应 ==================
@@ -70,10 +72,11 @@ class PlanRequest(BaseModel):
         city: 城市名（用于文件命名和显示）。
         hotel_name: 酒店名称。
         hotel_lon/lat: 酒店坐标（GCJ-02）。
-        hotel_tw_start/end: 酒店时间窗（默认 6:00~24:00）。
+        hotel_tw_start/end: 酒店时间窗（默认 0:00~24:00）。
         spots: 景点列表，至少 1 个。
         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
         mode: "fast"(CA) 或 "deep"(VNS)。
+        day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。
         penalty_weight: 迟到惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
@@ -82,14 +85,16 @@ class PlanRequest(BaseModel):
     hotel_name: str
     hotel_lon: float
     hotel_lat: float
-    hotel_tw_start: float = Field(default=360, ge=0, le=1440,
-                                   description="酒店开放时间开始，距午夜分钟数（默认 360 = 6:00）")
+    hotel_tw_start: float = Field(default=0, ge=0, le=1440,
+                                   description="酒店开放时间开始，距午夜分钟数（默认 0 = 全天）")
     hotel_tw_end: float = Field(default=1440, ge=0, le=1440,
                                  description="酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）")
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
     mode: str = Field(default="fast", pattern="^(fast|deep)$",
                       description="求解模式：fast(CA) 或 deep(VNS)")
+    day_start: float = Field(default=0, ge=0, le=1440,
+                              description="一天启程时间（距午夜分钟数），0=午夜")
     penalty_weight: float = Field(default=100.0, ge=0,
                                   description="迟到惩罚权重（默认 100.0）")
     early_wait_weight: float = Field(default=0.1, ge=0,

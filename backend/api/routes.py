@@ -32,6 +32,7 @@ def _build_poi_cache(req: PlanRequest):
             "lat": s.lat,
             "tw": (s.tw_start, s.tw_end),
             "stay": s.stay,
+            "expected_arrival": s.expected_arrival or None,
         }
         for s in req.spots
     ]
@@ -44,27 +45,28 @@ async def poi_lookup(req: POILookupRequest):
     """批量查询 POI 坐标和地址。
 
     前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
-    返回每个名称的坐标和地址。未找到的名称列入 failed 列表。
+    返回每个名称的坐标和地址。未找到的名称列入 failed 列表，
+    若跨城市则附带建议地址。
     """
     items: list[POILookupItem] = []
     failed: list[str] = []
 
     for name in req.names:
         try:
-            lon, lat, biz_hours, address = get_poi_details(name, req.city)
-            # 高德返回默认坐标 (116.4, 39.9) 时视为未找到
-            if abs(lon - 116.4) < 0.01 and abs(lat - 39.9) < 0.01:
-                failed.append(name)
+            result = get_poi_details(name, req.city)
+            if result is None:
+                failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
             else:
+                lon, lat, biz_hours, address, pname, cityname, actual_name = result
                 parsed = parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else None
                 tw_end = parsed[1] if parsed else None
                 items.append(POILookupItem(
-                    name=name, lon=lon, lat=lat, address=address,
+                    name=actual_name, lon=lon, lat=lat, address=address,
                     tw_start=tw_start, tw_end=tw_end,
                 ))
         except Exception:
-            failed.append(name)
+            failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
 
     return POILookupResponse(items=items, failed=failed)
 
@@ -86,6 +88,7 @@ async def suggest(req: PlanRequest):
             late_return_weight=req.late_return_weight,
             mode="fast",
             n_days=None,
+            day_start=req.day_start,
         )
         return result
     except Exception as e:
@@ -109,6 +112,7 @@ async def plan(req: PlanRequest):
             late_return_weight=req.late_return_weight,
             mode=req.mode,
             n_days=req.n_days,
+            day_start=req.day_start,
         )
         result["amap_api_key"] = AMAP_API_KEY
         return result

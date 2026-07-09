@@ -18,11 +18,7 @@
           {{ loading ? '搜索中...' : '🏨 搜索酒店坐标' }}
         </button>
       </div>
-      <div v-if="hotelResult" class="result-row">
-        <span class="coord">{{ hotelResult.lon.toFixed(4) }}, {{ hotelResult.lat.toFixed(4) }}</span>
-        <span class="addr">{{ hotelResult.address }}</span>
-      </div>
-      <div v-else-if="hotelFailed" class="hint error">⚠️ 未找到该酒店</div>
+      <div v-if="hotelMsg" class="result-row hint">{{ hotelMsg }}</div>
     </section>
 
     <section class="form-section">
@@ -33,36 +29,7 @@
           {{ loading ? '搜索中...' : '🔍 搜索景点坐标' }}
         </button>
       </div>
-    </section>
-
-    <section v-if="hasResults" class="form-section">
-      <h3>搜索结果（勾选要添加的点）</h3>
-      <table class="poi-table">
-        <thead>
-          <tr>
-            <th style="width:40px">✓</th>
-            <th>类型</th>
-            <th>名称</th>
-            <th>经度</th>
-            <th>纬度</th>
-            <th>地址</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, i) in allResults" :key="i">
-            <td style="text-align:center"><input v-model="item.checked" type="checkbox" /></td>
-            <td>{{ item.isHotel ? '🏨酒店' : '📍景点' }}</td>
-            <td>{{ item.name }}</td>
-            <td>{{ item.lon?.toFixed(4) }}</td>
-            <td>{{ item.lat?.toFixed(4) }}</td>
-            <td class="addr">{{ item.address }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-if="spotFailed.length" class="hint">⚠️ 未找到：{{ spotFailed.join('、') }}</div>
-      <div class="form-actions">
-        <button class="btn btn-primary" @click="confirmPoi">✅ 确认添加选中的点</button>
-      </div>
+      <div v-if="spotMsg" class="hint" style="white-space:pre-line">{{ spotMsg }}</div>
     </section>
 
     <section v-if="showManagement" class="form-section">
@@ -74,9 +41,7 @@
             <th>名称</th>
             <th>地址</th>
             <th>营业时间</th>
-            <th style="width:72px">开始</th>
-            <th style="width:72px">关闭</th>
-            <th style="width:72px">停留</th>
+            <th style="width:72px">停留(分)</th>
             <th style="width:72px">预计到达</th>
           </tr>
         </thead>
@@ -86,10 +51,8 @@
             <td>{{ row.isHotel ? '🏨 ' : '' }}{{ row.name }}</td>
             <td class="addr">{{ row.address }}</td>
             <td class="biz-hours">{{ formatBiz(row.twStart, row.twEnd) }}</td>
-            <td><input v-model.number="row.twStart" type="number" min="0" max="1440" class="num-input" /></td>
-            <td><input v-model.number="row.twEnd" type="number" min="0" max="1440" class="num-input" /></td>
-            <td><input v-model.number="row.stay" type="number" min="0" class="num-input" /></td>
-            <td><input v-model.number="row.expectedArrival" type="number" min="0" max="1440" class="num-input" /></td>
+            <td><input :value="row.stay || ''" @input="row.stay = Number(($event.target as HTMLInputElement).value) || 0" type="number" min="0" placeholder="请输入" class="num-input" /></td>
+            <td><input :value="row.expectedArrival || ''" @input="row.expectedArrival = Number(($event.target as HTMLInputElement).value) || 0" type="number" min="0" max="1440" placeholder="请输入" class="num-input" /></td>
           </tr>
         </tbody>
       </table>
@@ -100,14 +63,16 @@
       <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
     </section>
 
-    <details class="form-section">
-      <summary><h3 style="display:inline">算法参数</h3></summary>
-      <div class="form-row cols-3">
+    <section class="form-section">
+      <h3>算法参数</h3>
+      <div class="form-row cols-4">
+        <div><label>启程时间</label><input :value="store.dayStart || ''" @input="store.dayStart = Number(($event.target as HTMLInputElement).value) || 0" type="number" min="0" max="1440" placeholder="请输入" /><span class="unit-info">0=午夜, 480=08:00</span></div>
         <div><label>迟到惩罚</label><input v-model.number="store.penaltyWeight" type="number" step="10" /></div>
         <div><label>等待惩罚</label><input v-model.number="store.earlyWaitWeight" type="number" step="0.1" /></div>
         <div><label>晚归惩罚</label><input v-model.number="store.lateReturnWeight" type="number" step="10" /></div>
       </div>
-    </details>
+      <div v-if="dayStartMsg" class="hint error">{{ dayStartMsg }}</div>
+    </section>
 
     <div class="form-actions">
       <button class="btn btn-primary btn-lg" :disabled="!canSuggest" @click="fetchSuggest">
@@ -125,7 +90,7 @@
 defineOptions({ name: 'HomePage' })
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { postSuggest } from '@/services/api'
@@ -136,22 +101,28 @@ const store = usePlanStore()
 const router = useRouter()
 
 const {
-  spotText, hotelResult, hotelFailed, spotResults, spotFailed, loading,
-  canSearchHotel, canSearchSpots, hasResults, allResults,
-  searchHotel, searchSpots, confirmPoi, clearSearchResults,
+  spotText, hotelMsg, spotMsg, loading,
+  canSearchHotel, canSearchSpots,
+  searchHotel, searchSpots,
 } = usePoiSearch()
 
 // ====== 计算属性 ======
 const canSuggest = computed(() => store.spots.length > 0)
+const dayStartMsg = ref('')
 
 // ====== 管理表格 ======
-const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable(hasResults)
+const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable()
 
 /**
  * 获取方案建议：调 /api/suggest 后跳转 SuggestPage。
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
  */
 async function fetchSuggest() {
+  if (!store.dayStart) {
+    dayStartMsg.value = '请输入启程时间'
+    return
+  }
+  dayStartMsg.value = ''
   store.loading = true
   try {
     const data = await postSuggest(store.buildRequest(null))
@@ -174,15 +145,12 @@ async function fetchSuggest() {
 .form-row label { min-width: 80px; font-size: 13px; color: #555; }
 .form-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
 .form-row input:focus { outline: none; border-color: #1a73e8; }
-.cols-3 > div { flex: 1; }
+.cols-4 > div { flex: 1; }
+.cols-4 .unit-info { display: block; font-size: 10px; color: #999; margin-top: 2px; }
 textarea { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; resize: vertical; box-sizing: border-box; min-height: 120px; }
 textarea:focus { outline: none; border-color: #1a73e8; }
 .btn-self-start { align-self: flex-start; }
-.poi-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
-.poi-table th { text-align: left; padding: 6px 8px; border-bottom: 2px solid #e0e0e0; font-weight: 600; color: #555; }
-.poi-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
-.addr { color: #888; font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.coord { font-family: monospace; color: #333; }
+.addr { color: #888; font-size: 12px; }
 .result-row { font-size: 13px; margin-top: 4px; display: flex; gap: 16px; align-items: center; }
 .hint { font-size: 13px; color: #e67e22; margin-bottom: 12px; }
 .hint.error { color: #e74c3c; }

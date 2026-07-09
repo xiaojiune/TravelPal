@@ -60,7 +60,9 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         tw_start = spot["tw"][0]
         tw_end = spot["tw"][1]
         # 将时间窗收缩为实际可用时段：启程后才有空、到达之后才开放、关闭之前需留足停留时间
-        expected_arrival = spot.get("expected_arrival", tw_start)
+        expected_arrival = spot.get("expected_arrival")
+        if expected_arrival is None:
+            expected_arrival = tw_start
         effective_start = max(tw_start, expected_arrival, day_start)
         effective_end = tw_end - spot["stay"]
         spots[i] = {"name": spot["name"],

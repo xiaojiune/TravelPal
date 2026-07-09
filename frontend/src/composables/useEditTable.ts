@@ -25,7 +25,7 @@ export function useEditTable() {
         isHotel: true, name: store.hotelName, address: store.hotelAddress,
         lon: store.hotelLon, lat: store.hotelLat,
         twStart: store.hotelTwStart, twEnd: store.hotelTwEnd,
-        stay: 0, expectedArrival: store.hotelTwStart, delete: false,
+        stay: 0, expectedArrival: 0, delete: false,
       })
     }
     store.spots.forEach(s => {
@@ -33,7 +33,7 @@ export function useEditTable() {
         isHotel: false, name: s.name, address: s.address || '',
         lon: s.lon, lat: s.lat,
         twStart: s.twStart, twEnd: s.twEnd,
-        stay: s.stay, expectedArrival: s.expectedArrival ?? s.twStart, delete: false,
+        stay: s.stay, expectedArrival: s.expectedArrival ?? 0, delete: false,
       })
     })
     editRows.value = rows

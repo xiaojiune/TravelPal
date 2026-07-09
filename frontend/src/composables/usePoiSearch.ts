@@ -53,7 +53,7 @@ export function usePoiSearch() {
           store.spots.push({
             name: item.name, lon: item.lon, lat: item.lat,
             twStart: item.tw_start ?? 480, twEnd: item.tw_end ?? 1020, stay: 0,
-            address: item.address,
+            expectedArrival: 0, address: item.address,
           })
         }
       }

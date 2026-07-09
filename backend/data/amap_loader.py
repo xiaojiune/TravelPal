@@ -74,7 +74,7 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
 
 # ================== POI 详细信息 ==================
 
-def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str] | None:
+def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str] | str:
     """
     获取 POI 详细信息（坐标 + 营业时间 + 地址 + 省/市名 + 实际名称）。
 
@@ -83,9 +83,8 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         city: 城市名。
 
     Returns:
-        tuple[float, float, str, str, str, str, str] | None:
-        (经度, 纬度, 营业时间, 完整地址, 省份, 城市名, 实际名称)。
-        失败返回 None。
+        tuple[float, float, str, str, str, str, str]: 成功返回 7 元组
+        str: 失败返回错误信息字符串。
     """
     params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
               "extensions": "all", "city_limit": True, "types": "风景名胜"}
@@ -116,13 +115,11 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
                 pname = poi.get("pname", "")
                 cityname = poi.get("cityname", "")
                 adname = poi.get("adname", "")
-                print(f"警告：'{poi_name}' 不在 {city}，可能在 {pname}{cityname}")
-                return None
-            print(f"警告：未找到 '{poi_name}' 的信息")
-            return None
+                return f"'{poi_name}' 不在 {city}，可能在 {pname}{cityname}"
+            return f"未找到 '{poi_name}' 的信息"
     except Exception as e:
         print(f"POI请求失败: {e}")
-        return None
+        return f"'{poi_name}' 查询失败"
 
 # ================== 驾车路径规划 ==================
 

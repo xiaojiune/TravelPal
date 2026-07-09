@@ -32,7 +32,7 @@ def _build_poi_cache(req: PlanRequest):
             "lat": s.lat,
             "tw": (s.tw_start, s.tw_end),
             "stay": s.stay,
-            "expected_arrival": s.expected_arrival or None,
+            "expected_arrival": s.expected_arrival,
         }
         for s in req.spots
     ]
@@ -54,8 +54,8 @@ async def poi_lookup(req: POILookupRequest):
     for name in req.names:
         try:
             result = get_poi_details(name, req.city)
-            if result is None:
-                failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
+            if isinstance(result, str):
+                failed.append(result)
             else:
                 lon, lat, biz_hours, address, pname, cityname, actual_name = result
                 parsed = parse_biz_hours(biz_hours) if biz_hours else None
@@ -66,6 +66,7 @@ async def poi_lookup(req: POILookupRequest):
                     tw_start=tw_start, tw_end=tw_end,
                 ))
         except Exception:
+            traceback.print_exc()
             failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
 
     return POILookupResponse(items=items, failed=failed)
@@ -92,6 +93,7 @@ async def suggest(req: PlanRequest):
         )
         return result
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

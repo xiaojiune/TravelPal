@@ -1,8 +1,8 @@
 # 编码规范
 
-## 后端
+## 注释四级体系
 
-### 注释四级体系
+项目前后端统一使用 P0-P3 四级注释体系：
 
 | 等级 | 特征 | 目标 |
 |------|------|------|
@@ -11,7 +11,11 @@
 | P2 优秀 | 设计意图 + 边界约定 + 异常行为 | 追求目标 |
 | P3 详尽 | 逐行解释算法与数学推导 | 仅核心算法模块 |
 
-当前注释水平处于 P1 合格线。优化目标：P1→P2，**不是 P0→P1**。
+前后端的 Lx 分级及具体注释要求见各自域内。
+
+## 后端
+
+当前注释水平：后端核心模块（vns/ca/clustering）达 P2，编排模块（pipeline/search）达 P1~P2，测试达 P0~P1。
 
 ### 接口变更工具流
 
@@ -28,7 +32,7 @@
 
 **类型注解**：函数参数和返回值必须标注类型，Python 3.10+ 优先使用 `|` 语法而非 `Optional`/`Union`：
 
-```text
+```python
 def parse_time(s: str | None) -> tuple[int, int] | None: ...
 ```
 
@@ -43,28 +47,28 @@ def parse_time(s: str | None) -> tuple[int, int] | None: ...
 
 **导入顺序**：标准库 → 第三方库 → 项目内部模块，各组之间空一行。函数内 import 需注释说明原因：
 
-```text
+```python
 # 函数内导入，避免循环依赖
 from backend.engine.pipeline import _rebuild_schedule
 ```
 
 **路径处理**：使用 `pathlib.Path` 替代 `os.path`：
 
-```text
+```python
 from pathlib import Path
 data_dir = Path("data") / "subdir"
 ```
 
 **魔术数字**：避免硬编码数值，用常量或枚举命名：
 
-```text
+```python
 EARLY_WAIT_WEIGHT = 0.1
 MAX_RETRIES = 3
 ```
 
 **打印输出**：生产代码使用 `logging`，调试代码使用 `print` 但不应提交：
 
-```text
+```python
 import logging
 logger = logging.getLogger(__name__)
 ```
@@ -82,7 +86,7 @@ logger = logging.getLogger(__name__)
 
 **禁止可变默认参数**：`list`/`dict` 默认值用 `None` + 内部分支初始化：
 
-```text
+```python
 def solve(dis_matrix, initial_solution: list[int] | None = None):
     if initial_solution is None:
         initial_solution = []
@@ -102,7 +106,8 @@ def solve(dis_matrix, initial_solution: list[int] | None = None):
 |--------|------|------|
 | `dist_matrix` | km | 距离矩阵 |
 | `cost_matrix` | 分钟 | 耗时矩阵（cost_matrix_hours * 60 后的值） |
-| `travel_speed` | 无量纲 | 占位参数，真实数据未使用，固定 1.0 |
+| `travel_speed` | 无量纲 | 占位参数，use_real_time_matrix=False 时固定 1.0 |
+| `use_real_time_matrix` | — | bool 标志：False 用标准距离矩阵，True 用高德真实时间矩阵 |
 | `stay` | 分钟 | 景点停留时间 |
 | `tw` | 分钟 | 时间窗 (start, end)，0-1440 |
 
@@ -114,10 +119,9 @@ def solve(dis_matrix, initial_solution: list[int] | None = None):
 __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 ```
 
-**净化规则**：
-- `__all__` 不得包含下划线开头的私有函数，如 `data/__init__.py` 的 `_parse_opentime_to_tw` 应移除
-
-> 当前接口清单以手动注释块维护。未来如引入 Sphinx 等文档工具，可考虑从函数/类 Docstring 中自动提取接口文档，配合 `sphinx-apidoc` 生成，减少人工维护成本。
+**__all__ 生成规范**：
+- `__all__` 不得包含下划线开头的私有函数
+- 新增公开 API 时，先更新 `__init__.py` 的 `__all__` 列表，再运行 `tools/sync_all.py` 同步导出
 
 ### 注释规范
 
@@ -139,7 +143,7 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 |------|---------|:---------:|------|
 | API 请求/响应（schemas.py） | Pydantic BaseModel | ✅ | FastAPI 原生支持，自动生成 OpenAPI 文档 |
 | 内部数据结构（spots_dict、poi_cache） | TypedDict | ❌ | 轻量，零运行时开销，只做类型约束 |
-| 跨模块业务对象（PlanResult） | Pydantic Model | ✅ | 多处传递/校验时更安全 |
+| 跨模块业务对象（SpotDict / PlanResult） | TypedDict | ❌ | 内部传递轻量，零运行时开销 |
 | 配置/环境变量 | Pydantic BaseSettings | ✅ | 可自动加载 .env |
 | 函数参数/返回值 | TypedDict 或 Pydantic | 按需 | 取决于是否需要运行时校验 |
 
@@ -153,7 +157,7 @@ __all__ = ["VNSSolver", "CASolver", "cluster_and_solve"]
 - `# ---------- 子段标题 ----------` —— 子段落
 - `# ***** 标注文字 *****` —— 需要强调的关键注释
 
-```text
+```python
 # ================== VNS 默认参数 ==================
 # ---------- 适应度（带缓存） ----------
 ```
@@ -184,7 +188,7 @@ def analyze_solution(solution, dis_matrix, spots_dict, travel_speed, ...):
 
 内部方法使用单行 docstring：
 
-```text
+```python
 def _perturb_around(self, route, target, op):
     """针对特定节点进行扰动（对其附近片段操作）
 
@@ -193,7 +197,9 @@ def _perturb_around(self, route, target, op):
     """
 ```
 
-Raises 段在涉及外部输入时必写：
+### Raises 段要求
+
+涉及外部输入时必须在 docstring 中标注可能抛出的异常：
 
 ```text
 Raises:
@@ -229,7 +235,7 @@ new_spots = {mapping[i]: spots_dict[i] for i in remaining}
 
 P2 阶段需补充的前置设计意图说明，在函数 docstring 中而非行内注释表达：
 
-```text
+```python
 """从方案中移除指定景点并重新求解。
 
 设计说明：优先保留原有行程分组结构，仅对受影响的分组做局部重算；
@@ -240,7 +246,7 @@ P2 阶段需补充的前置设计意图说明，在函数 docstring 中而非行
 
 数据结构约定在行内注释中一并标注：
 
-```text
+```python
 spots_dict: dict[int, dict]
     # 格式: {index: {"name": str, "tw": (start, end), "stay": int, "x": float, "y": float}}
     # 索引 0 固定为酒店起点，不可删除
@@ -250,7 +256,7 @@ spots_dict: dict[int, dict]
 
 对复杂的配置项在定义处附带设计说明（常用于算法参数）：
 
-```text
+```python
 # 说明：压缩退火通过动态调整接受准则中惩罚项的权重来实现
 # 初期 penalty_start 很小 → 对惩罚增加不敏感，允许探索不可行区域
 # 后期逐渐增大到 1.0 → 与原始成本一致，强制收敛到可行解
@@ -260,7 +266,7 @@ spots_dict: dict[int, dict]
 
 在默认参数字典上方用多行注释说明每个参数。格式：**意图 → 建议默认值/范围 → 调参方向**：
 
-```text
+```python
 # VNS_DEFAULT_PARAMS 设计说明：
 # - max_iter：主循环迭代次数，决定搜索深度。建议 100-300。增大→更充分搜索，增大耗时。
 # - shaking_neighbors：抖动强度候选集合大小。越大扰动越剧烈，利于跳出局部最优。
@@ -288,15 +294,6 @@ VNS_DEFAULT_PARAMS = { ... }
 
 ## 前端
 
-### 注释四级体系
-
-| 等级 | 特征 | 目标 |
-|------|------|------|
-| P0 不合格 | 无注释 / 组件无规约 / Props 无 type | 不允许 |
-| P1 合格 | 组件职责说明 + Props JSDoc + 关键逻辑 Why | 底线要求 |
-| P2 优秀 | 设计意图 + 边界约定 + 异常行为 | 追求目标 |
-| P3 详尽 | 逐行解释复杂交互逻辑 | 仅核心组件 |
-
 ### 接口变更工具流
 
 修改组件 API 或新增路由时，遵循以下顺序：
@@ -307,7 +304,7 @@ VNS_DEFAULT_PARAMS = { ... }
 3. **若组件被多个父组件使用**，全局搜索引用逐一适配
 
 **路由变更**：
-1. **先在 `router/index.js` 注册路由**（含 `path` + `name` + 懒加载）
+1. **先在 `router/index.ts` 注册路由**（含 `path` + `name` + 懒加载）
 2. **再实现**对应的页面组件
 3. **最后更新**导航链接（`router.push` / `<router-link>`）
 
@@ -322,25 +319,26 @@ VNS_DEFAULT_PARAMS = { ... }
 **命名风格**：
 - 组件文件：`PascalCase.vue`（如 `SchedulePanel.vue`）
 - 页面文件：`PascalCase.vue`（如 `HomePage.vue`）
+- 服务/工具文件：`camelCase.ts`（如 `api.ts`、`types.ts`）
 - 目录：全小写（`stores/`、`services/`、`components/`、`pages/`）
 - 导出函数/变量：`camelCase`
 - Pinia store：`use` 前缀 + `Store` 后缀（`usePlanStore`）
 
 **导入顺序**：Vue/Pinia → 第三方库 → 项目内部模块，各组之间空一行。
 
-```text
+```ts
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { usePlanStore } from '../stores/plan'
-import { postSuggest } from '../services/api'
+import { usePlanStore } from '@/stores/plan'
+import { postSuggest } from '@/services/api'
 
-import AmapMap from '../components/AmapMap.vue'
+import AmapMap from '@/components/AmapMap.vue'
 ```
 
 **Composition API 结构约定**（`<script setup>` 内按序排列）：
 
-```text
+```ts
 // 1. 外部导入（import）
 
 // 2. Store / Router
@@ -348,7 +346,7 @@ const planStore = usePlanStore()
 const router = useRouter()
 
 // 3. Props / Emits
-const props = defineProps({ routes: Array, amapKey: String })
+const props = defineProps<{ routes: any[]; amapKey: string }>()
 
 // 4. 响应式状态
 const loading = ref(false)
@@ -358,24 +356,29 @@ const error = ref('')
 const hasResult = computed(() => planStore.result !== null)
 
 // 6. 生命周期
-onMounted(() => { ... })
-onBeforeUnmount(() => { ... })
+onMounted(() => { /* init */ })
+onBeforeUnmount(() => { /* cleanup */ })
 
 // 7. 事件处理 / 方法
-function handleSubmit() { ... }
-function onRemove(index) { ... }
+function handleSubmit() { /* ... */ }
+function onRemove(index: number) { /* ... */ }
 
 // 8. 侦听器（watch 放在最后）
-watch(() => props.routes, (val) => { ... }, { deep: true })
+watch(() => props.routes, (val) => { /* ... */ }, { deep: true })
 ```
 
-**Props 定义**：必须同时声明 `type` 和 `default`，数组/对象用工厂函数。
+**Props 定义**：使用 TypeScript 泛型定义 Props 接口，同时声明 `type` 和 `default`。
 
-```js
-const props = defineProps({
-  dailySchedules: { type: Array, default: () => [] },
-  highlightDay: { type: Number, default: 0 },
-  onRemovePoi: { type: Function, default: null },
+```ts
+interface Props {
+  dailySchedules?: ScheduleItem[][]
+  highlightDay?: number
+  onRemovePoi?: (dayIndex: number, spotId: number) => void
+}
+const props = withDefaults(defineProps<Props>(), {
+  dailySchedules: () => [],
+  highlightDay: 0,
+  onRemovePoi: undefined,
 })
 ```
 
@@ -383,11 +386,11 @@ const props = defineProps({
 
 **API 服务**：使用 axios 实例，`baseURL: '/api'`，在 service 层解包 `response.data`。
 
-```js
+```ts
 import axios from 'axios'
 const http = axios.create({ baseURL: '/api' })
 
-export function postPoiLookup(city, names) {
+export function postPoiLookup(city: string, names: string[]) {
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 ```
@@ -400,26 +403,26 @@ export function postPoiLookup(city, names) {
 
 **组件级清单**：在组件定义处使用注释块声明公开 API。
 
-```js
+```ts
 // SchedulePanel.vue 公开接口
 // Props:
 //   dailySchedules: 每日行程数组 [{day, spots, ...}]
 //   onRemovePoi:    删除景点回调 (dayIndex, spotId) => void
 ```
 
-**路由清单**：路由集中定义在 `router/index.js`，所有页面懒加载。
+**路由清单**：路由集中定义在 `router/index.ts`，所有页面懒加载。
 
-```js
-const routes = [
-  { path: '/', name: 'Home', component: () => import('../pages/HomePage.vue') },
-  { path: '/suggest', name: 'Suggest', component: () => import('../pages/SuggestPage.vue') },
-  { path: '/plan', name: 'Plan', component: () => import('../pages/PlanPage.vue') },
+```ts
+const routes: RouteRecordRaw[] = [
+  { path: '/', name: 'Home', component: () => import('@/pages/HomePage.vue') },
+  { path: '/suggest', name: 'Suggest', component: () => import('@/pages/SuggestPage.vue') },
+  { path: '/plan', name: 'Plan', component: () => import('@/pages/PlanPage.vue') },
 ]
 ```
 
 **Store 清单**：Pinia store 通过 `return` 显式暴露的接口即为公开 API。
 
-```js
+```ts
 return { city, spots, planResult, buildRequest, reset }
 ```
 
@@ -431,7 +434,7 @@ return { city, spots, planResult, buildRequest, reset }
 
 | 层级 | 范围 | 注释要求 | 数据方案 |
 |------|------|---------|---------|
-| **L0** | 核心复杂组件（AmapMap.vue、AgentChat.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 | TypedDict/Pydantic |
+| **L0** | 核心复杂组件（AmapMap.vue、ChatMessage.vue） | P2~P3 标准：JSDoc + 行内 Why + 设计意图 | TypedDict/Pydantic |
 | **L1** | 管道/展示组件（SchedulePanel.vue、HomePage.vue） | P1~P2 标准：JSDoc + 关键逻辑 Why | TypedDict |
 | **L2** | 页面容器 / store / 工具（SuggestPage.vue、stores/*.ts） | P1 标准：组件职责 + 行内 Why | Interface |
 
@@ -483,27 +486,26 @@ const props = defineProps({
 </script>
 ```
 
-##### `services/*.js` 文件
+##### `services/*.ts` 文件
 
 函数级 JSDoc：
 
-```js
+```ts
 /**
  * 查询景点 POI 坐标。
- * @param {string} city - 城市名
- * @param {string[]} names - 景点名称列表
- * @returns {Promise<Array<{name, x, y}>>}
+ * @param city - 城市名
+ * @param names - 景点名称列表
  */
-export function postPoiLookup(city, names) {
+export function postPoiLookup(city: string, names: string[]) {
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 ```
 
-##### `stores/*.js` 文件
+##### `stores/*.ts` 文件
 
 Store 职责说明 + 关键方法 JSDoc：
 
-```text
+```ts
 /**
  * planStore — 规划流程状态管理
  *
@@ -512,34 +514,21 @@ Store 职责说明 + 关键方法 JSDoc：
  */
 export const usePlanStore = defineStore('plan', () => {
   const city = ref('')
-  const spots = ref([])
+  const spots = ref<SpotFormItem[]>([])
   // ...
 
   /** 构造请求参数，nDays 为 null 时走 suggest 模式 */
-  function buildRequest(nDays) { ... }
+  function buildRequest(nDays: number | null): PlanRequestPayload { /* ... */ }
 
   return { city, spots, planResult, buildRequest, reset }
 })
 ```
 
-##### `router/index.js`
+##### `router/index.ts`
 
 Router 配置无需 JSDoc，路由 path 和 name 自文档化。
 
-#### 行内注释
-
-与后端一致，传达设计意图（Why）而非描述行为（What）：
-
-```js
-// 路由为空时保持地图实例，避免反复销毁重建
-const hasRoutes = computed(() => props.routes.length > 0)
-
-// 深度监听 route 变化，避免引用变更漏更新
-watch(() => props.routes, renderRoutes, { deep: true })
-
-// 高德 API 在组件卸载时必须销毁，否则内存泄漏
-onBeforeUnmount(() => mapRef.value?.destroy())
-```
+行内注释原则与后端一致（传达 Why 而非 What），参见后端「行内注释」节。
 
 #### 不需要注释的情况
 
@@ -588,6 +577,10 @@ const props = withDefaults(defineProps<Props>(), {
 - 相同业务逻辑出现 2 次以上 → 提取为 composable
 - 命名以 `use` 开头，如 `usePlanning`、`usePoiSearch`
 
+**Store 互引约定**：
+- store 之间避免直接通过 `useXxxStore()` 互相引用（造成隐式循环依赖）
+- 共享状态通过 composable 统一管理，或由调用方（页面）在组合时传入
+
 **命名规范**：
 - 组件文件：`PascalCase.vue`
 - 服务/工具文件：`camelCase.ts`
@@ -597,10 +590,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 以下做法与项目约定冲突，应避免：
 
-- **`reactive()` 包裹对象**：使用 `ref()` + 对象解构，更易追踪变更
-- **`defineEmits` 声明事件**：当前项目统一使用回调 prop 通信
-- **组件 Props 用 `v-bind="obj"` 对象展开**：逐一传递各 prop，调用处可读
-- **组件内 `async setup`**：异步初始化放在 `onMounted` 中处理
-- **Pinia store 中引用其他 store 实例**：store 之间通过参数传值而非直接 `useXxxStore`
-- **模板中混入复杂表达式**：计算逻辑放入 `computed`，模板只做渲染
-- **`@` 别名导入**：统一使用相对路径 `../` 导入
+| 反模式 | 推荐做法 | 后果 |
+|--------|----------|------|
+| `reactive()` 包裹对象后在模板或计算中解构 | 优先用 `ref()`；如需深度响应才用 `reactive()`，直接使用不解构 | 解构后失去响应性追踪，变更不触发重渲染 |
+| 组件 Props 用 `v-bind="obj"` 对象展开 | 逐一传递各 prop，调用处可读 | 数据来源不透明，难以定位未定义 prop 的传值 |
+| 组件内 `async setup` | 异步初始化放在 `onMounted` 中处理 | setup 不支持 async，编译不报错但运行时行为未定义 |
+| 模板中混入复杂表达式 | 计算逻辑放入 `computed`，模板只做渲染 | 模板难以测试和调试，表达式变更时容易遗漏 

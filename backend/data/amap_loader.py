@@ -5,6 +5,18 @@ from backend.config import AMAP_API_KEY
 
 # ---------- 工具函数 ----------
 
+def normalize_text(text: str) -> str:
+    """全角字符转为半角字符，用于名称匹配前归一化。"""
+    result = []
+    for char in text:
+        code = ord(char)
+        if 0xFF01 <= code <= 0xFF5E:
+            result.append(chr(code - 0xFEE0))
+        else:
+            result.append(char)
+    return ''.join(result)
+
+
 def _parse_date(date_str: str, year: int) -> datetime.date | None:
     """解析高德营业时间中的日期段，如 '04月01日' → datetime.date。成功返回 date，失败返回 None。"""
     date_str = date_str.replace('日', '').replace('月', '-')
@@ -88,8 +100,10 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
     """
 
     def _match_name(query: str, result_name: str) -> bool:
-        """双向子串匹配：搜索词是结果名的子串，或结果名是搜索词的子串。"""
-        return query in result_name or result_name in query
+        """双向子串匹配：归一化全角符号后再比较。"""
+        q = normalize_text(query)
+        r = normalize_text(result_name)
+        return q in r or r in q
 
     def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str]:
         loc = poi["location"]
@@ -133,6 +147,11 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
             poi3 = data3["pois"][0]
             pname = poi3.get("pname", "")
             cityname = poi3.get("cityname", "")
+            # 同城市则返回，不限名字（高德全国搜索默认按相关性排序）
+            if city and cityname and city in cityname:
+                if _match_name(poi_name, poi3.get("name", "")):
+                    return _extract_poi(poi3)
+                return f"未找到 '{poi_name}' 的信息"
             return f"'{poi_name}' 不在 {city}，可能在 {pname}{cityname}"
 
         return f"未找到 '{poi_name}' 的信息"

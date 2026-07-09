@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -35,7 +36,8 @@ app = create_app()
 
 def main():
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    reload = os.getenv("DEV_RELOAD", "").lower() in ("1", "true")
+    uvicorn.run("backend.api.server:app", host="0.0.0.0", port=8000, reload=reload)
 
 
 if __name__ == "__main__":

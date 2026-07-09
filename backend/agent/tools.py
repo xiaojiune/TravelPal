@@ -141,7 +141,7 @@ async def stream_chat(messages: list[dict]):
 
 # ================== 公开 API ==================
 
-MOCK_MODE = True
+MOCK_MODE = False
 
 
 # ---------- SSE 流式聊天 ----------

@@ -29,6 +29,9 @@ dependencies = [
 [tool.poetry]
 package-mode = false
 
+[tool.poetry.scripts]
+dev = "backend.api.server:main"
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.1.1"
 

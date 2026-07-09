@@ -122,6 +122,7 @@
  * 首页：城市/酒店/景点输入 → POI 搜索确认 → 管理表格编辑 → 获取方案建议。
  * 通过 usePoiSearch + useEditTable 两个 composable 拆分交互逻辑。
  */
+defineOptions({ name: 'HomePage' })
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { computed } from 'vue'

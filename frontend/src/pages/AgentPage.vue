@@ -33,6 +33,8 @@ import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
 import type { ChatMessage as ChatMessageType } from '@/types'
 
+defineOptions({ name: 'AgentPage' })
+
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
 const loading = ref(false)

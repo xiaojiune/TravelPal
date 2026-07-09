@@ -3,7 +3,7 @@ from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 from backend.engine.vns import VNSSolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
-from backend.types import SpotDict, RouteResult
+from backend.typedefs import SpotDict, RouteResult
 
 # ================== 分组求解 ==================
 

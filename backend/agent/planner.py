@@ -1,6 +1,6 @@
 import numpy as np
 from backend.engine.search import cluster_and_solve, solve_groups
-from backend.types import SpotDict, RouteResult
+from backend.typedefs import SpotDict, RouteResult
 
 
 def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:

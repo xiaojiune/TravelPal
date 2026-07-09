@@ -8,7 +8,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 from backend.data.amap_loader import build_real_data
 from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
 from backend.agent.commentator import generate_commentary
-from backend.types import PoiCache, SpotDict, PlanResult, ScheduleItem, RouteResult
+from backend.typedefs import PoiCache, SpotDict, PlanResult, ScheduleItem, RouteResult
 
 # ================== 常量 ==================
 

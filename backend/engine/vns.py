@@ -3,7 +3,7 @@ import random
 import math
 from typing import Tuple, List
 import numpy as np
-from backend.types import SpotDict
+from backend.typedefs import SpotDict
 from numba import njit
 from backend.engine.fitness import analyze_solution
 

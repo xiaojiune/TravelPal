@@ -63,7 +63,7 @@ cd frontend && npm install
 cp .env.example .env
 
 # 启动后端（开发模式，默认启用热重载）
-serve
+./serve
 
 # 或手动启动（无热重载）
 python -m backend.api.server

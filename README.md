@@ -62,8 +62,11 @@ cd frontend && npm install
 # 配置环境变量（高德 API Key + LLM Key）
 cp .env.example .env
 
-# 启动后端
-poetry run uvicorn backend.api.server:app --reload
+# 启动后端（开发模式，默认启用热重载）
+serve
+
+# 或手动启动（无热重载）
+python -m backend.api.server
 
 # 启动前端开发服务器（新终端）
 cd frontend && npm run dev

@@ -87,7 +87,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         str: 失败返回错误信息字符串。
     """
     params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
-              "extensions": "all", "city_limit": True, "types": "风景名胜"}
+              "extensions": "all", "city_limit": True}
     try:
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
         data = resp.json()

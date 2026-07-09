@@ -86,37 +86,56 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         tuple[float, float, str, str, str, str, str]: 成功返回 7 元组
         str: 失败返回错误信息字符串。
     """
-    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
-              "extensions": "all", "city_limit": True, "types": "风景名胜"}
+
+    def _match_name(query: str, result_name: str) -> bool:
+        """双向子串匹配：搜索词是结果名的子串，或结果名是搜索词的子串。"""
+        return query in result_name or result_name in query
+
+    def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str]:
+        loc = poi["location"]
+        lon, lat = map(float, loc.split(','))
+        biz_hours = ""
+        if "biz_ext" in poi and "opentime2" in poi["biz_ext"]:
+            biz_hours = poi["biz_ext"]["opentime2"]
+        pname = poi.get("pname", "")
+        cityname = poi.get("cityname", "")
+        adname = poi.get("adname", "")
+        street = poi.get("address", "")
+        full_address = f"{pname}{cityname}{adname}{street}"
+        actual_name = poi.get("name", poi_name)
+        return lon, lat, biz_hours, full_address, pname, cityname, actual_name
+
     try:
+        # 策略1：types=风景名胜 + city_limit，高德分类准确时直接命中
+        params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
+                  "extensions": "all", "city_limit": True, "types": "风景名胜"}
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
         data = resp.json()
-        if data["status"] == "1" and int(data["count"]) > 0:
+        if data["status"] == "1" and int(data.get("count", 0)) > 0:
             poi = data["pois"][0]
-            loc = poi["location"]
-            lon, lat = map(float, loc.split(','))
-            biz_hours = ""
-            if "biz_ext" in poi and "opentime2" in poi["biz_ext"]:
-                biz_hours = poi["biz_ext"]["opentime2"]
-            pname = poi.get("pname", "")
-            cityname = poi.get("cityname", "")
-            adname = poi.get("adname", "")
-            street = poi.get("address", "")
-            full_address = f"{pname}{cityname}{adname}{street}"
-            actual_name = poi.get("name", poi_name)
-            return lon, lat, biz_hours, full_address, pname, cityname, actual_name
-        else:
-            # city_limit 搜不到时去除限制再搜一次，获取全国结果用于建议
-            relax_params = {k: v for k, v in params.items() if k != "city_limit"}
-            resp2 = requests.get("https://restapi.amap.com/v3/place/text", params=relax_params, timeout=10)
-            data2 = resp2.json()
-            if data2["status"] == "1" and int(data2["count"]) > 0:
-                poi = data2["pois"][0]
-                pname = poi.get("pname", "")
-                cityname = poi.get("cityname", "")
-                adname = poi.get("adname", "")
-                return f"'{poi_name}' 不在 {city}，可能在 {pname}{cityname}"
-            return f"未找到 '{poi_name}' 的信息"
+            if _match_name(poi_name, poi.get("name", "")):
+                return _extract_poi(poi)
+
+        # 策略2：去掉 types，按关键词相关性自然排序（如岭南印象园→中山纪念堂的误配）
+        params2 = {k: v for k, v in params.items() if k != "types"}
+        resp2 = requests.get("https://restapi.amap.com/v3/place/text", params=params2, timeout=10)
+        data2 = resp2.json()
+        if data2["status"] == "1" and int(data2.get("count", 0)) > 0:
+            poi2 = data2["pois"][0]
+            if _match_name(poi_name, poi2.get("name", "")):
+                return _extract_poi(poi2)
+
+        # 策略3：全国搜索，仅用于判定跨城市（city_limit 排除了不在本市的景点）
+        relax_params = {k: v for k, v in params2.items() if k != "city_limit"}
+        resp3 = requests.get("https://restapi.amap.com/v3/place/text", params=relax_params, timeout=10)
+        data3 = resp3.json()
+        if data3["status"] == "1" and int(data3.get("count", 0)) > 0:
+            poi3 = data3["pois"][0]
+            pname = poi3.get("pname", "")
+            cityname = poi3.get("cityname", "")
+            return f"'{poi_name}' 不在 {city}，可能在 {pname}{cityname}"
+
+        return f"未找到 '{poi_name}' 的信息"
     except Exception as e:
         print(f"POI请求失败: {e}")
         return f"'{poi_name}' 查询失败"

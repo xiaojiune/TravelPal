@@ -14,38 +14,6 @@
         <div class="metric"><span class="metric-label">等待惩罚</span><span class="metric-value">{{ solution.wait.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">迟到惩罚</span><span class="metric-value">{{ solution.late.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">算法耗时</span><span class="metric-value">{{ store.planResult?.algo_time?.toFixed(1) }}s</span></div>
-        <div class="metric metric-action">
-          <button class="btn btn-outline" :disabled="balancing" @click="doBalance">
-            {{ balancing ? '均衡中...' : '⚖️ 均衡分配' }}
-          </button>
-        </div>
-        <div class="metric metric-action metric-days">
-          <input v-model.number="newDays" type="number" min="1" class="days-input" />
-          <button class="btn btn-outline" :disabled="adjusting" @click="onAdjustDays">
-            {{ adjusting ? '调整中...' : '📅 调整天数' }}
-          </button>
-        </div>
-        <div class="metric metric-action metric-days">
-          <button class="btn btn-outline" @click="showAddPoi = !showAddPoi">
-            {{ showAddPoi ? '✕ 关闭' : '➕ 添加景点' }}
-          </button>
-        </div>
-      </div>
-
-      <div v-if="showAddPoi" class="add-poi-panel">
-        <div class="form-row">
-          <input v-model="addPoiInput" placeholder="输入景点名称" @keydown.enter="searchAddPoi" />
-          <button class="btn btn-outline" :disabled="addingPoi || !addPoiInput.trim()" @click="searchAddPoi">
-            {{ addingPoi ? '搜索中...' : '🔍 搜索' }}
-          </button>
-        </div>
-        <div v-if="addPoiSearchResult" class="result-row">
-          <span class="coord">{{ addPoiSearchResult.lon.toFixed(4) }}, {{ addPoiSearchResult.lat.toFixed(4) }}</span>
-          <span class="addr">{{ addPoiSearchResult.name }}</span>
-          <button class="btn btn-primary btn-sm" @click="confirmAddPoi">✅ 确认添加</button>
-          <button class="btn btn-outline btn-sm" @click="resetAddPoi">取消</button>
-        </div>
-        <div v-else-if="addPoiSearchFailed" class="hint error">⚠️ 未找到该景点</div>
       </div>
 
       <div v-if="store.planResult?.commentary" class="commentary">
@@ -57,7 +25,7 @@
           <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :amap-key="(store.planResult?.amap_api_key) || ''" />
         </div>
         <div class="plan-schedule">
-          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :on-remove-poi="doRemovePoi" />
+          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" />
         </div>
       </div>
     </template>
@@ -66,24 +34,16 @@
 
 <script setup lang="ts">
 // ====== 状态定义 ======
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { usePlanStore } from '@/stores/plan'
-import { usePlanAdjust } from '@/composables/usePlanAdjust'
 import AmapMap from '@/components/AmapMap.vue'
 import SchedulePanel from '@/components/SchedulePanel.vue'
 import type { PlanResultSolution } from '@/types'
 
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
-const { balancing, adjusting, doBalance, doAdjustDays, doRemovePoi, addingPoi, addPoiInput, addPoiSearchResult, addPoiSearchFailed, searchAddPoi, confirmAddPoi, resetAddPoi } = usePlanAdjust()
-const newDays = ref(1)
-const showAddPoi = ref(false)
 
-watch(() => store.planResult?.best_days, (val) => {
-  if (val) newDays.value = val
-})
-
-// 收到新规划结果时写入 localStorage 历史记录
+/** 收到新规划结果时写入 localStorage 历史记录。 */
 function saveToHistory() {
   const r = store.planResult
   if (!r) return
@@ -106,11 +66,6 @@ function saveToHistory() {
 
 watch(() => store.planResult, (val) => { if (val) saveToHistory() })
 
-// ====== 数据操作 ======
-/** 调整天数：composable 需要数字参数，模板传 newDays。 */
-async function onAdjustDays() {
-  await doAdjustDays(newDays.value)
-}
 
 </script>
 

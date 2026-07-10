@@ -18,7 +18,8 @@ export interface paths {
          * @description 批量查询 POI 坐标和地址。
          *
          *     前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
-         *     返回每个名称的坐标和地址。未找到的名称列入 failed 列表。
+         *     返回每个名称的坐标和地址。未找到的名称列入 failed 列表，
+         *     若跨城市则附带建议地址。
          */
         post: operations["poi_lookup_api_poi_lookup_post"];
         delete?: never;
@@ -95,28 +96,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/plan/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Plan Adjust
-         * @description 调整已有方案（均衡、改天数等）。
-         *
-         *     接收当前方案状态，按 adjustments 指令重新求解后返回新方案。
-         */
-        patch: operations["plan_adjust_api_plan_adjust_patch"];
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -158,6 +137,7 @@ export interface components {
          *         tw_start: 时间窗开始，距午夜分钟数（默认 480 = 8:00）。
          *         tw_end: 时间窗结束，距午夜分钟数（默认 1020 = 17:00）。
          *         stay: 建议停留时长（分钟），影响时间窗有效结束时间。
+         *         expected_arrival: 用户期望到达时间，可为空。
          */
         POIItem: {
             /** Name */
@@ -184,6 +164,11 @@ export interface components {
              * @default 0
              */
             stay: number;
+            /**
+             * Expected Arrival
+             * @description 预期到达时间，距午夜分钟数
+             */
+            expected_arrival?: number | null;
         };
         /**
          * POILookupItem
@@ -242,32 +227,6 @@ export interface components {
             failed: string[];
         };
         /**
-         * PlanAdjustRequest
-         * @description 方案调整请求。
-         *
-         *     前端在查看方案后希望调整（如均衡天、改天数、重算某天）时调用。
-         *     暂只支持 balance，后续扩展 replan_day / change_days。
-         */
-        PlanAdjustRequest: {
-            /** Spots */
-            spots: {
-                [key: string]: unknown;
-            };
-            /** Cost Matrix */
-            cost_matrix: unknown[];
-            /** Dist Matrix */
-            dist_matrix: unknown[];
-            /** Routes */
-            routes: unknown[];
-            /**
-             * Adjustments
-             * @description 调整指令，如 {'balance': true}
-             */
-            adjustments?: {
-                [key: string]: unknown;
-            };
-        };
-        /**
          * PlanRequest
          * @description 统一请求模型，适用于 /api/suggest 和 /api/plan。
          *
@@ -278,10 +237,11 @@ export interface components {
          *         city: 城市名（用于文件命名和显示）。
          *         hotel_name: 酒店名称。
          *         hotel_lon/lat: 酒店坐标（GCJ-02）。
-         *         hotel_tw_start/end: 酒店时间窗（默认 6:00~24:00）。
+         *         hotel_tw_start/end: 酒店时间窗（默认 0:00~24:00）。
          *         spots: 景点列表，至少 1 个。
          *         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
          *         mode: "fast"(CA) 或 "deep"(VNS)。
+         *         day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。
          *         penalty_weight: 迟到惩罚权重。
          *         early_wait_weight: 早到等待惩罚权重。
          *         late_return_weight: 晚归惩罚权重。
@@ -297,8 +257,8 @@ export interface components {
             hotel_lat: number;
             /**
              * Hotel Tw Start
-             * @description 酒店开放时间开始，距午夜分钟数（默认 360 = 6:00）
-             * @default 360
+             * @description 酒店开放时间开始，距午夜分钟数（默认 0 = 全天）
+             * @default 0
              */
             hotel_tw_start: number;
             /**
@@ -323,6 +283,12 @@ export interface components {
              * @default fast
              */
             mode: string;
+            /**
+             * Day Start
+             * @description 一天启程时间（距午夜分钟数），0=午夜
+             * @default 0
+             */
+            day_start: number;
             /**
              * Penalty Weight
              * @description 迟到惩罚权重（默认 100.0）
@@ -473,39 +439,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ChatRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    plan_adjust_api_plan_adjust_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlanAdjustRequest"];
             };
         };
         responses: {

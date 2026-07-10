@@ -1,5 +1,5 @@
 /** 规划点管理表格 composable：维护编辑行数据，提供确认/删除操作，与 store 数据解耦。 */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 
 interface EditRow {
@@ -13,12 +13,14 @@ export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
+  let _rebuilding = false
 
   /** 已有确认点位时展示管理表格。 */
   const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
 
   /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
   function rebuildEditRows() {
+    _rebuilding = true
     const rows: EditRow[] = []
     if (store.hotelName && store.hotelLon) {
       rows.push({
@@ -37,9 +39,15 @@ export function useEditTable() {
       })
     })
     editRows.value = rows
+    nextTick(() => { _rebuilding = false })
   }
 
   watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
+
+  /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
+  watch(editRows, () => {
+    if (!_rebuilding) store.isParamsSaved = false
+  }, { deep: true })
 
   /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */
   function formatBiz(start: number, end: number) {
@@ -68,6 +76,7 @@ export function useEditTable() {
       expectedArrival: r.expectedArrival,
       address: r.address,
     }))
+    store.isParamsSaved = true
     editHint.value = ''
     rebuildEditRows()
   }
@@ -85,8 +94,8 @@ export function useEditTable() {
       expectedArrival: r.expectedArrival,
       address: r.address,
     }))
+    store.isParamsSaved = true
     editHint.value = '参数已保存'
-    setTimeout(() => { editHint.value = '' }, 2000)
     rebuildEditRows()
   }
 

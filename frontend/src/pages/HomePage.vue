@@ -118,11 +118,17 @@ const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, apply
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
  */
 async function fetchSuggest() {
+  if (!store.isParamsSaved) {
+    alert('请先在「规划点管理」中点击「确认规划点参数」')
+    return
+  }
   if (!store.dayStart) {
     dayStartMsg.value = '请输入启程时间'
     return
   }
   dayStartMsg.value = ''
+  store.suggestions = []
+  store.planResult = null
   store.loading = true
   try {
     const data = await postSuggest(store.buildRequest(null))

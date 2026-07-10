@@ -90,7 +90,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
 
     dataset_name = f"{city}_{len(poi_names)-1}spots_{result['best_days']}日游"
 
-    daily_schedules = _rebuild_schedule(solution["routes"], spots, dist_matrix)
+    daily_schedules = _rebuild_schedule(solution["routes"], spots, cost_matrix)
 
     algo_time = time.time() - total_start
     print("所有任务完成。\n")
@@ -113,13 +113,13 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
 
 # ================== 工具函数 ==================
 
-def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], dist_matrix: np.ndarray) -> list[list[ScheduleItem]]:
+def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray) -> list[list[ScheduleItem]]:
     """从路径和景点字典重建每日行程表。
 
     Args:
         routes: 路径列表，每组含首尾 depot (0)。
         spots_dict: 景点字典。
-        dist_matrix: 距离矩阵。
+        cost_matrix: 旅行时间矩阵（分钟）。
 
     Returns:
         list[list[dict]]: 每日行程列表。
@@ -131,7 +131,7 @@ def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], dist_matrix
         for i in range(len(route) - 1):
             from_node = route[i]
             to_node = route[i + 1]
-            travel_time = dist_matrix[from_node][to_node]
+            travel_time = cost_matrix[from_node][to_node]
             arrival_time = round(current_time + travel_time)
 
             if to_node != 0:

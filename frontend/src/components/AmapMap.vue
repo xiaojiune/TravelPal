@@ -107,11 +107,14 @@ onMounted(async () => {
   if (!props.amapKey) return
   await loadAmapScript()
   if (!amapLoaded) return
+  // 等待 DOM 布局完成后再初始化地图，避免容器尺寸为 0 时瓦片不加载
+  await new Promise(r => setTimeout(r, 100))
   map = new AMap.Map(container.value, {
     zoom: 13,
     resizeEnable: true,
   })
   render()
+  map.resize()
 })
 
 onBeforeUnmount(() => {

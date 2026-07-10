@@ -18,6 +18,10 @@ export const usePlanStore = defineStore('plan', () => {
   const earlyWaitWeight = ref(0.1)
   const lateReturnWeight = ref(50)
 
+  // ====== 参数确认锁 ======
+  /** 用户是否已确认当前规划点参数。false 时阻止获取方案建议。 */
+  const isParamsSaved = ref(false)
+
   // ====== 方案状态 ======
   const suggestions = ref<SuggestionItem[]>([])
   const selectedNDays = ref<number | null>(null)
@@ -67,6 +71,7 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwEnd.value = 1440
     dayStart.value = 0
     spots.value = []
+    isParamsSaved.value = false
     suggestions.value = []
     selectedNDays.value = null
     selectedMethod.value = ''
@@ -77,7 +82,7 @@ export const usePlanStore = defineStore('plan', () => {
     city, hotelName, hotelLon, hotelLat, hotelAddress,
     hotelTwStart, hotelTwEnd, dayStart,
     spots, penaltyWeight, earlyWaitWeight, lateReturnWeight,
-    suggestions, selectedNDays, selectedMethod,
+    isParamsSaved, suggestions, selectedNDays, selectedMethod,
     planResult, loading,
     buildRequest, reset,
   }

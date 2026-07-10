@@ -1,8 +1,8 @@
 import json
 import traceback
 from fastapi import APIRouter, HTTPException
-from backend.api.schemas import PlanRequest, PlanAdjustRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
-from backend.engine.pipeline import run_planning, adjust_plan
+from backend.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
+from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY
 from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
@@ -153,18 +153,3 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.patch("/api/plan/adjust")
-async def plan_adjust(req: PlanAdjustRequest):
-    """调整已有方案（均衡、改天数等）。
-
-    接收当前方案状态，按 adjustments 指令重新求解后返回新方案。
-    """
-    try:
-        result = adjust_plan(
-            req.spots, req.cost_matrix, req.dist_matrix,
-            req.routes, req.adjustments,
-        )
-        return result
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))

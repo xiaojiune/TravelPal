@@ -67,6 +67,7 @@ function select(i: number) {
 
 /** 按选定天数调用 /api/plan 生成最终方案，成功后跳转 PlanPage。 */
 async function generatePlan() {
+  store.planResult = null
   store.loading = true
   store.selectedNDays = customDays.value
   store.selectedMethod = store.suggestions[selectedIndex.value]?.method || ''

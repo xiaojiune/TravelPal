@@ -24,7 +24,3 @@ export function postChat(message: string, sessionId: string): Promise<unknown> {
   return http.post('/chat', { message, session_id: sessionId }).then(r => r.data)
 }
 
-/** 方案调整：均衡天数 / 调整天数 / 移除景点，后端重新求解后返回新方案。 */
-export function patchPlanAdjust(data: unknown): Promise<PlanResult> {
-  return http.patch('/plan/adjust', data).then(r => r.data)
-}

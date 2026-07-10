@@ -107,7 +107,8 @@ const {
 } = usePoiSearch()
 
 // ====== 计算属性 ======
-const canSuggest = computed(() => store.spots.length > 0)
+const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store.hotelLon !== 0)
+const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
 const dayStartMsg = ref('')
 
 // ====== 管理表格 ======
@@ -118,6 +119,14 @@ const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, apply
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
  */
 async function fetchSuggest() {
+  if (!hotelConfirmed.value) {
+    alert('请先搜索并确认酒店')
+    return
+  }
+  if (store.spots.length === 0) {
+    alert('请先添加景点')
+    return
+  }
   if (!store.isParamsSaved) {
     alert('请先在「规划点管理」中点击「确认规划点参数」')
     return

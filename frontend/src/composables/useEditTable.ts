@@ -45,9 +45,12 @@ export function useEditTable() {
 
   /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
   watch([() => store.spots, () => store.hotelName, () => store.hotelLon], () => {
-    if (!_saving) store.isParamsSaved = false
+    if (!_saving) {
+      store.isParamsSaved = false
+      editHint.value = ''
+    }
     rebuildEditRows()
-  }, { deep: true })
+  }, { deep: true, flush: 'sync' })
 
   /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
   watch(editRows, () => {
@@ -91,9 +94,14 @@ export function useEditTable() {
       store.hotelTwStart = hotelRow.twStart
       store.hotelTwEnd = hotelRow.twEnd
     }
+    const spotsOnly = editRows.value.filter(r => !r.isHotel)
+    if (spotsOnly.length === 0) {
+      editHint.value = '请先搜索并添加景点'
+      return
+    }
     _saving = true
     store.isParamsSaved = true
-    store.spots = editRows.value.filter(r => !r.isHotel).map(r => ({
+    store.spots = spotsOnly.map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
       expectedArrival: r.expectedArrival,

@@ -13,7 +13,7 @@
  *   highlightDay: number          — 高亮某天（-1 全部显示）
  *   amapKey: string               — 高德 JS API Key
  */
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 import type { SpotDictItem } from '@/types'
 
 interface Props {
@@ -104,12 +104,13 @@ function render() {
 }
 
 onMounted(async () => {
+  console.log('[map] mount start, container:', container.value?.offsetHeight)
   if (!props.amapKey) return
   await loadAmapScript()
   if (!amapLoaded) return
-  // 等待 Vue 渲染完成后再初始化地图，避免容器尺寸为 0 时瓦片不加载
   await nextTick()
   if (container.value?.offsetHeight === 0) {
+    console.log('[map] awaiting resize...')
     await new Promise<void>(resolve => {
       const ro = new ResizeObserver(() => {
         if (container.value?.offsetHeight) {
@@ -120,15 +121,24 @@ onMounted(async () => {
       ro.observe(container.value!)
     })
   }
+  console.log('[map] init AMap, height=' + container.value?.offsetHeight)
   map = new AMap.Map(container.value, {
     zoom: 13,
     resizeEnable: true,
   })
+  console.log('[map] AMap init done, rendering...')
   render()
+  map.resize()
 })
 
 onBeforeUnmount(() => {
+  console.log('[map] unmount')
   if (map) { map.destroy(); map = null }
+})
+
+/** KeepAlive 重新激活时 AMap 容器已重新挂载到 DOM，强制 resize 恢复瓦片渲染。 */
+onActivated(() => {
+  if (map) nextTick(() => container.value?.offsetHeight && map.resize())
 })
 
 watch(() => [props.routes, props.spots, props.highlightDay], render, { deep: true })

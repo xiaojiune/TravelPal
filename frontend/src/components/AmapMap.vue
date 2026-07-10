@@ -13,7 +13,7 @@
  *   highlightDay: number          — 高亮某天（-1 全部显示）
  *   amapKey: string               — 高德 JS API Key
  */
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import type { SpotDictItem } from '@/types'
 
 interface Props {
@@ -107,14 +107,24 @@ onMounted(async () => {
   if (!props.amapKey) return
   await loadAmapScript()
   if (!amapLoaded) return
-  // 等待 DOM 布局完成后再初始化地图，避免容器尺寸为 0 时瓦片不加载
-  await new Promise(r => setTimeout(r, 100))
+  // 等待 Vue 渲染完成后再初始化地图，避免容器尺寸为 0 时瓦片不加载
+  await nextTick()
+  if (container.value?.offsetHeight === 0) {
+    await new Promise<void>(resolve => {
+      const ro = new ResizeObserver(() => {
+        if (container.value?.offsetHeight) {
+          ro.disconnect()
+          resolve()
+        }
+      })
+      ro.observe(container.value!)
+    })
+  }
   map = new AMap.Map(container.value, {
     zoom: 13,
     resizeEnable: true,
   })
   render()
-  map.resize()
 })
 
 onBeforeUnmount(() => {

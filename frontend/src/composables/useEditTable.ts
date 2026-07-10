@@ -14,6 +14,7 @@ export function useEditTable() {
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
   let _rebuilding = false
+  let _saving = false
 
   /** 已有确认点位时展示管理表格。 */
   const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
@@ -42,7 +43,11 @@ export function useEditTable() {
     nextTick(() => { _rebuilding = false })
   }
 
-  watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
+  /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
+  watch([() => store.spots, () => store.hotelName, () => store.hotelLon], () => {
+    if (!_saving) store.isParamsSaved = false
+    rebuildEditRows()
+  }, { deep: true })
 
   /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
   watch(editRows, () => {
@@ -76,27 +81,26 @@ export function useEditTable() {
       expectedArrival: r.expectedArrival,
       address: r.address,
     }))
-    store.isParamsSaved = true
     editHint.value = ''
-    rebuildEditRows()
   }
 
-  /** 将编辑行数据回写 store（时间窗/停留/预计到达），触发重建。 */
+  /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
   function applyEdits() {
     const hotelRow = editRows.value.find(r => r.isHotel)
     if (hotelRow) {
       store.hotelTwStart = hotelRow.twStart
       store.hotelTwEnd = hotelRow.twEnd
     }
+    _saving = true
+    store.isParamsSaved = true
     store.spots = editRows.value.filter(r => !r.isHotel).map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
       expectedArrival: r.expectedArrival,
       address: r.address,
     }))
-    store.isParamsSaved = true
+    _saving = false
     editHint.value = '参数已保存'
-    rebuildEditRows()
   }
 
   return { editRows, editHint, showManagement, rebuildEditRows, formatBiz, deleteSelectedRows, applyEdits }

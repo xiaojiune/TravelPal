@@ -21,8 +21,7 @@ TRAVEL_SPEED = 1.0
 def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
                  penalty_weight: float, early_wait_weight: float, late_return_weight: float,
                  mode: str = "fast", n_days: int | None = None,
-                 day_start: int = 0, min_days: int | None = None,
-                 max_days: int | None = None) -> PlanResult | dict:
+                 day_start: int = 0, min_days: int | None = None) -> PlanResult | dict:
     """
     双阶段流程编排入口。
 
@@ -39,7 +38,6 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         n_days: 行程天数（可选），None 时走建议模式。
         day_start: 每天最早出发时间（0-1440），默认 0（午夜）。
         min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
-        max_days: 建议模式最大搜索天数（默认由引擎自动推断）。
 
     Returns:
         dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
@@ -80,7 +78,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
 
     result: PlanResult | dict = cluster_and_solve(
         spots, depot, cost_matrix, mode=mode,
-        n_days=n_days, min_days=min_days, max_days=max_days,
+        n_days=n_days, min_days=min_days,
         travel_speed=TRAVEL_SPEED,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,

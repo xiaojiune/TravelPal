@@ -67,8 +67,7 @@
       <h3>算法参数</h3>
       <div class="form-grid-3">
         <div><label>启程时间</label><input :value="store.dayStart || ''" @input="store.dayStart = Number(($event.target as HTMLInputElement).value) || 0" type="number" min="0" max="1440" placeholder="请输入" /><span class="unit-info">0=午夜, 480=08:00</span></div>
-        <div><label>最小天数</label><input :value="store.minDays ?? ''" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">n_spots//5+1={{ minDaysHint }}</span></div>
-        <div><label>最大天数</label><input :value="store.maxDays ?? ''" @input="store.maxDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">n_spots//3+1={{ maxDaysHint }}</span></div>
+        <div><label>最小天数</label><input :value="store.minDays ?? ''" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">n_spots//8+1={{ minDaysHint }}</span></div>
         <div><label>迟到惩罚</label><input v-model.number="store.penaltyWeight" type="number" step="10" /></div>
         <div><label>等待惩罚</label><input v-model.number="store.earlyWaitWeight" type="number" step="0.1" /></div>
         <div><label>晚归惩罚</label><input v-model.number="store.lateReturnWeight" type="number" step="10" /></div>
@@ -111,8 +110,7 @@ const {
 // ====== 计算属性 ======
 const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store.hotelLon !== 0)
 const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
-const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 5) + 1))
-const maxDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 3) + 1))
+const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 8) + 1))
 const dayStartMsg = ref('')
 
 // ====== 管理表格 ======

@@ -76,8 +76,7 @@ class PlanRequest(BaseModel):
         hotel_lon/lat: 酒店坐标（GCJ-02）。
         hotel_tw_start/end: 酒店时间窗（默认 0:00~24:00）。
         spots: 景点列表，至少 1 个。
-        min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
-        max_days: 建议模式最大搜索天数（默认由引擎自动推断）。
+        min_days: 搜索最小天数（默认由引擎自动推断，n_spots//8+1）。
         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
         mode: "fast"(CA) 或 "deep"(VNS)。
         day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。
@@ -93,8 +92,7 @@ class PlanRequest(BaseModel):
                                    description="酒店开放时间开始，距午夜分钟数（默认 0 = 全天）")
     hotel_tw_end: float = Field(default=1440, ge=0, le=1440,
                                  description="酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）")
-    min_days: int | None = Field(default=None, description="搜索最小天数，不传由引擎自动推断")
-    max_days: int | None = Field(default=None, description="搜索最大天数，不传由引擎自动推断")
+    min_days: int | None = Field(default=None, description="搜索最小天数，不传则由引擎自动推断 (n_spots//8+1)")
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
     mode: str = Field(default="fast", pattern="^(fast|deep)$",

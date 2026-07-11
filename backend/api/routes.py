@@ -96,7 +96,6 @@ async def suggest(req: PlanRequest):
             n_days=None,
             day_start=req.day_start,
             min_days=req.min_days,
-            max_days=req.max_days,
         )
         result["amap_api_key"] = AMAP_API_KEY
         return result

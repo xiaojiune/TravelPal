@@ -1,3 +1,5 @@
+"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话。"""
+
 import json
 import traceback
 from fastapi import APIRouter, HTTPException
@@ -79,6 +81,9 @@ async def suggest(req: PlanRequest):
 
     不指定 n_days，run_planning 内部回退到 ca_suggest()，
     遍历多种聚类方法 × 天数，返回 top-5 建议。
+
+    Raises:
+        HTTPException 500: 建议搜索引擎内部错误。
     """
     try:
         poi_cache = _build_poi_cache(req)
@@ -102,9 +107,13 @@ async def suggest(req: PlanRequest):
 
 @router.post("/api/plan")
 async def plan(req: PlanRequest):
-    """执行完整规划，返回 3D 地图 HTML 和每日行程。
+    """执行完整规划，返回每日行程与高德地图可视化数据。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
+
+    Raises:
+        HTTPException 400: n_days 未指定时。
+        HTTPException 500: 规划引擎内部错误。
     """
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
@@ -133,6 +142,9 @@ async def chat(req: ChatRequest):
 
     Mock 模式返回死 token，方便前端联调。
     正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
+
+    Raises:
+        HTTPException 500: LLM 调用异常或数据格式错误。
     """
     try:
         messages = build_chat_messages(req.message, req.plan_result)

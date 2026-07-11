@@ -1,3 +1,5 @@
+"""方案调整功能：改天数、添加/移除景点并重新求解。"""
+
 import numpy as np
 from backend.engine.search import cluster_and_solve, solve_groups
 from backend.typedefs import SpotDict, RouteResult

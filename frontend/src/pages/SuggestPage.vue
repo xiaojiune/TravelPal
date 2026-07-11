@@ -89,6 +89,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     }
   })
   return {
+    type: 'suggest',
     solution: {
       routes: s.routes,
       total_cost: s.cost,

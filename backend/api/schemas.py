@@ -1,3 +1,5 @@
+"""Pydantic 请求/响应模型定义，FastAPI 自动据此生成 OpenAPI 文档。"""
+
 from pydantic import BaseModel, Field
 
 

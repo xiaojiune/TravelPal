@@ -1,3 +1,4 @@
+"""压缩退火求解器（Compressed Annealing），基于模拟退火框架的 TSPTW 求解。"""
 
 import math
 import random

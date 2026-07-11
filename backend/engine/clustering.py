@@ -1,3 +1,4 @@
+"""聚类方法注册表：6 种分组策略（K-means / 启发式 / 混合优化）。"""
 
 import numpy as np
 from sklearn.cluster import KMeans

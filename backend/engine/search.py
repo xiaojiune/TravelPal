@@ -1,3 +1,5 @@
+"""双模式分发：CA 全参数搜索建议 + 指定天数求解。"""
+
 import numpy as np
 from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 from backend.engine.vns import VNSSolver

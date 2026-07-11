@@ -1,3 +1,5 @@
+"""行程规划双阶段编排：数据加载 → 聚类求解 → 每日行程重建。"""
+
 import time, os, warnings
 import numpy as np
 
@@ -34,8 +36,10 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
         mode: "fast" 或 "deep"。
-        n_days: 行程天数（可选）。
+        n_days: 行程天数（可选），None 时走建议模式。
         day_start: 每天最早出发时间（0-1440），默认 0（午夜）。
+        min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
+        max_days: 建议模式最大搜索天数（默认由引擎自动推断）。
 
     Returns:
         dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
@@ -124,7 +128,7 @@ def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix
         cost_matrix: 旅行时间矩阵（分钟）。
 
     Returns:
-        list[list[dict]]: 每日行程列表。
+        list[list[ScheduleItem]]: 每日行程列表。
     """
     daily_schedules = []
     for route in routes:
@@ -202,6 +206,9 @@ def adjust_plan(spots_dict: dict[int, SpotDict], cost_matrix_list: list, dist_ma
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。
+
+    Raises:
+        ValueError: adjustments 中未识别的指令类型。
     """
     cost_matrix = np.array(cost_matrix_list)
     dist_matrix = np.array(dist_matrix_list)

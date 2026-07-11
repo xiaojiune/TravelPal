@@ -16,6 +16,7 @@ from backend.api.server import app
 
 
 def main():
+    """使用 TestClient 导出 OpenAPI 规范 JSON 到 frontend/openapi.json。"""
     client = TestClient(app)
     spec = client.get("/openapi.json").json()
     output = Path(__file__).resolve().parents[2] / "frontend" / "openapi.json"

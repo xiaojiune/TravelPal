@@ -1,3 +1,5 @@
+"""高德地图 API 封装：POI 搜索、营业时间解析、驾车路径规划与成本矩阵构建。"""
+
 import os, time, datetime
 import numpy as np
 import requests
@@ -97,6 +99,9 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
     Returns:
         tuple[float, float, str, str, str, str, str]: 成功返回 7 元组
         str: 失败返回错误信息字符串。
+
+    Raises:
+        Exception: 网络请求异常时透传，由调用方捕获。
     """
 
     def _match_name(query: str, result_name: str) -> bool:
@@ -172,6 +177,9 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
 
     Returns:
         Tuple[float | None, int | None, str | None]: (距离 km, 耗时 秒, 折线字符串)。
+
+    Raises:
+        Exception: 网络请求异常时重试，重试耗尽后返回 (None, None, None)。
     """
     url = "https://restapi.amap.com/v3/direction/driving"
     params = {
@@ -224,6 +232,9 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
 
     Returns:
         Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
+
+    Raises:
+        Exception: 驾车 API 调用失败时输出警告，对应矩阵元素置为 -1 标记不可达。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))

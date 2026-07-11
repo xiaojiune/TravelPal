@@ -201,6 +201,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 "n_days": n_days,
                 "cost": res["total_cost"],
                 "groups": groups,
+                "routes": res["routes"],
             })
             # 增益阈值早退：改善不明显（< early_stop_gain_threshold%）或连续变差达到上限时停止该聚类方法的搜索
             if res["total_cost"] < best_cost:
@@ -231,6 +232,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 "method": item["method"],
                 "cost": item["cost"],
                 "groups": item["groups"],
+                "routes": item["routes"],
             }
             for item in top5
         ],
@@ -241,6 +243,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
 
 def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                       mode: str = "fast", n_days: int | None = None,
+                      min_days: int | None = None, max_days: int | None = None,
                       travel_speed: float = 1.0, penalty_weight: float = 100.0,
                       early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
                       use_real_time_matrix: bool = False) -> dict:
@@ -302,6 +305,7 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
 
     return ca_suggest(
         spots, depot, cost_mat,
+        min_days=min_days, max_days=max_days,
         travel_speed=travel_speed,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,

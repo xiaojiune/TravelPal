@@ -89,6 +89,8 @@ class PlanRequest(BaseModel):
                                    description="酒店开放时间开始，距午夜分钟数（默认 0 = 全天）")
     hotel_tw_end: float = Field(default=1440, ge=0, le=1440,
                                  description="酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）")
+    min_days: int | None = Field(default=None, description="搜索最小天数，不传由引擎自动推断")
+    max_days: int | None = Field(default=None, description="搜索最大天数，不传由引擎自动推断")
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
     mode: str = Field(default="fast", pattern="^(fast|deep)$",

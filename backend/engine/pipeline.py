@@ -19,7 +19,8 @@ TRAVEL_SPEED = 1.0
 def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
                  penalty_weight: float, early_wait_weight: float, late_return_weight: float,
                  mode: str = "fast", n_days: int | None = None,
-                 day_start: int = 0) -> PlanResult | dict:
+                 day_start: int = 0, min_days: int | None = None,
+                 max_days: int | None = None) -> PlanResult | dict:
     """
     双阶段流程编排入口。
 
@@ -75,7 +76,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
 
     result: PlanResult | dict = cluster_and_solve(
         spots, depot, cost_matrix, mode=mode,
-        n_days=n_days,
+        n_days=n_days, min_days=min_days, max_days=max_days,
         travel_speed=TRAVEL_SPEED,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
@@ -83,6 +84,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
     )
 
     if result["type"] == "suggestion":
+        result["spots"] = spots
         return result
 
     solution = result["solution"]

@@ -17,6 +17,8 @@ export const usePlanStore = defineStore('plan', () => {
   const penaltyWeight = ref(100)
   const earlyWaitWeight = ref(0.1)
   const lateReturnWeight = ref(50)
+  const minDays = ref<number | null>(null)
+  const maxDays = ref<number | null>(null)
 
   // ====== 参数确认锁 ======
   /** 用户是否已确认当前规划点参数。false 时阻止获取方案建议。 */
@@ -29,6 +31,7 @@ export const usePlanStore = defineStore('plan', () => {
 
   // ====== 结果状态 ======
   const planResult = ref<PlanResult | null>(null)
+  const amapApiKey = ref('')
   const loading = ref(false)
 
   // ====== 方法 ======
@@ -43,6 +46,8 @@ export const usePlanStore = defineStore('plan', () => {
       hotel_tw_start: hotelTwStart.value,
       hotel_tw_end: hotelTwEnd.value,
       day_start: dayStart.value,
+      min_days: minDays.value ?? null,
+      max_days: maxDays.value ?? null,
       spots: spots.value.map(s => ({
         name: s.name,
         lon: Number(s.lon),
@@ -71,19 +76,23 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwEnd.value = 1440
     dayStart.value = 0
     spots.value = []
+    minDays.value = null
+    maxDays.value = null
     isParamsSaved.value = false
     suggestions.value = []
     selectedNDays.value = null
     selectedMethod.value = ''
     planResult.value = null
+    amapApiKey.value = ''
   }
 
   return {
     city, hotelName, hotelLon, hotelLat, hotelAddress,
     hotelTwStart, hotelTwEnd, dayStart,
     spots, penaltyWeight, earlyWaitWeight, lateReturnWeight,
+    minDays, maxDays,
     isParamsSaved, suggestions, selectedNDays, selectedMethod,
-    planResult, loading,
+    planResult, amapApiKey, loading,
     buildRequest, reset,
   }
 })

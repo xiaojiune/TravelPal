@@ -1,6 +1,6 @@
 /** API 客户端：封装 axios 实例，提供类型化的后端接口调用。 */
 import axios from 'axios'
-import type { POILookupResponse, PlanRequestPayload, PlanResult, SuggestionItem } from '@/types'
+import type { POILookupResponse, PlanRequestPayload, PlanResult, SuggestionItem, SpotDictItem } from '@/types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -9,8 +9,8 @@ export function postPoiLookup(city: string, names: string[]): Promise<POILookupR
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 
-/** 获取方案建议：返回多组不同天数的候选方案（ca_suggest 结果）。 */
-export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: SuggestionItem[] }> {
+/** 获取方案建议：返回多组候选方案及高德 API key。FAST 模式可直接用 routes 渲染地图。 */
+export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: SuggestionItem[]; amap_api_key?: string; spots?: Record<string, SpotDictItem> }> {
   return http.post('/suggest', data).then(r => r.data)
 }
 

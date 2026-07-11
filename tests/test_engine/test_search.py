@@ -26,6 +26,7 @@ class TestCASuggest:
             assert "n_days" in s
             assert "method" in s
             assert "cost" in s
+            assert "routes" in s
             assert s["cost"] > 0
 
     def test_suggestions_sorted_by_cost(self, n20_dataset):
@@ -138,6 +139,8 @@ class TestClusterAndSolve:
 
         assert result["type"] == "suggestion"
         assert len(result["suggestions"]) >= 1
+        for s in result["suggestions"]:
+            assert "routes" in s
 
     # ---------- 解有效性验证 ----------
     def test_routes_cover_all_nodes(self, n20_dataset):

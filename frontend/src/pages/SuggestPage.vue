@@ -1,78 +1,126 @@
 <template>
   <div class="page-suggest">
     <h2>方案建议</h2>
-    <p v-if="store.suggestions.length" class="subtitle">共 {{ store.suggestions.length }} 个方案，点击选择天数并生成规划</p>
 
     <div v-if="!store.suggestions.length" class="empty-state">
       <p>暂无方案建议，请先在首页输入规划参数。</p>
       <router-link to="/" class="btn btn-primary">返回首页</router-link>
     </div>
 
-    <div v-else class="suggest-list">
-      <div
-        v-for="(s, i) in store.suggestions"
-        :key="i"
-        class="suggest-card"
-        :class="{ selected: selectedIndex === i }"
-        @click="select(i)"
-      >
-        <div class="card-method">{{ s.method }}</div>
-        <div class="card-body">
-          <span class="card-days">{{ s.n_days }} 天</span>
-          <span class="card-cost">成本 {{ s.cost.toFixed(1) }}</span>
+    <div v-else>
+      <div v-for="group in groupedSuggestions" :key="group.n_days" class="day-group">
+        <h3>{{ group.n_days }} 日游</h3>
+        <div class="card-list">
+          <div
+            v-for="(s, i) in group.items"
+            :key="i"
+            class="suggest-card"
+          >
+            <div class="card-body">
+              <span class="card-method">{{ s.method }}</span>
+              <span class="card-cost">成本 {{ s.cost.toFixed(1) }}</span>
+            </div>
+            <div class="card-actions">
+              <button
+                class="btn btn-sm btn-outline"
+                :class="{ active: selectedNDays === s.n_days && selectedMethod === s.method && mode === 'fast' }"
+                :disabled="store.loading"
+                @click="generateFast(s)"
+              >快速</button>
+              <button
+                class="btn btn-sm btn-primary"
+                :class="{ active: selectedNDays === s.n_days && selectedMethod === s.method && mode === 'deep' }"
+                :disabled="store.loading"
+                @click="generateDeep(s)"
+              >深度</button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div v-if="store.suggestions.length" class="form-actions">
-      <div class="form-row inline">
-        <label>天数</label>
-        <select v-model.number="customDays">
-          <option v-for="d in availableDays" :key="d" :value="d">{{ d }} 天</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" :disabled="store.loading" @click="generatePlan">
-        {{ store.loading ? '规划中...' : '生成规划' }}
-      </button>
     </div>
   </div>
 </template>
 
-/** 方案建议页：展示引擎返回的多组候选方案卡片，用户选择天数后生成最终规划。 */
-
 <script setup lang="ts">
-// ====== 状态定义 ======
+/** 方案建议页：树形分组展示，快速/深度双模式入口。 */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { postPlan } from '@/services/api'
+import type { SuggestionItem, PlanResult, SpotDictItem } from '@/types'
 
 const store = usePlanStore()
 const router = useRouter()
 
-const selectedIndex = ref(0)
-const customDays = ref(store.suggestions[0]?.n_days || 3)
+const mode = ref<'fast' | 'deep'>('fast')
+const selectedNDays = ref<number | null>(null)
+const selectedMethod = ref('')
 
-/** 从所有建议中提取去重后的天数列表，供下拉选择。 */
-const availableDays = computed(() => {
-  const days = new Set(store.suggestions.map(s => s.n_days))
-  return [...days].sort((a, b) => a - b)
+const groupedSuggestions = computed(() => {
+  const seen = new Set<number>()
+  const groups: { n_days: number; items: SuggestionItem[] }[] = []
+  for (const s of store.suggestions) {
+    if (!seen.has(s.n_days)) {
+      seen.add(s.n_days)
+      groups.push({
+        n_days: s.n_days,
+        items: store.suggestions.filter(x => x.n_days === s.n_days).sort((a, b) => a.cost - b.cost),
+      })
+    }
+  }
+  return groups.sort((a, b) => a.n_days - b.n_days)
 })
 
-/** 选中某张方案卡片，同步更新下拉框的天数。 */
-function select(i: number) {
-  selectedIndex.value = i
-  customDays.value = store.suggestions[i].n_days
+function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
+  const spots: Record<string, SpotDictItem> = {
+    '0': {
+      name: store.hotelName,
+      x: store.hotelLon, y: store.hotelLat,
+      tw: [store.hotelTwStart, store.hotelTwEnd],
+      stay: 0,
+    },
+  }
+  store.spots.forEach((sp, i) => {
+    spots[String(i + 1)] = {
+      name: sp.name,
+      x: sp.lon, y: sp.lat,
+      tw: [sp.twStart, sp.twEnd],
+      stay: sp.stay,
+    }
+  })
+  return {
+    solution: {
+      routes: s.routes,
+      total_cost: s.cost,
+      total_dist: 0, wait: 0, late: 0, valid: true,
+    },
+    best_days: s.n_days,
+    best_m: s.method,
+    spots,
+    amap_api_key: store.amapApiKey,
+  }
 }
 
-/** 按选定天数调用 /api/plan 生成最终方案，成功后跳转 PlanPage。 */
-async function generatePlan() {
-  store.planResult = null
+async function generateFast(s: SuggestionItem) {
+  mode.value = 'fast'
+  selectedNDays.value = s.n_days
+  selectedMethod.value = s.method
+  store.selectedNDays = s.n_days
+  store.selectedMethod = s.method
+  store.planResult = buildPlanResultFromSuggestion(s)
+  router.push('/plan')
+}
+
+async function generateDeep(s: SuggestionItem) {
+  mode.value = 'deep'
+  selectedNDays.value = s.n_days
+  selectedMethod.value = s.method
   store.loading = true
-  store.selectedNDays = customDays.value
-  store.selectedMethod = store.suggestions[selectedIndex.value]?.method || ''
+  store.planResult = null
+  store.selectedNDays = s.n_days
+  store.selectedMethod = s.method
   try {
-    const data = await postPlan(store.buildRequest(customDays.value))
+    const data = await postPlan(store.buildRequest(s.n_days))
     store.planResult = data
     router.push('/plan')
   } catch (e: unknown) {
@@ -84,30 +132,30 @@ async function generatePlan() {
 </script>
 
 <style scoped>
-.page-suggest { max-width: 600px; margin: 0 auto; }
-.subtitle { color: #666; margin-bottom: 20px; }
+.page-suggest { max-width: 700px; margin: 0 auto; }
 .empty-state { text-align: center; padding: 60px 0; color: #999; }
 .empty-state .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
-.suggest-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.day-group { margin-bottom: 24px; }
+.day-group h3 { font-size: 16px; margin-bottom: 10px; color: #333; border-left: 3px solid #1a73e8; padding-left: 10px; }
+.card-list { display: flex; flex-direction: column; gap: 8px; }
 .suggest-card {
-  display: flex; align-items: center; gap: 16px;
-  background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;
-  padding: 14px 18px; cursor: pointer; transition: border-color 0.2s;
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+  padding: 10px 16px; transition: box-shadow 0.15s;
 }
-.suggest-card:hover { border-color: #1a73e8; }
-.suggest-card.selected { border-color: #1a73e8; background: #f0f7ff; }
+.suggest-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.card-body { display: flex; align-items: center; gap: 14px; }
 .card-method {
   background: #e8f0fe; color: #1a73e8;
-  padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;
-  white-space: nowrap;
+  padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
 }
-.card-body { display: flex; gap: 20px; font-size: 14px; }
-.card-days { font-weight: 600; }
-.card-cost { color: #555; }
-.form-actions { display: flex; align-items: center; justify-content: center; gap: 16px; }
-.form-row.inline { display: flex; align-items: center; gap: 8px; }
-.form-row.inline select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-.btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.card-cost { font-size: 14px; color: #555; }
+.card-actions { display: flex; gap: 6px; }
+.btn { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { padding: 4px 12px; font-size: 11px; }
 .btn-primary { background: #1a73e8; color: #fff; }
+.btn-outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+.btn-outline.active { background: #e8f0fe; }
+.btn-primary.active { background: #1557b0; }
 </style>

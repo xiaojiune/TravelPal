@@ -19,6 +19,7 @@ export interface SuggestionItem {
   n_days: number
   method: string
   cost: number
+  routes: number[][]
 }
 
 /** 规划结果的 solution 子对象 */

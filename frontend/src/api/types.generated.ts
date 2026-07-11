@@ -268,6 +268,16 @@ export interface components {
              */
             hotel_tw_end: number;
             /**
+             * Min Days
+             * @description 搜索最小天数，不传由引擎自动推断
+             */
+            min_days?: number | null;
+            /**
+             * Max Days
+             * @description 搜索最大天数，不传由引擎自动推断
+             */
+            max_days?: number | null;
+            /**
              * Spots
              * @description 景点列表，至少 1 个
              */

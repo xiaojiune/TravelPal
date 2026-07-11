@@ -1,7 +1,7 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult } from '@/types'
+import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult, SpotDictItem } from '@/types'
 
 export const usePlanStore = defineStore('plan', () => {
   // ====== 输入状态 ======
@@ -26,11 +26,15 @@ export const usePlanStore = defineStore('plan', () => {
 
   // ====== 方案状态 ======
   const suggestions = ref<SuggestionItem[]>([])
+  /** suggest 响应带回来的 spots 字典（含 original_tw），fast 模式构建 PlanResult 时使用。 */
+  const suggestSpots = ref<Record<string, SpotDictItem>>({})
   const selectedNDays = ref<number | null>(null)
   const selectedMethod = ref('')
 
   // ====== 结果状态 ======
   const planResult = ref<PlanResult | null>(null)
+  /** 深度模式生成的规划结果卡片列表（首页传来新参数时不清除）。 */
+  const deepResults = ref<PlanResult[]>([])
   const amapApiKey = ref('')
   const loading = ref(false)
 
@@ -80,9 +84,11 @@ export const usePlanStore = defineStore('plan', () => {
     maxDays.value = null
     isParamsSaved.value = false
     suggestions.value = []
+    suggestSpots.value = {}
     selectedNDays.value = null
     selectedMethod.value = ''
     planResult.value = null
+    deepResults.value = []
     amapApiKey.value = ''
   }
 
@@ -91,8 +97,9 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwStart, hotelTwEnd, dayStart,
     spots, penaltyWeight, earlyWaitWeight, lateReturnWeight,
     minDays, maxDays,
-    isParamsSaved, suggestions, selectedNDays, selectedMethod,
-    planResult, amapApiKey, loading,
+    isParamsSaved,
+    suggestions, suggestSpots, selectedNDays, selectedMethod,
+    planResult, deepResults, amapApiKey, loading,
     buildRequest, reset,
   }
 })

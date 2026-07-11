@@ -19,7 +19,11 @@ export interface SuggestionItem {
   n_days: number
   method: string
   cost: number
+  total_dist: number
+  wait: number
+  late: number
   routes: number[][]
+  daily_schedules?: ScheduleItem[][]
 }
 
 /** 规划结果的 solution 子对象 */

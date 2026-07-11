@@ -44,7 +44,7 @@ export function useEditTable() {
   }
 
   /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
-  watch([() => store.spots, () => store.hotelName, () => store.hotelLon], () => {
+  watch([() => store.spots, () => store.hotelName, () => store.hotelLon, () => store.hotelAddress], () => {
     if (!_saving) {
       store.isParamsSaved = false
       editHint.value = ''

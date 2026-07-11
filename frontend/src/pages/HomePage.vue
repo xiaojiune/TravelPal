@@ -65,10 +65,10 @@
 
     <section class="form-section">
       <h3>算法参数</h3>
-      <div class="form-row cols-4">
+      <div class="form-grid-3">
         <div><label>启程时间</label><input :value="store.dayStart || ''" @input="store.dayStart = Number(($event.target as HTMLInputElement).value) || 0" type="number" min="0" max="1440" placeholder="请输入" /><span class="unit-info">0=午夜, 480=08:00</span></div>
-        <div><label>最小天数</label><input :value="store.minDays ?? ''" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">景点数/5+1≈{{ Math.max(1, Math.floor(store.spots.length / 5) + 1) }}</span></div>
-        <div><label>最大天数</label><input :value="store.maxDays ?? ''" @input="store.maxDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">景点数/3+1≈{{ Math.max(1, Math.floor(store.spots.length / 3) + 1) }}</span></div>
+        <div><label>最小天数</label><input :value="store.minDays ?? ''" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">n_spots//5+1={{ minDaysHint }}</span></div>
+        <div><label>最大天数</label><input :value="store.maxDays ?? ''" @input="store.maxDays = Number(($event.target as HTMLInputElement).value) || null" type="number" min="1" placeholder="自动" /><span class="unit-info">n_spots//3+1={{ maxDaysHint }}</span></div>
         <div><label>迟到惩罚</label><input v-model.number="store.penaltyWeight" type="number" step="10" /></div>
         <div><label>等待惩罚</label><input v-model.number="store.earlyWaitWeight" type="number" step="0.1" /></div>
         <div><label>晚归惩罚</label><input v-model.number="store.lateReturnWeight" type="number" step="10" /></div>
@@ -111,6 +111,8 @@ const {
 // ====== 计算属性 ======
 const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store.hotelLon !== 0)
 const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
+const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 5) + 1))
+const maxDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 3) + 1))
 const dayStartMsg = ref('')
 
 // ====== 管理表格 ======
@@ -139,11 +141,13 @@ async function fetchSuggest() {
   }
   dayStartMsg.value = ''
   store.suggestions = []
+  store.deepResults = []
   store.planResult = null
   store.loading = true
   try {
     const data = await postSuggest(store.buildRequest(null))
     store.suggestions = data.suggestions || []
+    if (data.spots) store.suggestSpots = data.spots
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
     router.push('/suggest')
   } catch (e: unknown) {
@@ -163,9 +167,9 @@ async function fetchSuggest() {
 .form-row label { min-width: 80px; font-size: 13px; color: #555; }
 .form-row input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
 .form-row input:focus { outline: none; border-color: #1a73e8; }
-.cols-4 { flex-wrap: wrap; }
-.cols-4 > div { flex: 1; min-width: 120px; }
-.cols-4 .unit-info { display: block; font-size: 10px; color: #999; margin-top: 2px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.form-grid-3 > div { min-width: 0; }
+.form-grid-3 .unit-info { display: block; font-size: 10px; color: #999; margin-top: 2px; }
 textarea { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; resize: vertical; box-sizing: border-box; min-height: 120px; }
 textarea:focus { outline: none; border-color: #1a73e8; }
 .btn-self-start { align-self: flex-start; }

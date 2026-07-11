@@ -76,6 +76,8 @@ class PlanRequest(BaseModel):
         hotel_lon/lat: 酒店坐标（GCJ-02）。
         hotel_tw_start/end: 酒店时间窗（默认 0:00~24:00）。
         spots: 景点列表，至少 1 个。
+        min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
+        max_days: 建议模式最大搜索天数（默认由引擎自动推断）。
         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
         mode: "fast"(CA) 或 "deep"(VNS)。
         day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。

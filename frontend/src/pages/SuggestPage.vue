@@ -56,6 +56,7 @@ const mode = ref<'fast' | 'deep'>('fast')
 const selectedNDays = ref<number | null>(null)
 const selectedMethod = ref('')
 
+/** 按天数分组建议，每组内部按成本升序排列，用于树形展示。 */
 const groupedSuggestions = computed(() => {
   const seen = new Set<number>()
   const groups: { n_days: number; items: SuggestionItem[] }[] = []
@@ -71,6 +72,10 @@ const groupedSuggestions = computed(() => {
   return groups.sort((a, b) => a.n_days - b.n_days)
 })
 
+/**
+ * 从建议项构造前端 PlanResult，用于快速模式直接渲染地图。
+ * routes 直接用建议项中已有路径，跳过后端规划流程。
+ */
 function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
   const spots: Record<string, SpotDictItem> = {
     '0': {

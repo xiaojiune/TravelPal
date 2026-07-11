@@ -22,9 +22,8 @@
   </div>
 </template>
 
-/** 历史记录页：从 localStorage 读取摘要列表，点击清空后跳转首页重新搜索。 */
-
 <script setup lang="ts">
+/** 历史记录页：从 localStorage 读取摘要列表，点击后跳转首页重新搜索。 */
 import { ref } from 'vue'
 
 /** 从 localStorage 读取历史规划记录列表。完整规划结果不在此处存储（避免大对象溢出）。 */

@@ -14,7 +14,7 @@ export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: Su
   return http.post('/suggest', data).then(r => r.data)
 }
 
-/** 执行规划：按指定天数生成完整方案（包含 routes / schedules / Cesium 数据）。 */
+/** 执行规划：按指定天数生成完整方案（包含 routes / schedules / 地图数据）。 */
 export function postPlan(data: PlanRequestPayload): Promise<PlanResult> {
   return http.post('/plan', data).then(r => r.data)
 }

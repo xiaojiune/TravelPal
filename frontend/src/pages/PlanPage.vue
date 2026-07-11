@@ -43,7 +43,10 @@ import type { PlanResultSolution } from '@/types'
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
 
-/** 收到新规划结果时写入 localStorage 历史记录。 */
+/**
+ * 从 store.planResult 提取摘要写入 localStorage 历史记录。
+ * 仅存 city/hotel/days/cost 等元信息，完整结果因体积过大不持久化。
+ */
 function saveToHistory() {
   const r = store.planResult
   if (!r) return

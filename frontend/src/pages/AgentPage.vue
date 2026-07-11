@@ -113,9 +113,8 @@ async function send() {
 
 // ====== 工具函数 ======
 
-// ====== 工具函数 ======
-
 /** 将聊天历史容器滚动到底部，确保最新消息可见。 */
+
 function scrollToBottom() {
   if (historyRef.value) {
     historyRef.value.scrollTop = historyRef.value.scrollHeight

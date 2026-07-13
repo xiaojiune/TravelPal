@@ -53,6 +53,7 @@ export interface PlanResult {
   cost_matrix?: number[][]
   dist_matrix?: number[][]
   amap_api_key?: string
+  amap_security_code?: string
   algo_time?: number
 }
 

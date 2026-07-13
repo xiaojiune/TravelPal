@@ -36,6 +36,8 @@ export const usePlanStore = defineStore('plan', () => {
   const deepResults = ref<PlanResult[]>([])
   const amapApiKey = ref('')
   const loading = ref(false)
+  /** 高德 JS API 安全密钥 */
+  const amapSecurityCode = ref('')
   /** suggest 响应中的成本矩阵，deep 模式复用。 */
   const suggestCostMatrix = ref<number[][]>([])
   /** suggest 响应中的距离矩阵。 */
@@ -97,6 +99,7 @@ export const usePlanStore = defineStore('plan', () => {
     suggestDistMatrix.value = []
     suggestAlgoTime.value = 0
     amapApiKey.value = ''
+    amapSecurityCode.value = ''
   }
 
   return {
@@ -106,7 +109,7 @@ export const usePlanStore = defineStore('plan', () => {
     minDays,
     isParamsSaved,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
-    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestAlgoTime, amapApiKey, loading,
+    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestAlgoTime, amapApiKey, amapSecurityCode, loading,
     buildRequest, reset,
   }
 })

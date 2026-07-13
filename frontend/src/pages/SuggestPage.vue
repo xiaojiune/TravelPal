@@ -142,6 +142,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     spots: store.suggestSpots,
     daily_schedules: s.daily_schedules || [],
     amap_api_key: store.amapApiKey,
+    amap_security_code: store.amapSecurityCode,
     algo_time: store.suggestAlgoTime,
   }
 }

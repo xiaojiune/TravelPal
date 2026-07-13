@@ -152,6 +152,7 @@ async function fetchSuggest() {
     if (data.dist_matrix) store.suggestDistMatrix = data.dist_matrix  // 缓存距离矩阵
     if (data.algo_time) store.suggestAlgoTime = data.algo_time  // 搜索总耗时
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
+    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
     router.push('/suggest')
   } catch (e: unknown) {
     alert('获取建议失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))

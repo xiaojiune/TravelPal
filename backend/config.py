@@ -5,8 +5,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 高德地图 Web API Key，用于 POI 搜索和驾车路径规划
+# 高德地图 Web 服务 API Key，用于后端 POI 搜索和驾车路径规划
 AMAP_API_KEY = os.getenv("AMAP_API_KEY", "")
+# 高德 Web 端 JS API Key，用于前端地图渲染
+AMAP_JS_KEY = os.getenv("AMAP_JS_KEY", "")
+# 高德 Web 端 JS API 安全密钥
+AMAP_JS_SECURITY_CODE = os.getenv("AMAP_JS_SECURITY_CODE", "")
 # LLM API Key，用于营业时间解析和 Agent 对话
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 # LLM API 基础地址，默认 DeepSeek

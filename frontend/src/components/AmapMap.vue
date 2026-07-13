@@ -12,6 +12,7 @@
  *   spots: Record<string, any>    — 景点字典 {idx: {name, x, y, ...}}
  *   highlightDay: number          — 高亮某天（-1 全部显示）
  *   amapKey: string               — 高德 JS API Key
+ *   securityCode: string          — 高德 JS API 安全密钥
  */
 import { ref, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 import type { SpotDictItem } from '@/types'
@@ -21,6 +22,7 @@ interface Props {
   spots?: Record<string, SpotDictItem>
   highlightDay?: number
   amapKey?: string
+  securityCode?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -28,6 +30,7 @@ const props = withDefaults(defineProps<Props>(), {
   spots: () => ({}),
   highlightDay: -1,
   amapKey: '',
+  securityCode: '',
 })
 
 const container = ref<HTMLDivElement | null>(null)
@@ -99,8 +102,21 @@ function render() {
     overlays.push(polyline)
     map.add(polyline)
   })
-  // 自适应视野：setFitView 自动计算中心点和缩放使所有覆盖物可见，4 个 60px padding 留出边界
-  nextTick(() => map.setFitView(null, false, [60, 60, 60, 60]))
+  // 自适应视野：容器有尺寸时立即 setFitView，否则用 ResizeObserver 等
+  function fitView() {
+    if (container.value?.offsetHeight) {
+      map.setFitView(null, false, [60, 60, 60, 60])
+    } else {
+      const ro = new ResizeObserver(() => {
+        if (container.value?.offsetHeight) {
+          ro.disconnect()
+          map.setFitView(null, false, [60, 60, 60, 60])
+        }
+      })
+      ro.observe(container.value!)
+    }
+  }
+  nextTick(fitView)
 }
 
 onMounted(async () => {
@@ -109,6 +125,9 @@ onMounted(async () => {
   await loadAmapScript()
   if (!amapLoaded) return
   await nextTick()
+  if (props.securityCode) {
+    window.AMap.securityCode = props.securityCode
+  }
   if (container.value?.offsetHeight === 0) {
     console.log('[map] awaiting resize...')
     await new Promise<void>(resolve => {

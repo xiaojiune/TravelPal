@@ -21,7 +21,7 @@
 
       <div class="plan-layout">
         <div class="plan-map">
-          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :amap-key="(store.planResult?.amap_api_key) || ''" />
+          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" />
         </div>
         <div class="plan-schedule">
           <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" />

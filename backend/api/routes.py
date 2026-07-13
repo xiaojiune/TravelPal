@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from backend.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
 from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
-from backend.config import AMAP_API_KEY
+from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
 from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
 from fastapi.responses import StreamingResponse
 
@@ -99,7 +99,8 @@ async def suggest(req: PlanRequest):
             day_start=req.day_start,
             min_days=req.min_days,
         )
-        result["amap_api_key"] = AMAP_API_KEY
+        result["amap_api_key"] = AMAP_JS_KEY
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
         return result
     except Exception as e:
         traceback.print_exc()
@@ -133,11 +134,14 @@ async def plan(req: PlanRequest):
             cost_matrix_override=req.cost_matrix,
             dist_matrix_override=req.dist_matrix,
         )
-        result["amap_api_key"] = AMAP_API_KEY
+        result["amap_api_key"] = AMAP_JS_KEY
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
         return result
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # ---------- Agent 对话 ----------
 

@@ -100,7 +100,7 @@ function render() {
     map.add(polyline)
   })
   // 自适应视野：setFitView 自动计算中心点和缩放使所有覆盖物可见，4 个 60px padding 留出边界
-  map.setFitView(null, false, [60, 60, 60, 60])
+  nextTick(() => map.setFitView(null, false, [60, 60, 60, 60]))
 }
 
 onMounted(async () => {

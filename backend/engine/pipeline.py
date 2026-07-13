@@ -96,6 +96,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
     )
 
     if result["type"] == "suggestion":
+        result["algo_time"] = round(time.time() - total_start, 2)
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)

@@ -56,10 +56,10 @@
           💡 点击上方方案卡片直接查看规划结果
         </div>
         <div v-if="mode === 'fast' && store.suggestAlgoTime" class="algo-time">
-          ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(1) }}s
+          ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(3) }}s
         </div>
         <div v-if="mode === 'deep' && deepAlgoTime" class="algo-time">
-          ⏱ 深度规划耗时 {{ deepAlgoTime.toFixed(1) }}s
+          ⏱ 深度规划耗时 {{ deepAlgoTime.toFixed(3) }}s
         </div>
       </div>
 
@@ -74,7 +74,7 @@
             @click="viewDeepResult(r)"
           >
             <div class="card-body">
-              <span class="card-method">VNS</span>
+              <span class="card-method">VNS({{ r.best_m }})</span>
               <span class="card-cost">成本 {{ r.solution?.total_cost?.toFixed(1) }}</span>
               <span class="card-meta">{{ r.best_days }} 天</span>
             </div>
@@ -142,6 +142,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     spots: store.suggestSpots,
     daily_schedules: s.daily_schedules || [],
     amap_api_key: store.amapApiKey,
+    algo_time: store.suggestAlgoTime,
   }
 }
 
@@ -158,6 +159,7 @@ function onCardClick(s: SuggestionItem) {
 async function runDeep() {
   if (!deepNDays.value) return
   store.loading = true
+  store.deepResults = []
   try {
     const req = store.buildRequest(deepNDays.value, {
       cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined,  // 复用成本矩阵，避免 re-fetch

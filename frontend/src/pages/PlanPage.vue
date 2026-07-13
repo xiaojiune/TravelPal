@@ -13,7 +13,6 @@
         <div class="metric"><span class="metric-label">旅行成本</span><span class="metric-value">{{ solution.total_dist.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">等待惩罚</span><span class="metric-value">{{ solution.wait.toFixed(1) }}</span></div>
         <div class="metric"><span class="metric-label">迟到惩罚</span><span class="metric-value">{{ solution.late.toFixed(1) }}</span></div>
-        <div class="metric"><span class="metric-label">算法耗时</span><span class="metric-value">{{ store.planResult?.algo_time?.toFixed(1) }}s</span></div>
       </div>
 
       <div v-if="store.planResult?.commentary" class="commentary">

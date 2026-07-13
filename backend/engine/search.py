@@ -194,6 +194,8 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
+            if len(res["routes"]) != n_days:
+                continue
             raw_results.append({
                 "method": method_name,
                 "n_days": n_days,
@@ -229,7 +231,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         "algo_time": round(time.time() - algo_start, 2),
         "suggestions": [
             {
-                "n_days": len(item["routes"]),
+                "n_days": item["n_days"],
                 "method": item["method"],
                 "cost": item["cost"],
                 "total_dist": item["total_dist"],
@@ -291,6 +293,8 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
+            if len(res["routes"]) != n_days:
+                continue
             if res["total_cost"] < best_cost:
                 best_cost = res["total_cost"]
                 best_result = res

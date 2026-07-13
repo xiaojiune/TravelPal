@@ -21,7 +21,7 @@
 
       <div class="plan-layout">
         <div class="plan-map">
-          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" />
+          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
         </div>
         <div class="plan-schedule">
           <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" />

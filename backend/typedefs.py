@@ -83,4 +83,5 @@ class PlanResult(TypedDict):
     daily_schedules: list[list[ScheduleItem]]
     cost_matrix: list[list[float]]
     dist_matrix: list[list[float]]
+    polylines: dict[str, str]
     commentary: str

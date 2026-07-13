@@ -9,8 +9,8 @@ export function postPoiLookup(city: string, names: string[]): Promise<POILookupR
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 
-/** 获取方案建议：返回多组候选方案及高德 API key。FAST 模式可直接用 routes 渲染地图。 */
-export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: SuggestionItem[]; algo_time?: number; amap_api_key?: string; amap_security_code?: string; spots?: Record<string, SpotDictItem>; cost_matrix?: number[][]; dist_matrix?: number[][]; message?: string }> {
+/** 获取方案建议：返回多组候选方案、高德 API key、真实路径坐标(polylines)及成本矩阵(cost_matrix)，供深度规划复用。 */
+export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: SuggestionItem[]; algo_time?: number; amap_api_key?: string; amap_security_code?: string; spots?: Record<string, SpotDictItem>; cost_matrix?: number[][]; dist_matrix?: number[][]; polylines?: Record<string, string>; message?: string }> {
   return http.post('/suggest', data).then(r => r.data)
 }
 

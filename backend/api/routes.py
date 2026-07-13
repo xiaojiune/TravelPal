@@ -80,9 +80,12 @@ async def suggest(req: PlanRequest):
     """获取方案建议列表。
 
     不指定 n_days，run_planning 内部回退到 ca_suggest()，
-    遍历多种聚类方法 × 天数，返回 top-5 建议。
-    响应中附带 cost_matrix/dist_matrix，供后续深度规划
-    复用以跳过驾车 API 调用。
+    遍历多种聚类方法 × 天数，返回建议列表。
+    响应中附带 cost_matrix/dist_matrix/polylines，供后续深度规划复用。
+
+    Returns:
+        dict: 含 suggestions（建议列表）、algo_time、cost_matrix、dist_matrix、
+        polylines、amap_api_key、amap_security_code。
 
     Raises:
         HTTPException 500: 建议搜索引擎内部错误。
@@ -114,6 +117,10 @@ async def plan(req: PlanRequest):
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
     则将矩阵作为 override 传给 run_planning，跳过驾车 API 调用。
+
+    Returns:
+        dict: 含 solution、best_days、daily_schedules、cost_matrix、dist_matrix、
+        polylines、commentary、amap_api_key、amap_security_code。
 
     Raises:
         HTTPException 400: n_days 未指定时。

@@ -12,8 +12,8 @@ export function usePoiSearch() {
   const spotMsg = ref('')
   const loading = ref(false)
 
-  const canSearchHotel = computed(() => !!store.city && store.hotelName.trim().length > 0)
-  const canSearchSpots = computed(() => !!store.city && spotText.value.trim().length > 0)
+  const canSearchHotel = computed(() => !!store.city && store.hotelName.trim().length > 0)  // 城市+酒店名非空时可搜
+  const canSearchSpots = computed(() => !!store.city && spotText.value.trim().length > 0)  // 城市+景点文本非空时可搜
 
   /** 搜索酒店坐标，成功则自动确认到 store。 */
   async function searchHotel() {

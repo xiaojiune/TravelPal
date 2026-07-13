@@ -11,7 +11,7 @@ def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, d
     Args:
         spots_dict: 景点字典（与 run_planning 格式一致）。
         cost_matrix: np.ndarray 成本矩阵。
-        dist_matrix: np.ndarray 距离矩阵。
+        dist_matrix: np.ndarray 距离矩阵（仅接收，不参与求解，用于矩阵一致性维护）。
         new_n_days: 新的行程天数。
 
     Returns:
@@ -51,7 +51,7 @@ def add_poi_to_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, di
     Args:
         spots_dict: 景点字典（含新 POI，矩阵已对应展开）。
         cost_matrix: 展开后的成本矩阵（ndarray）。
-        dist_matrix: 展开后的距离矩阵（ndarray）。
+        dist_matrix: 展开后的距离矩阵（ndarray，仅接收，不参与求解）。
         routes: 当前方案的路径列表（仅用于获取天数）。
 
     Returns:
@@ -82,7 +82,7 @@ def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarra
     Args:
         spots_dict: 景点字典。
         cost_matrix: np.ndarray 成本矩阵。
-        dist_matrix: np.ndarray 距离矩阵。
+        dist_matrix: np.ndarray 距离矩阵（仅接收，用于矩阵一致性维护，不参与求解）。
         routes: 当前方案的路径列表。
         poi_name: 要移除的景点名称。
 

@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+/** 智能 Agent 对话页：支持 SSE 流式响应 + 打字机效果渲染。 */
 // ====== 状态定义 ======
 import { ref, nextTick } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
@@ -114,7 +115,6 @@ async function send() {
 // ====== 工具函数 ======
 
 /** 将聊天历史容器滚动到底部，确保最新消息可见。 */
-
 function scrollToBottom() {
   if (historyRef.value) {
     historyRef.value.scrollTop = historyRef.value.scrollHeight

@@ -123,7 +123,7 @@ const defaultDays = computed(() => {
 })
 
 /**
- * 从建议项构造完整 PlanResult，直接使用 suggest 响应的 daily_schedules 和 spots。
+ * 从建议项构造完整 PlanResult，直接使用 suggest 响应的 daily_schedules、spots 和 polylines。
  * 不调 plan/ 接口，避免重复计算。
  */
 function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
@@ -144,6 +144,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     amap_api_key: store.amapApiKey,
     amap_security_code: store.amapSecurityCode,
     algo_time: store.suggestAlgoTime,
+    polylines: Object.keys(store.suggestPolylines).length ? store.suggestPolylines : undefined,
   }
 }
 

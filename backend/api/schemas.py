@@ -134,8 +134,8 @@ class PlanAdjustRequest(BaseModel):
     支持 balance / adjust_days / remove_poi / add_poi。
     """
     spots: dict
-    cost_matrix: list = Field(description="成本矩阵（分钟），用于调整时重新规划")
-    dist_matrix: list = Field(description="距离矩阵（km），用于调整时重新规划")
+    cost_matrix: list[list[float]] = Field(description="成本矩阵（分钟），用于调整时重新规划")
+    dist_matrix: list[list[float]] = Field(description="距离矩阵（km），用于调整时重新规划")
     routes: list
     adjustments: dict = Field(default_factory=lambda: {"balance": True},
                                description="调整指令，如 {'balance': true}")

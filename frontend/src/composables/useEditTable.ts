@@ -13,8 +13,8 @@ export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
-  let _rebuilding = false
-  let _saving = false
+  let _rebuilding = false  // 重建中标志，阻止 editRows watch 触发解锁
+  let _saving = false      // 保存中标志，阻止 store watch 重建
 
   /** 已有确认点位时展示管理表格。 */
   const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))

@@ -44,7 +44,8 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         dist_matrix_override: 与 cost_matrix_override 一同传入的距离矩阵。
 
     Returns:
-        dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
+        dict: type="suggestion"（未指定天数）时含 suggestions、algo_time、cost_matrix、dist_matrix、polylines；
+              规划模式时含 solution、best_days、daily_schedules、cost_matrix、dist_matrix、polylines、commentary 等。
     """
     total_start = time.time()
 
@@ -95,13 +96,16 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         late_return_weight=late_return_weight,
     )
 
+    polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}  # tuple 键转 "fromIdx_toIdx" 字符串键
+
     if result["type"] == "suggestion":
-        result["algo_time"] = round(time.time() - total_start, 2)
+        result["algo_time"] = round(time.time() - total_start, 2)  # 含 API 拉取 + 引擎求解的总耗时
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)
-        result["cost_matrix"] = cost_matrix.tolist()
+        result["cost_matrix"] = cost_matrix.tolist()   # 返回前端缓存，deep 模式复用跳过驾车 API
         result["dist_matrix"] = dist_matrix.tolist()
+        result["polylines"] = polylines_serial          # 真实路径坐标，供前端绘制驾车轨迹
         return result
 
     solution = result["solution"]
@@ -127,6 +131,7 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         "daily_schedules": daily_schedules,
         "cost_matrix": cost_matrix.tolist(),
         "dist_matrix": dist_matrix.tolist(),
+        "polylines": polylines_serial,
         "commentary": commentary,
     }
 

@@ -55,6 +55,8 @@ export interface PlanResult {
   amap_api_key?: string
   amap_security_code?: string
   algo_time?: number
+  /** 真实路径坐标字典。key 为 "fromIdx_toIdx"（如 "0_3"），value 为高德 polyline 格式 "lng,lat;lng,lat" */
+  polylines?: Record<string, string>
 }
 
 // ==================== 纯前端类型（不与后端 schema 对应） ====================

@@ -168,7 +168,8 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
-        dict: type="suggestion"，suggestions 为全部可行方案的列表（含 n_days、method、cost、routes 等）。
+        dict: type="suggestion"；顶层含 algo_time（引擎求解耗时秒数）、
+        suggestions 为全部可行方案的列表（含 n_days、method、cost、routes 等）。
     """
     n_spots = len(spots) - 1
     if min_days is None:
@@ -179,7 +180,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
 
     raw_results = []
-    algo_start = time.time()
+    algo_start = time.time()  # 计时仅覆盖引擎求解阶段（不含 API 拉取）
 
     for method_name, method_func in CLUSTER_METHODS:
         best_cost = float("inf")
@@ -194,7 +195,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
-            if len(res["routes"]) != n_days:
+            if len(res["routes"]) != n_days:  # 聚类可能产生空天（组数与 n_days 不匹配），跳过该方案
                 continue
             raw_results.append({
                 "method": method_name,
@@ -293,10 +294,9 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
-            if len(res["routes"]) != n_days:
+            if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
                 continue
             if res["total_cost"] < best_cost:
-                best_cost = res["total_cost"]
                 best_result = res
                 best_m = method_name
                 best_groups = groups

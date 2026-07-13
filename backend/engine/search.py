@@ -1,5 +1,6 @@
 """双模式分发：CA 全参数搜索建议 + 指定天数求解。"""
 
+import time
 import numpy as np
 from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 from backend.engine.vns import VNSSolver
@@ -178,6 +179,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
 
     raw_results = []
+    algo_start = time.time()
 
     for method_name, method_func in CLUSTER_METHODS:
         best_cost = float("inf")
@@ -224,9 +226,10 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
 
     return {
         "type": "suggestion",
+        "algo_time": round(time.time() - algo_start, 2),
         "suggestions": [
             {
-                "n_days": item["n_days"],
+                "n_days": len(item["routes"]),
                 "method": item["method"],
                 "cost": item["cost"],
                 "total_dist": item["total_dist"],

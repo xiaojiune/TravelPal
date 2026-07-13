@@ -55,6 +55,12 @@
         <div v-if="mode === 'fast'" class="mode-hint">
           💡 点击上方方案卡片直接查看规划结果
         </div>
+        <div v-if="mode === 'fast' && store.suggestAlgoTime" class="algo-time">
+          ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(1) }}s
+        </div>
+        <div v-if="mode === 'deep' && deepAlgoTime" class="algo-time">
+          ⏱ 深度规划耗时 {{ deepAlgoTime.toFixed(1) }}s
+        </div>
       </div>
 
       <!-- ====== 下区：深度结果卡片 ====== -->
@@ -92,6 +98,7 @@ const router = useRouter()
 
 const mode = ref<'fast' | 'deep'>('fast')
 const deepNDays = ref<number | null>(null)
+const deepAlgoTime = ref(0)
 
 /** 按天数分组建议，每组内部按成本升序排列。 */
 const groupedSuggestions = computed(() => {
@@ -159,6 +166,7 @@ async function runDeep() {
     req.mode = 'deep'
     const data = await postPlan(req)
     store.deepResults.push(data)
+    deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
   } catch (e: unknown) {
     alert('深度规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
@@ -212,6 +220,7 @@ function viewDeepResult(r: PlanResult) {
 .deep-form input { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: center; }
 .deep-form .hint { font-size: 12px; color: #999; }
 .mode-hint { font-size: 13px; color: #888; text-align: center; padding: 4px 0; }
+.algo-time { font-size: 12px; color: #999; text-align: center; padding: 2px 0; }
 
 /* ====== 深度结果区 ====== */
 .deep-section { margin-top: 20px; }

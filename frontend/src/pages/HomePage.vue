@@ -150,6 +150,7 @@ async function fetchSuggest() {
     if (data.spots) store.suggestSpots = data.spots
     if (data.cost_matrix) store.suggestCostMatrix = data.cost_matrix  // 缓存成本矩阵，deep 模式复用跳过驾车 API
     if (data.dist_matrix) store.suggestDistMatrix = data.dist_matrix  // 缓存距离矩阵
+    if (data.algo_time) store.suggestAlgoTime = data.algo_time  // 搜索总耗时
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
     router.push('/suggest')
   } catch (e: unknown) {

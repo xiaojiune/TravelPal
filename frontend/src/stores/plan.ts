@@ -40,6 +40,8 @@ export const usePlanStore = defineStore('plan', () => {
   const suggestCostMatrix = ref<number[][]>([])
   /** suggest 响应中的距离矩阵。 */
   const suggestDistMatrix = ref<number[][]>([])
+  /** suggest 搜索总耗时（秒）。 */
+  const suggestAlgoTime = ref(0)
 
   // ====== 方法 ======
 
@@ -93,6 +95,7 @@ export const usePlanStore = defineStore('plan', () => {
     deepResults.value = []
     suggestCostMatrix.value = []
     suggestDistMatrix.value = []
+    suggestAlgoTime.value = 0
     amapApiKey.value = ''
   }
 
@@ -103,7 +106,7 @@ export const usePlanStore = defineStore('plan', () => {
     minDays,
     isParamsSaved,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
-    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, amapApiKey, loading,
+    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestAlgoTime, amapApiKey, loading,
     buildRequest, reset,
   }
 })

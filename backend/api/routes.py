@@ -81,6 +81,8 @@ async def suggest(req: PlanRequest):
 
     不指定 n_days，run_planning 内部回退到 ca_suggest()，
     遍历多种聚类方法 × 天数，返回 top-5 建议。
+    响应中附带 cost_matrix/dist_matrix，供后续深度规划
+    复用以跳过驾车 API 调用。
 
     Raises:
         HTTPException 500: 建议搜索引擎内部错误。
@@ -109,6 +111,8 @@ async def plan(req: PlanRequest):
     """执行完整规划，返回每日行程与高德地图可视化数据。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
+    若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
+    则将矩阵作为 override 传给 run_planning，跳过驾车 API 调用。
 
     Raises:
         HTTPException 400: n_days 未指定时。
@@ -126,6 +130,8 @@ async def plan(req: PlanRequest):
             mode=req.mode,
             n_days=req.n_days,
             day_start=req.day_start,
+            cost_matrix_override=req.cost_matrix,
+            dist_matrix_override=req.dist_matrix,
         )
         result["amap_api_key"] = AMAP_API_KEY
         return result

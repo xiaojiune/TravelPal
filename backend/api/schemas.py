@@ -80,6 +80,8 @@ class PlanRequest(BaseModel):
         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
         mode: "fast"(CA) 或 "deep"(VNS)。
         day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。
+        cost_matrix: 成本矩阵（分钟），复用 suggest 阶段结果时传入以跳过驾车 API。
+        dist_matrix: 距离矩阵（km），与 cost_matrix 一同传入。
         penalty_weight: 迟到惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
@@ -99,6 +101,8 @@ class PlanRequest(BaseModel):
                       description="求解模式：fast(CA) 或 deep(VNS)")
     day_start: float = Field(default=0, ge=0, le=1440,
                               description="一天启程时间（距午夜分钟数），0=午夜")
+    cost_matrix: list[list[float]] | None = Field(default=None, description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API")
+    dist_matrix: list[list[float]] | None = Field(default=None, description="距离矩阵（km），与 cost_matrix 一同传入")
     penalty_weight: float = Field(default=100.0, ge=0,
                                   description="迟到惩罚权重（默认 100.0）")
     early_wait_weight: float = Field(default=0.1, ge=0,
@@ -130,8 +134,8 @@ class PlanAdjustRequest(BaseModel):
     支持 balance / adjust_days / remove_poi / add_poi。
     """
     spots: dict
-    cost_matrix: list
-    dist_matrix: list
+    cost_matrix: list = Field(description="成本矩阵（分钟），用于调整时重新规划")
+    dist_matrix: list = Field(description="距离矩阵（km），用于调整时重新规划")
     routes: list
     adjustments: dict = Field(default_factory=lambda: {"balance": True},
                                description="调整指令，如 {'balance': true}")

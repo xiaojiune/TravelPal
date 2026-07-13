@@ -144,11 +144,18 @@ function onCardClick(s: SuggestionItem) {
   router.push('/plan')
 }
 
+/**
+ * 深度规划：复用 suggest 阶段缓存的成本/距离矩阵，
+ * 使后端 run_planning 跳过驾车 AMap API 调用。
+ */
 async function runDeep() {
   if (!deepNDays.value) return
   store.loading = true
   try {
-    const req = store.buildRequest(deepNDays.value)
+    const req = store.buildRequest(deepNDays.value, {
+      cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined,  // 复用成本矩阵，避免 re-fetch
+      dist_matrix: store.suggestDistMatrix.length ? store.suggestDistMatrix : undefined,
+    })
     req.mode = 'deep'
     const data = await postPlan(req)
     store.deepResults.push(data)

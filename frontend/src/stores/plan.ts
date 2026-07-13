@@ -36,11 +36,15 @@ export const usePlanStore = defineStore('plan', () => {
   const deepResults = ref<PlanResult[]>([])
   const amapApiKey = ref('')
   const loading = ref(false)
+  /** suggest 响应中的成本矩阵，deep 模式复用。 */
+  const suggestCostMatrix = ref<number[][]>([])
+  /** suggest 响应中的距离矩阵。 */
+  const suggestDistMatrix = ref<number[][]>([])
 
   // ====== 方法 ======
 
   /** 构建 POST /api/plan 或 /api/suggest 请求体。nDays=null 时引擎端自动推断。 */
-  function buildRequest(nDays: number | null): PlanRequestPayload {
+  function buildRequest(nDays: number | null, extra?: { cost_matrix?: number[][]; dist_matrix?: number[][] }): PlanRequestPayload {
     return {
       city: city.value,
       hotel_name: hotelName.value,
@@ -64,6 +68,7 @@ export const usePlanStore = defineStore('plan', () => {
       penalty_weight: penaltyWeight.value,
       early_wait_weight: earlyWaitWeight.value,
       late_return_weight: lateReturnWeight.value,
+      ...(extra?.cost_matrix ? { cost_matrix: extra.cost_matrix, dist_matrix: extra.dist_matrix } : {}),
     }
   }
 
@@ -86,6 +91,8 @@ export const usePlanStore = defineStore('plan', () => {
     selectedMethod.value = ''
     planResult.value = null
     deepResults.value = []
+    suggestCostMatrix.value = []
+    suggestDistMatrix.value = []
     amapApiKey.value = ''
   }
 
@@ -96,7 +103,7 @@ export const usePlanStore = defineStore('plan', () => {
     minDays,
     isParamsSaved,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
-    planResult, deepResults, amapApiKey, loading,
+    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, amapApiKey, loading,
     buildRequest, reset,
   }
 })

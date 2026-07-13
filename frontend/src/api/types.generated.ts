@@ -43,6 +43,11 @@ export interface paths {
          *
          *     不指定 n_days，run_planning 内部回退到 ca_suggest()，
          *     遍历多种聚类方法 × 天数，返回 top-5 建议。
+         *     响应中附带 cost_matrix/dist_matrix，供后续深度规划
+         *     复用以跳过驾车 API 调用。
+         *
+         *     Raises:
+         *         HTTPException 500: 建议搜索引擎内部错误。
          */
         post: operations["suggest_api_suggest_post"];
         delete?: never;
@@ -62,9 +67,15 @@ export interface paths {
         put?: never;
         /**
          * Plan
-         * @description 执行完整规划，返回 3D 地图 HTML 和每日行程。
+         * @description 执行完整规划，返回每日行程与高德地图可视化数据。
          *
          *     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
+         *     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
+         *     则将矩阵作为 override 传给 run_planning，跳过驾车 API 调用。
+         *
+         *     Raises:
+         *         HTTPException 400: n_days 未指定时。
+         *         HTTPException 500: 规划引擎内部错误。
          */
         post: operations["plan_api_plan_post"];
         delete?: never;
@@ -88,6 +99,9 @@ export interface paths {
          *
          *     Mock 模式返回死 token，方便前端联调。
          *     正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
+         *
+         *     Raises:
+         *         HTTPException 500: LLM 调用异常或数据格式错误。
          */
         post: operations["chat_api_chat_post"];
         delete?: never;
@@ -239,9 +253,12 @@ export interface components {
          *         hotel_lon/lat: 酒店坐标（GCJ-02）。
          *         hotel_tw_start/end: 酒店时间窗（默认 0:00~24:00）。
          *         spots: 景点列表，至少 1 个。
+         *         min_days: 搜索最小天数（默认由引擎自动推断，n_spots//8+1）。
          *         n_days: 行程天数。None 时走建议模式，有值时走规划模式。
          *         mode: "fast"(CA) 或 "deep"(VNS)。
          *         day_start: 一天启程时间，对所有景点生效（默认 0 = 午夜）。
+         *         cost_matrix: 成本矩阵（分钟），复用 suggest 阶段结果时传入以跳过驾车 API。
+         *         dist_matrix: 距离矩阵（km），与 cost_matrix 一同传入。
          *         penalty_weight: 迟到惩罚权重。
          *         early_wait_weight: 早到等待惩罚权重。
          *         late_return_weight: 晚归惩罚权重。
@@ -269,14 +286,9 @@ export interface components {
             hotel_tw_end: number;
             /**
              * Min Days
-             * @description 搜索最小天数，不传由引擎自动推断
+             * @description 搜索最小天数，不传则由引擎自动推断 (n_spots//8+1)
              */
             min_days?: number | null;
-            /**
-             * Max Days
-             * @description 搜索最大天数，不传由引擎自动推断
-             */
-            max_days?: number | null;
             /**
              * Spots
              * @description 景点列表，至少 1 个
@@ -299,6 +311,16 @@ export interface components {
              * @default 0
              */
             day_start: number;
+            /**
+             * Cost Matrix
+             * @description 成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API
+             */
+            cost_matrix?: number[][] | null;
+            /**
+             * Dist Matrix
+             * @description 距离矩阵（km），与 cost_matrix 一同传入
+             */
+            dist_matrix?: number[][] | null;
             /**
              * Penalty Weight
              * @description 迟到惩罚权重（默认 100.0）

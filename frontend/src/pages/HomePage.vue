@@ -119,6 +119,8 @@ const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, apply
 /**
  * 获取方案建议：调 /api/suggest 后跳转 SuggestPage。
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
+ * 将响应中的 cost_matrix/dist_matrix 存入 store，
+ * 供深度规划（SuggestPage）复用以跳过驾车 API。
  */
 async function fetchSuggest() {
   if (!hotelConfirmed.value) {
@@ -146,6 +148,8 @@ async function fetchSuggest() {
     const data = await postSuggest(store.buildRequest(null))
     store.suggestions = data.suggestions || []
     if (data.spots) store.suggestSpots = data.spots
+    if (data.cost_matrix) store.suggestCostMatrix = data.cost_matrix  // 缓存成本矩阵，deep 模式复用跳过驾车 API
+    if (data.dist_matrix) store.suggestDistMatrix = data.dist_matrix  // 缓存距离矩阵
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
     router.push('/suggest')
   } catch (e: unknown) {

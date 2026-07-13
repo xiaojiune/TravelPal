@@ -4,7 +4,10 @@ import type { components } from '@/api/types.generated'
 // ==================== API 类型（由 OpenAPI 驱动） ====================
 
 /** 发送给后端的 PlanRequest */
-export type PlanRequestPayload = components['schemas']['PlanRequest']
+export type PlanRequestPayload = components['schemas']['PlanRequest'] & {
+  cost_matrix?: number[][]
+  dist_matrix?: number[][]
+}
 
 /** POI 查找结果 */
 export type POILookupItem = components['schemas']['POILookupItem']

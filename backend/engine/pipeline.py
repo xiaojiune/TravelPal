@@ -21,7 +21,9 @@ TRAVEL_SPEED = 1.0
 def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
                  penalty_weight: float, early_wait_weight: float, late_return_weight: float,
                  mode: str = "fast", n_days: int | None = None,
-                 day_start: int = 0, min_days: int | None = None) -> PlanResult | dict:
+                 day_start: int = 0, min_days: int | None = None,
+                 cost_matrix_override: list[list[float]] | None = None,
+                 dist_matrix_override: list[list[float]] | None = None) -> PlanResult | dict:
     """
     双阶段流程编排入口。
 
@@ -38,6 +40,8 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         n_days: 行程天数（可选），None 时走建议模式。
         day_start: 每天最早出发时间（0-1440），默认 0（午夜）。
         min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
+        cost_matrix_override: 复用 suggest 阶段的成本矩阵，传入时跳过驾车 API。
+        dist_matrix_override: 与 cost_matrix_override 一同传入的距离矩阵。
 
     Returns:
         dict: type="suggestion"（未指定天数）或包含 solution、best_days、daily_schedules 等。
@@ -48,9 +52,15 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
     coords = [(poi_cache["hotel"]["lon"], poi_cache["hotel"]["lat"])] + \
              [(s["lon"], s["lat"]) for s in poi_cache["spots"]]
 
-    print("正在调用驾车API计算成本矩阵...")
-    cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
-    print("成本矩阵构建完成。\n")
+    if cost_matrix_override is not None and dist_matrix_override is not None:
+        cost_matrix = np.array(cost_matrix_override, dtype=np.float64)
+        dist_matrix = np.array(dist_matrix_override, dtype=np.float64)
+        polylines = {}
+        print("已复用 suggest 阶段成本矩阵，跳过驾车API调用。\n")
+    else:
+        print("正在调用驾车API计算成本矩阵...")
+        cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
+        print("成本矩阵构建完成。\n")
 
     hotel_tw = poi_cache["hotel"]["tw"]
     effective_hotel_start = max(hotel_tw[0], day_start)
@@ -89,6 +99,8 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)
+        result["cost_matrix"] = cost_matrix.tolist()
+        result["dist_matrix"] = dist_matrix.tolist()
         return result
 
     solution = result["solution"]
@@ -282,7 +294,7 @@ def adjust_plan(spots_dict: dict[int, SpotDict], cost_matrix_list: list, dist_ma
             travel_speed=TRAVEL_SPEED,
         )
         print(f"调整后总成本: {result['total_cost']:.1f}\n")
-        daily_schedules = _rebuild_schedule(result["routes"], spots_dict, dist_matrix)
+        daily_schedules = _rebuild_schedule(result["routes"], spots_dict, cost_matrix)
         best_days = len(routes)
         best_m = "balance"
 

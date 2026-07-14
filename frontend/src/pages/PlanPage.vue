@@ -19,12 +19,17 @@
         💬 {{ store.planResult.commentary }}
       </div>
 
+      <div class="map-toggle">
+        <button v-if="!showMap" class="btn btn-outline" @click="showMap = true">🗺️ 显示地图</button>
+        <button v-else class="btn btn-outline" @click="showMap = false">🗺️ 收起地图</button>
+      </div>
+
       <div class="plan-layout">
-        <div class="plan-map">
-          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
+        <div v-if="showMap" class="plan-map">
+          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :highlight-day="highlightDay" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
         </div>
         <div class="plan-schedule">
-          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" />
+          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :active-day="highlightDay" @select-day="highlightDay = $event" />
         </div>
       </div>
     </template>
@@ -33,7 +38,7 @@
 
 <script setup lang="ts">
 // ====== 状态定义 ======
-import { computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 import AmapMap from '@/components/AmapMap.vue'
 import SchedulePanel from '@/components/SchedulePanel.vue'
@@ -41,6 +46,11 @@ import type { PlanResultSolution } from '@/types'
 
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
+
+/** 当前高亮日索引，-1 表示全部显示。点击 SchedulePanel 日期标题切换。 */
+const highlightDay = ref(-1)
+/** 地图是否已显示（懒加载，首次点击按钮后常驻）。 */
+const showMap = ref(false)
 
 /**
  * 从 store.planResult 提取摘要写入 localStorage 历史记录。
@@ -66,7 +76,13 @@ function saveToHistory() {
   localStorage.setItem('travelpal_history', JSON.stringify(list))
 }
 
-watch(() => store.planResult, (val) => { if (val) saveToHistory() })
+watch(() => store.planResult, (val) => {
+  if (val) {
+    saveToHistory()
+    highlightDay.value = -1
+    showMap.value = false
+  }
+})
 
 
 </script>
@@ -95,6 +111,7 @@ watch(() => store.planResult, (val) => { if (val) saveToHistory() })
 .plan-schedule { flex: 1; min-width: 320px; }
 .btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
 .btn-primary { background: #1a73e8; color: #fff; }
+.map-toggle { display: flex; justify-content: center; margin-bottom: 16px; }
 .metric-days { gap: 6px; }
 .days-input { width: 52px; text-align: center; padding: 6px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
 .add-poi-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }

@@ -3,7 +3,7 @@
     <h3>每日行程</h3>
     <div v-if="!dailySchedules?.length" class="empty">暂无行程数据</div>
     <div v-for="(day, di) in dailySchedules" v-else :key="di" class="day-section">
-      <h4 class="day-title">第 {{ di + 1 }} 天</h4>
+      <h4 class="day-title" :class="{ 'day-active': activeDay === di }" @click="$emit('select-day', activeDay === di ? -1 : di)">第 {{ di + 1 }} 天<span class="day-hint">{{ activeDay === di ? ' (当前)' : '点击查看' }}</span></h4>
       <table class="schedule-table">
         <thead>
           <tr>
@@ -50,9 +50,15 @@ import type { ScheduleItem } from '@/types'
 
 // ====== 工具函数 ======
 
-defineProps<{
+const props = defineProps<{
   dailySchedules?: ScheduleItem[][]
   onRemovePoi?: ((name: string) => void) | null
+  /** 当前高亮日索引，-1 表示全部显示。用于在标题上标记选中状态。 */
+  activeDay?: number
+}>()
+
+defineEmits<{
+  (e: 'select-day', dayIndex: number): void
 }>()
 
 /**
@@ -84,7 +90,10 @@ function statusClass(s: string | null | undefined) {
 .schedule-panel h3 { margin-bottom: 12px; font-size: 15px; }
 .empty { color: #999; font-size: 13px; padding: 20px 0; text-align: center; }
 .day-section { margin-bottom: 16px; }
-.day-title { font-size: 14px; color: #1a73e8; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; }
+.day-title { font-size: 14px; color: #1a73e8; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; cursor: pointer; user-select: none; }
+.day-title:hover { opacity: 0.7; }
+.day-title.day-active { background: #e8f0fe; margin: -4px -8px 8px; padding: 4px 8px; border-radius: 4px; }
+.day-hint { font-size: 11px; color: #999; font-weight: 400; margin-left: 6px; }
 .schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e0e0e0; color: #888; font-weight: 600; }
 .schedule-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }

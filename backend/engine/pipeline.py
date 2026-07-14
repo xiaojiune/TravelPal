@@ -7,7 +7,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.data.amap_loader import build_real_data
+from backend.data.amap_loader import build_real_data, _get_driving_data
 from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
 from backend.agent.commentator import generate_commentary
 from backend.typedefs import PoiCache, SpotDict, PlanResult, ScheduleItem, RouteResult
@@ -15,6 +15,37 @@ from backend.typedefs import PoiCache, SpotDict, PlanResult, ScheduleItem, Route
 # ================== 常量 ==================
 
 TRAVEL_SPEED = 1.0
+
+
+def _supplement_polylines(
+    routes_list: list[list[list[int]]],
+    coords: list[tuple[float, float]],
+    polylines: dict[tuple[int, int], str],
+) -> None:
+    """扫描 routes 涉及的缺失 polyline 段，逐段补调驾车 API。
+
+    build_real_data 中 cost/dist 对称复用但 polyline 不复制，
+    此处对 route 需要但 polylines 中缺失的方向单独补调。
+    """
+    needed: set[tuple[int, int]] = set()
+    for routes in routes_list:
+        for route in routes:
+            for i in range(len(route) - 1):
+                key = (route[i], route[i + 1])
+                if key not in polylines:
+                    needed.add(key)
+
+    if not needed:
+        return
+
+    print(f"正在补调 {len(needed)} 段缺失 polyline...")
+    for f, t in sorted(needed):
+        _, _, poly = _get_driving_data(coords[f], coords[t])
+        if poly:
+            polylines[(f, t)] = poly
+        time.sleep(0.4)
+    print("polyline 补调完成。\n")
+
 
 # ================== 主入口 ==================
 
@@ -95,6 +126,18 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
     )
+
+    # 补调 route 涉及但 polylines 中缺失的方向（cost/dist 对称复用，polyline 不复制）
+    if result["type"] == "suggestion":
+        _supplement_polylines(
+            [s["routes"] for s in result["suggestions"]],
+            coords, polylines,
+        )
+    else:
+        _supplement_polylines(
+            [result["solution"]["routes"]],
+            coords, polylines,
+        )
 
     polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}  # tuple 键转 "fromIdx_toIdx" 字符串键
 

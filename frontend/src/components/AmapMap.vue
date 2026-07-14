@@ -4,11 +4,12 @@
 
 <script setup lang="ts">
 /**
- * 高德地图渲染器：绘制景点标记、真实驾车路径（抽稀后）、每日路线着色。
+ * 高德地图渲染器：绘制景点标记、真实驾车路径、每日路线着色。
  * 从旧项目 cesium_utils.py 迁移并适配 AMap JS API v2.0。
  *
  * 景点点击弹 InfoWindow 显示行程详情（到达/离开/状态）。
- * 路线支持高亮单日（highlightDay），非高亮日半透明处理。
+ * 路线支持高亮单日（highlightDay），非高亮日完全隐藏。
+ * 每条路段独立绘制 Polyline，无 polyline 数据的路段不绘制（无欧几里得直线降级）。
  */
 import { ref, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
 import type { SpotDictItem, ScheduleItem } from '@/types'
@@ -62,34 +63,7 @@ function parsePolyline(str: string): [number, number][] {
   })
 }
 
-/** Douglas-Peucker 辅助：点到线段垂距。用于经纬度坐标系，量纲为度。 */
-function perpendicularDist(point: [number, number], lineStart: [number, number], lineEnd: [number, number]): number {
-  const [x0, y0] = point; const [x1, y1] = lineStart; const [x2, y2] = lineEnd
-  const dx = x2 - x1; const dy = y2 - y1
-  if (dx === 0 && dy === 0) return Math.sqrt((x0 - x1) ** 2 + (y0 - y1) ** 2)
-  const t = Math.max(0, Math.min(1, ((x0 - x1) * dx + (y0 - y1) * dy) / (dx * dx + dy * dy)))
-  return Math.sqrt((x0 - (x1 + t * dx)) ** 2 + (y0 - (y1 + t * dy)) ** 2)
-}
 
-/**
- * Douglas-Peucker 折线抽稀：在保留形状的前提下减少坐标点数。
- * epsilon=0.0003 对应经纬度约 30m，兼顾精度与性能。
- * 从旧项目 cesium_utils.py douglasPeucker 迁移。
- */
-function douglasPeucker(points: [number, number][], epsilon = 0.0003): [number, number][] {
-  if (points.length <= 2) return points
-  let dmax = 0; let index = 0
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = perpendicularDist(points[i], points[0], points[points.length - 1])
-    if (d > dmax) { dmax = d; index = i }
-  }
-  if (dmax > epsilon) {
-    const left = douglasPeucker(points.slice(0, index + 1), epsilon)
-    const right = douglasPeucker(points.slice(index), epsilon)
-    return left.slice(0, -1).concat(right)
-  }
-  return [points[0], points[points.length - 1]]
-}
 
 interface Props {
   /** 每日路线列表，每组为景点索引序列（含首尾 depot 0） */
@@ -140,8 +114,8 @@ function clearOverlays() {
 }
 
 /**
- * 主渲染入口：绘制景点标记 + InfoWindow + 每日驾车路径。
- * 路径优先使用真实 polylines（经 DP 抽稀），无真实数据时 fallback 到直线。
+ * 主渲染入口：绘制景点标记 + InfoWindow + 每段驾车路径。
+ * 每条路段独立绘制 Polyline，无 polylines 数据时跳过（不使用欧几里得直线降级）。
  */
 function render() {
   if (!map || !props.routes.length || !Object.keys(props.spots).length) return
@@ -198,35 +172,31 @@ function render() {
     map.add(marker)
   })
 
-  // 绘制每日驾车路径（含抽稀后的真实轨迹）
+  // 绘制每日驾车路径（每条路段独立 Polyline，无 polyline 数据时不绘制）
   ;(props.routes as number[][]).forEach((route, di) => {
+    if (props.highlightDay >= 0 && di !== props.highlightDay) return  // 非高亮日完全隐藏
     const color = ROUTE_COLORS[di % ROUTE_COLORS.length]
-    const clamped = props.highlightDay >= 0 && di !== props.highlightDay
-    let pts: [number, number][] = []
 
     for (let i = 0; i < route.length - 1; i++) {
       const fromIdx = route[i]; const toIdx = route[i + 1]
-      const key = `${fromIdx}_${toIdx}`  // 两端索引拼接作为 polylines 字典 key
-      if (props.polylines?.[key]) {
-        pts.push(...douglasPeucker(parsePolyline(props.polylines[key]), 0.0003))
-      } else if (coords[fromIdx]) {
-        pts.push(coords[fromIdx])
-      }
-    }
-    const last = coords[route[route.length - 1]]
-    if (last) pts.push(last)
-    if (pts.length < 2) return
+      if (toIdx === 0) continue  // 跳过返回酒店的末段，仅计算成本不绘制
+      const key = `${fromIdx}_${toIdx}`
+      if (!props.polylines?.[key]) continue  // 无真实路径数据时不画该段
+      const pts = parsePolyline(props.polylines[key])
+      if (pts.length < 2) continue
 
-    const polyline = new AMap.Polyline({
-      path: pts,
-      strokeColor: color,
-      strokeWeight: clamped ? 3 : 5,
-      strokeOpacity: clamped ? 0.3 : 0.9,
-      strokeStyle: 'solid',
-      lineJoin: 'round',
-    })
-    overlays.push(polyline)
-    map.add(polyline)
+      const polyline = new AMap.Polyline({
+        path: pts,
+        showDir: true,
+        strokeColor: color,
+        strokeWeight: 5,
+        strokeOpacity: 0.9,
+        strokeStyle: 'solid',
+        lineJoin: 'round',
+      })
+      overlays.push(polyline)
+      map.add(polyline)
+    }
   })
 
   function fitView() {
@@ -271,9 +241,14 @@ onMounted(async () => {
   map = new AMap.Map(container.value, {
     zoom: 13,
     resizeEnable: true,
+    zooms: [3, 18],
+  })
+  AMap.plugin('AMap.ToolBar', () => {
+    map.addControl(new AMap.ToolBar())
   })
   infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) })  // 偏移避免遮挡标记
   console.log('[map] AMap init done, rendering...')
+  await nextTick()
   render()
   map.resize()
 })

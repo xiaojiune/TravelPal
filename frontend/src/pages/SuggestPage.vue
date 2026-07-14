@@ -169,6 +169,8 @@ async function runDeep() {
     })
     req.mode = 'deep'
     const data = await postPlan(req)
+    // 深度模式复用 suggest 阶段缓存的真实路径坐标（后端因跳过驾车 API 返回空 polylines）
+    if (Object.keys(store.suggestPolylines).length) data.polylines = store.suggestPolylines
     store.deepResults.push(data)
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null

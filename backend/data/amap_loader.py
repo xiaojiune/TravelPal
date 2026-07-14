@@ -245,11 +245,10 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
         for j in range(n):
             if i == j:
                 continue
-            # 利用对称性：A→B 已请求过则 B→A 直接填入，减少 API 调用量
+            # cost/dist 对称复用，polyline 因方向相关不作对称（由 pipeline._supplement_polylines 补调）
             if cost[j][i] > 0:
                 cost[i][j] = cost[j][i]
                 dist[i][j] = dist[j][i]
-                polylines[(i, j)] = polylines.get((j, i), "")
                 continue
             d_km, dur, poly = _get_driving_data(coords[i], coords[j])
             if dur is not None:

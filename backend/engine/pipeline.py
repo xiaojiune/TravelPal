@@ -195,6 +195,15 @@ def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix
     for route in routes:
         schedule = []
         current_time = spots_dict[0]["tw"][0]
+        schedule.append({
+            "name": "酒店（出发）",
+            "arrival": current_time,
+            "departure": current_time,
+            "tw": "-",
+            "stay": "-",
+            "arrival_status": "",
+            "departure_status": "",
+        })
         for i in range(len(route) - 1):
             from_node = route[i]
             to_node = route[i + 1]

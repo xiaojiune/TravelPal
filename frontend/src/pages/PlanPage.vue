@@ -9,10 +9,10 @@
 
     <template v-else>
       <div class="metrics-bar">
-        <div class="metric"><span class="metric-label">总成本</span><span class="metric-value">{{ solution.total_cost.toFixed(1) }}</span></div>
-        <div class="metric"><span class="metric-label">旅行成本</span><span class="metric-value">{{ solution.total_dist.toFixed(1) }}</span></div>
-        <div class="metric"><span class="metric-label">等待惩罚</span><span class="metric-value">{{ solution.wait.toFixed(1) }}</span></div>
-        <div class="metric"><span class="metric-label">迟到惩罚</span><span class="metric-value">{{ solution.late.toFixed(1) }}</span></div>
+        <div class="metric"><span class="metric-label">总成本</span><span class="metric-value">{{ solution.total_cost.toFixed(1) }} min</span></div>
+        <div class="metric"><span class="metric-label">旅行成本</span><span class="metric-value">{{ solution.total_dist.toFixed(1) }} min</span></div>
+        <div class="metric"><span class="metric-label">等待惩罚</span><span class="metric-value">{{ solution.wait.toFixed(1) }} min</span></div>
+        <div class="metric"><span class="metric-label">迟到惩罚</span><span class="metric-value">{{ solution.late.toFixed(1) }} min</span></div>
       </div>
 
       <div v-if="store.planResult?.commentary" class="commentary">
@@ -26,10 +26,10 @@
 
       <div class="plan-layout">
         <div v-if="showMap" class="plan-map">
-          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :highlight-day="highlightDay" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
+          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :highlight-day="highlightDay" :highlight-spot="highlightSpot" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
         </div>
         <div class="plan-schedule">
-          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :active-day="highlightDay" @select-day="highlightDay = $event" />
+          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :active-day="highlightDay" @select-day="highlightDay = $event" @select-spot="highlightSpot = $event" />
         </div>
       </div>
     </template>
@@ -51,6 +51,8 @@ const solution = computed<PlanResultSolution>(() => (store.planResult?.solution 
 const highlightDay = ref(-1)
 /** 地图是否已显示（懒加载，首次点击按钮后常驻）。 */
 const showMap = ref(false)
+/** 行程表中点击的景点名，用于地图 marker 高亮。 */
+const highlightSpot = ref('')
 
 /**
  * 从 store.planResult 提取摘要写入 localStorage 历史记录。
@@ -81,6 +83,7 @@ watch(() => store.planResult, (val) => {
     saveToHistory()
     highlightDay.value = -1
     showMap.value = false
+    highlightSpot.value = ''
   }
 })
 

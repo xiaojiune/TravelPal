@@ -76,6 +76,8 @@ interface Props {
   dailySchedules?: ScheduleItem[][]
   /** 高亮某日（索引），-1 表示全部正常显示 */
   highlightDay?: number
+  /** 高亮景点名，来自 SchedulePanel 点击，marker 弹跳+居中 */
+  highlightSpot?: string
   amapKey?: string
   securityCode?: string
 }
@@ -86,6 +88,7 @@ const props = withDefaults(defineProps<Props>(), {
   polylines: () => ({}),
   dailySchedules: () => [],
   highlightDay: -1,
+  highlightSpot: '',
   amapKey: '',
   securityCode: '',
 })
@@ -93,6 +96,7 @@ const props = withDefaults(defineProps<Props>(), {
 const container = ref<HTMLDivElement | null>(null)
 let map: any = null
 let overlays: any[] = []
+let markerMap: Record<string, any> = {}
 let infoWindow: any = null
 let amapLoaded = false
 
@@ -111,6 +115,7 @@ function loadAmapScript() {
 function clearOverlays() {
   overlays.forEach(o => map?.remove(o))
   overlays = []
+  markerMap = {}
 }
 
 /**
@@ -170,6 +175,7 @@ function render() {
     }
     overlays.push(marker)
     map.add(marker)
+    if (spot?.name) markerMap[spot.name] = marker  // 供左右联动按名查找
   })
 
   // 绘制每日驾车路径（每条路段独立 Polyline，无 polyline 数据时不绘制）
@@ -264,6 +270,16 @@ onActivated(() => {
 
 // 任意地图数据变化时重新渲染
 watch(() => [props.routes, props.spots, props.polylines, props.highlightDay], render, { deep: true })
+
+/** 左右联动：行程表点击景点 → 对应 marker 弹跳 + 居中 */
+watch(() => props.highlightSpot, (name) => {
+  if (!map) return
+  Object.values(markerMap).forEach((m: any) => m.setAnimation())
+  if (name && markerMap[name]) {
+    markerMap[name].setAnimation('AMAP_ANIMATION_BOUNCE')
+    map.setCenter(markerMap[name].getPosition())
+  }
+})
 </script>
 
 <style scoped>

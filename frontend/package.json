@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "gen:openapi": "cd /d D:\\AAA\\TravelPal && .venv\\Scripts\\python.exe backend\\tools\\gen_openapi.py",
+    "gen:openapi": "python backend/tools/gen_openapi.py",
     "gen:api": "npm run gen:openapi && openapi-typescript openapi.json -o src/api/types.generated.ts",
     "dev": "vite",
     "build": "vite build",

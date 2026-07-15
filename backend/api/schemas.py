@@ -139,3 +139,63 @@ class PlanAdjustRequest(BaseModel):
     routes: list
     adjustments: dict = Field(default_factory=lambda: {"balance": True},
                                description="调整指令，如 {'balance': true}")
+
+
+# ================== 历史记录（分享站） ==================
+
+
+class HistoryCreate(BaseModel):
+    """保存历史记录的请求体。
+
+    device_id 由前端 localStorage 生成，仅用于删除鉴权。
+    plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
+    request_params 为用户输入参数，方便复现。
+    """
+    device_id: str | None = Field(default=None, description="匿名设备标识")
+    note: str | None = Field(default=None, description="用户备注")
+    city: str
+    hotel: str | None = None
+    n_days: int
+    cost: float | None = None
+    spot_count: int | None = None
+    plan_result: dict
+    request_params: dict | None = None
+
+
+class HistorySummary(BaseModel):
+    """历史记录列表中的摘要信息。"""
+    id: str
+    city: str
+    hotel: str | None = None
+    n_days: int
+    cost: float | None = None
+    spot_count: int | None = None
+    note: str | None = None
+    created_at: str
+
+
+class HistoryDetail(BaseModel):
+    """历史记录完整信息，含全量 plan_result。"""
+    id: str
+    city: str
+    hotel: str | None = None
+    n_days: int
+    cost: float | None = None
+    spot_count: int | None = None
+    note: str | None = None
+    plan_result: dict
+    request_params: dict | None = None
+    created_at: str
+
+
+class HistoryListResponse(BaseModel):
+    """历史记录分页列表响应。"""
+    items: list[HistorySummary]
+    total: int
+    page: int
+    page_size: int
+
+
+class HistoryDeleteRequest(BaseModel):
+    """删除历史记录的请求体，需与创建时的 device_id 一致。"""
+    device_id: str

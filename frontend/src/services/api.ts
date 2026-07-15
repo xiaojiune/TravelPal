@@ -24,3 +24,82 @@ export function postChat(message: string, sessionId: string): Promise<unknown> {
   return http.post('/chat', { message, session_id: sessionId }).then(r => r.data)
 }
 
+
+// ================== 历史记录（分享站） ==================
+
+
+/** 历史记录列表项（摘要） */
+export interface HistorySummary {
+  id: string
+  city: string
+  hotel?: string
+  n_days: number
+  cost?: number
+  spot_count?: number
+  note?: string
+  created_at: string
+}
+
+/** 历史记录分页响应 */
+export interface HistoryListResponse {
+  items: HistorySummary[]
+  total: number
+  page: number
+  page_size: number
+}
+
+/** 历史记录完整详情 */
+export interface HistoryDetail {
+  id: string
+  city: string
+  hotel?: string
+  n_days: number
+  cost?: number
+  spot_count?: number
+  note?: string
+  plan_result: Record<string, unknown>
+  request_params?: Record<string, unknown>
+  created_at: string
+}
+
+/** 获取设备 ID：首次访问时生成匿名随机标识，存入 localStorage。 */
+export function getDeviceId(): string {
+  const key = 'travelpal_device_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
+/** 获取历史记录列表（分页）。 */
+export function getHistoryList(page = 1, pageSize = 20): Promise<HistoryListResponse> {
+  return http.get('/history', { params: { page, page_size: pageSize } }).then(r => r.data)
+}
+
+/** 获取单条历史记录完整数据。 */
+export function getHistoryDetail(id: string): Promise<HistoryDetail> {
+  return http.get(`/history/${id}`).then(r => r.data)
+}
+
+/** 保存一条历史记录（分享方案）。 */
+export function postHistory(data: {
+  device_id?: string
+  note?: string
+  city: string
+  hotel?: string
+  n_days: number
+  cost?: number
+  spot_count?: number
+  plan_result: Record<string, unknown>
+  request_params?: Record<string, unknown>
+}): Promise<{ id: string }> {
+  return http.post('/history', data).then(r => r.data)
+}
+
+/** 删除一条历史记录（需 device_id 匹配）。 */
+export function deleteHistory(id: string, deviceId: string): Promise<{ ok: boolean }> {
+  return http.delete(`/history/${id}`, { data: { device_id: deviceId } }).then(r => r.data)
+}
+

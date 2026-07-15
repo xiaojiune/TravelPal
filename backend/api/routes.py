@@ -1,13 +1,22 @@
-"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话。"""
+"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话、历史记录。"""
 
 import json
 import traceback
-from fastapi import APIRouter, HTTPException
-from backend.api.schemas import PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest
+from uuid import UUID
+from fastapi import APIRouter, HTTPException, Depends, Query
+from sqlalchemy import select, func, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.api.schemas import (
+    PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest,
+    HistoryCreate, HistorySummary, HistoryDetail, HistoryListResponse, HistoryDeleteRequest,
+)
 from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
 from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
+from backend.data.model.database import get_session
+from backend.data.model.models import HistoryRecord
 from fastapi.responses import StreamingResponse
 
 router = APIRouter()
@@ -182,5 +191,94 @@ async def chat(req: ChatRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================== 历史记录（分享站） ==================
+
+
+@router.get("/api/history", response_model=HistoryListResponse)
+async def list_history(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+):
+    count_q = select(func.count(HistoryRecord.id))
+    total = (await session.execute(count_q)).scalar() or 0
+
+    q = (
+        select(HistoryRecord)
+        .order_by(HistoryRecord.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    rows = (await session.execute(q)).scalars().all()
+
+    items = [
+        HistorySummary(
+            id=str(r.id),
+            city=r.city,
+            hotel=r.hotel,
+            n_days=r.n_days,
+            cost=r.cost,
+            spot_count=r.spot_count,
+            note=r.note,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+        )
+        for r in rows
+    ]
+    return HistoryListResponse(items=items, total=total, page=page, page_size=page_size)
+
+
+@router.get("/api/history/{record_id}", response_model=HistoryDetail)
+async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
+    r = await session.get(HistoryRecord, record_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return HistoryDetail(
+        id=str(r.id),
+        city=r.city,
+        hotel=r.hotel,
+        n_days=r.n_days,
+        cost=r.cost,
+        spot_count=r.spot_count,
+        note=r.note,
+        plan_result=r.plan_result,
+        request_params=r.request_params,
+        created_at=r.created_at.isoformat() if r.created_at else "",
+    )
+
+
+@router.post("/api/history", status_code=201)
+async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get_session)):
+    record = HistoryRecord(
+        device_id=req.device_id,
+        note=req.note,
+        city=req.city,
+        hotel=req.hotel,
+        n_days=req.n_days,
+        cost=req.cost,
+        spot_count=req.spot_count,
+        plan_result=req.plan_result,
+        request_params=req.request_params,
+    )
+    session.add(record)
+    await session.commit()
+    return {"id": str(record.id)}
+
+
+@router.delete("/api/history/{record_id}")
+async def delete_history(
+    record_id: UUID,
+    req: HistoryDeleteRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    r = await session.get(HistoryRecord, record_id)
+    if not r:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    if r.device_id and r.device_id != req.device_id:
+        raise HTTPException(status_code=403, detail="无权删除此记录")
+    await session.delete(r)
+    await session.commit()
+    return {"ok": True}
 
 

@@ -19,7 +19,8 @@
         💬 {{ store.planResult.commentary }}
       </div>
 
-      <div class="map-toggle">
+      <div class="action-bar">
+        <button class="btn btn-outline" @click="sharePlan" :disabled="sharing">📤 分享此方案</button>
         <button v-if="!showMap" class="btn btn-outline" @click="showMap = true">🗺️ 显示地图</button>
         <button v-else class="btn btn-outline" @click="showMap = false">🗺️ 收起地图</button>
       </div>
@@ -43,6 +44,7 @@ import { usePlanStore } from '@/stores/plan'
 import AmapMap from '@/components/AmapMap.vue'
 import SchedulePanel from '@/components/SchedulePanel.vue'
 import type { PlanResultSolution } from '@/types'
+import { postHistory, getDeviceId } from '@/services/api'
 
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
@@ -53,34 +55,37 @@ const highlightDay = ref(-1)
 const showMap = ref(false)
 /** 行程表中点击的景点名，用于地图 marker 高亮。 */
 const highlightSpot = ref('')
+/** 分享按钮加载状态 */
+const sharing = ref(false)
 
-/**
- * 从 store.planResult 提取摘要写入 localStorage 历史记录。
- * 仅存 city/hotel/days/cost 等元信息，完整结果因体积过大不持久化。
- */
-function saveToHistory() {
+/** 手动分享当前方案到分享站（PostgreSQL）。 */
+async function sharePlan() {
   const r = store.planResult
-  if (!r) return
-  const key = `plan_${Date.now()}`
-  const record = {
-    id: key,
-    city: r.city || store.city,
-    hotel: store.hotelName,
-    n_days: r.best_days,
-    cost: r.solution?.total_cost,
-    spots: store.spots.length,
-    time: new Date().toLocaleString(),
+  if (!r || sharing.value) return
+  const note = prompt('添加备注（可选，方便其他访客了解此方案）：')
+  if (note === null) return
+  sharing.value = true
+  try {
+    await postHistory({
+      device_id: getDeviceId(),
+      note: note || undefined,
+      city: r.city || store.city,
+      hotel: store.hotelName,
+      n_days: r.best_days,
+      cost: r.solution?.total_cost,
+      spot_count: store.spots.length,
+      plan_result: r as unknown as Record<string, unknown>,
+    })
+    alert('✅ 方案已分享到分享站！可在"历史记录"页面查看。')
+  } catch {
+    alert('❌ 分享失败，请稍后重试。')
+  } finally {
+    sharing.value = false
   }
-  const raw = localStorage.getItem('travelpal_history')
-  const list = raw ? JSON.parse(raw) : []
-  list.unshift(record)
-  if (list.length > 10) list.length = 10
-  localStorage.setItem('travelpal_history', JSON.stringify(list))
 }
 
 watch(() => store.planResult, (val) => {
   if (val) {
-    saveToHistory()
     highlightDay.value = -1
     showMap.value = false
     highlightSpot.value = ''
@@ -114,7 +119,7 @@ watch(() => store.planResult, (val) => {
 .plan-schedule { flex: 1; min-width: 320px; }
 .btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
 .btn-primary { background: #1a73e8; color: #fff; }
-.map-toggle { display: flex; justify-content: center; margin-bottom: 16px; }
+.action-bar { display: flex; justify-content: center; gap: 12px; margin-bottom: 16px; }
 .metric-days { gap: 6px; }
 .days-input { width: 52px; text-align: center; padding: 6px 4px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
 .add-poi-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }

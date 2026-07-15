@@ -1,10 +1,21 @@
 """FastAPI 应用工厂与启动入口。"""
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router
+from backend.data.model.database import init_db, close_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期：启动时创建数据库表，关闭时释放连接池。"""
+    await init_db()
+    yield
+    await close_db()
+
 
 # ================== 应用工厂 ==================
 
@@ -12,12 +23,12 @@ def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用实例。
 
     初始化 API 路由、CORS 跨域策略（允许 Vue 开发服务器访问）、
-    静态资源挂载（CesiumJS /Build/ 目录）。
+    数据库连接池、生命周期管理。
 
     Returns:
         FastAPI: 配置完成的应用实例。
     """
-    app = FastAPI(title="TravelPal API", version="0.1.0")
+    app = FastAPI(title="TravelPal API", version="0.1.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

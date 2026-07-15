@@ -84,6 +84,7 @@ async function sharePlan() {
   }
 }
 
+// 新方案加载时重置 UI 状态：全部显示 → 收起地图 → 清空选中景点
 watch(() => store.planResult, (val) => {
   if (val) {
     highlightDay.value = -1

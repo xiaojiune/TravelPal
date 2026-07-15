@@ -202,6 +202,18 @@ async def list_history(
     page_size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ):
+    """获取历史记录分页列表。
+
+    仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
+    不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
+
+    Args:
+        page: 页码，从 1 开始。
+        page_size: 每页条数，最大 100。
+
+    Returns:
+        HistoryListResponse: { items, total, page, page_size }。
+    """
     count_q = select(func.count(HistoryRecord.id))
     total = (await session.execute(count_q)).scalar() or 0
 
@@ -231,6 +243,17 @@ async def list_history(
 
 @router.get("/api/history/{record_id}", response_model=HistoryDetail)
 async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
+    """获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+
+    Args:
+        record_id: 记录 UUID。
+
+    Returns:
+        HistoryDetail: 含 plan_result/request_params 等完整字段。
+
+    Raises:
+        HTTPException 404: 记录不存在。
+    """
     r = await session.get(HistoryRecord, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
@@ -250,6 +273,23 @@ async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(ge
 
 @router.post("/api/history", status_code=201)
 async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get_session)):
+    """保存一条历史记录（分享方案到分享站）。
+
+    设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
+    这是软鉴权设计。核心考量：
+    1. 不引入注册/登录系统，保持访客零门槛
+    2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
+    3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+
+    Args:
+        req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+
+    Returns:
+        dict: { id: str } 新创建的记录 UUID。
+
+    Raises:
+        HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
+    """
     record = HistoryRecord(
         device_id=req.device_id,
         note=req.note,
@@ -272,6 +312,19 @@ async def delete_history(
     req: HistoryDeleteRequest,
     session: AsyncSession = Depends(get_session),
 ):
+    """删除一条历史记录（需 device_id 匹配创建者）。
+
+    Args:
+        record_id: 记录 UUID。
+        req: HistoryDeleteRequest，包含 device_id。
+
+    Returns:
+        dict: { ok: true }
+
+    Raises:
+        HTTPException 404: 记录不存在。
+        HTTPException 403: device_id 不匹配，无权删除。
+    """
     r = await session.get(HistoryRecord, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")

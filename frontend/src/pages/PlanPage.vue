@@ -20,7 +20,8 @@
       </div>
 
       <div class="action-bar">
-        <button class="btn btn-outline" :disabled="sharing" @click="sharePlan">📤 分享此方案</button>
+        <button v-if="store.historyRecordId" class="btn btn-outline" disabled>✅ 已在分享站</button>
+        <button v-else class="btn btn-outline" :disabled="sharing" @click="sharePlan">📤 分享此方案</button>
         <button v-if="!showMap" class="btn btn-outline" @click="showMap = true">🗺️ 显示地图</button>
         <button v-else class="btn btn-outline" @click="showMap = false">🗺️ 收起地图</button>
       </div>

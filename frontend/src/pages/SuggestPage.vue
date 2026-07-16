@@ -151,6 +151,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
 function onCardClick(s: SuggestionItem) {
   if (mode.value === 'deep') return
   store.planResult = buildPlanResultFromSuggestion(s)
+  store.historyRecordId = null
   router.push('/plan')
 }
 
@@ -183,6 +184,7 @@ async function runDeep() {
 
 function viewDeepResult(r: PlanResult) {
   store.planResult = r
+  store.historyRecordId = null
   router.push('/plan')
 }
 </script>

@@ -54,7 +54,10 @@ export function useEditTable() {
 
   /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
   watch(editRows, () => {
-    if (!_rebuilding) store.isParamsSaved = false
+    if (!_rebuilding) {
+      store.isParamsSaved = false
+      editHint.value = ''
+    }
   }, { deep: true })
 
   /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */

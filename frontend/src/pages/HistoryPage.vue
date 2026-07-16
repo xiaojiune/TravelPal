@@ -83,6 +83,7 @@ async function viewRecord(r: HistorySummary) {
   try {
     const detail = await getHistoryDetail(r.id)
     store.planResult = detail.plan_result as any
+    store.historyRecordId = r.id
     router.push('/plan')
   } catch {
     alert('加载方案详情失败，请稍后重试。')

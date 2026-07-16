@@ -22,6 +22,8 @@ export const usePlanStore = defineStore('plan', () => {
   // ====== 参数确认锁 ======
   /** 用户是否已确认当前规划点参数。false 时阻止获取方案建议。 */
   const isParamsSaved = ref(false)
+  /** 从历史记录加载的记录 ID，非空时 PlanPage 应禁用「分享此方案」。 */
+  const historyRecordId = ref<string | null>(null)
 
   // ====== 方案状态 ======
   const suggestions = ref<SuggestionItem[]>([])
@@ -91,6 +93,7 @@ export const usePlanStore = defineStore('plan', () => {
     spots.value = []
     minDays.value = null
     isParamsSaved.value = false
+    historyRecordId.value = null
     suggestions.value = []
     suggestSpots.value = {}
     selectedNDays.value = null
@@ -110,7 +113,7 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwStart, hotelTwEnd, dayStart,
     spots, penaltyWeight, earlyWaitWeight, lateReturnWeight,
     minDays,
-    isParamsSaved,
+    isParamsSaved, historyRecordId,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
     planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestPolylines, suggestAlgoTime, amapApiKey, amapSecurityCode, loading,
     buildRequest, reset,

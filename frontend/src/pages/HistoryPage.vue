@@ -16,8 +16,8 @@
           <div class="h-main">
             <span class="h-city">{{ r.city }}</span>
             <span class="h-days">{{ r.n_days }} 天</span>
-            <span class="h-cost" v-if="r.cost != null">成本 {{ r.cost.toFixed(1) }}</span>
-            <span class="h-spots" v-if="r.spot_count != null">{{ r.spot_count }} 个景点</span>
+            <span v-if="r.cost != null" class="h-cost">成本 {{ r.cost.toFixed(1) }}</span>
+            <span v-if="r.spot_count != null" class="h-spots">{{ r.spot_count }} 个景点</span>
           </div>
           <div class="h-meta">
             <span v-if="r.hotel">{{ r.hotel }}</span>

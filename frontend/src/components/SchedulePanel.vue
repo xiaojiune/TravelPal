@@ -3,7 +3,13 @@
     <h3>每日行程</h3>
     <div v-if="!dailySchedules?.length" class="empty">暂无行程数据</div>
     <div v-for="(day, di) in dailySchedules" v-else :key="di" class="day-section">
-      <h4 class="day-title" :class="{ 'day-active': activeDay === di }" @click="toggleDay(di)">第 {{ di + 1 }} 天<span class="day-hint">{{ collapsedDays.has(di) ? '展开' : '收起' }}{{ activeDay === di ? ' (当前)' : '' }}</span></h4>
+      <div class="day-header">
+        <span class="day-toggle" @click="toggleDay(di)">
+          <span class="day-arrow">{{ collapsedDays.has(di) ? '▶' : '▼' }}</span>
+          <span class="day-title" :class="{ 'day-active': activeDay === di }">第 {{ di + 1 }} 天</span>
+        </span>
+        <button class="btn-highlight" :class="{ active: activeDay === di }" @click="emit('select-day', activeDay === di ? -1 : di)">◎ 高显</button>
+      </div>
       <table v-show="!collapsedDays.has(di)" class="schedule-table">
         <thead>
           <tr>
@@ -77,7 +83,6 @@ function toggleDay(di: number) {
   const next = new Set(collapsedDays.value)
   if (next.has(di)) { next.delete(di) } else { next.add(di) }
   collapsedDays.value = next
-  emit('select-day', activeDay === di ? -1 : di)
 }
 
 /**
@@ -116,10 +121,15 @@ function statusColor(s: string | null | undefined) {
 .schedule-panel h3 { margin-bottom: 12px; font-size: 15px; }
 .empty { color: #999; font-size: 13px; padding: 20px 0; text-align: center; }
 .day-section { margin-bottom: 16px; }
-.day-title { font-size: 14px; color: #1a73e8; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; cursor: pointer; user-select: none; }
-.day-title:hover { opacity: 0.7; }
-.day-title.day-active { background: #e8f0fe; margin: -4px -8px 8px; padding: 4px 8px; border-radius: 4px; }
-.day-hint { font-size: 11px; color: #999; font-weight: 400; margin-left: 6px; }
+.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; }
+.day-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+.day-toggle:hover .day-title { opacity: 0.7; }
+.day-arrow { font-size: 10px; color: #aaa; }
+.day-title { font-size: 14px; color: #999; font-weight: 400; }
+.day-title.day-active { color: #1a73e8; font-weight: 700; }
+.btn-highlight { background: none; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 11px; color: #bbb; cursor: pointer; padding: 2px 8px; transition: all .15s; }
+.btn-highlight:hover { border-color: #1a73e8; color: #1a73e8; }
+.btn-highlight.active { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; font-weight: 600; }
 .schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e0e0e0; color: #888; font-weight: 600; }
 .schedule-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }

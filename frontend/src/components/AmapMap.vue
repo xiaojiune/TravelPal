@@ -8,7 +8,7 @@
  * 从旧项目 cesium_utils.py 迁移并适配 AMap JS API v2.0。
  *
  * 景点点击弹 InfoWindow 显示行程详情（到达/离开/状态）。
- * 路线支持高亮单日（highlightDay），非高亮日完全隐藏。
+ * 路线支持高亮多日（highlightDays），非高亮日完全隐藏。
  * 每条路段独立绘制 Polyline，无 polyline 数据的路段不绘制（无欧几里得直线降级）。
  */
 import { ref, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'vue'
@@ -74,8 +74,8 @@ interface Props {
   polylines?: Record<string, string>
   /** 每日行程表，用于 InfoWindow 点击弹窗 */
   dailySchedules?: ScheduleItem[][]
-  /** 高亮某日（索引），-1 表示全部正常显示 */
-  highlightDay?: number
+  /** 高亮多日（索引数组），空数组表示全部正常显示 */
+  highlightDays?: number[]
   /** 高亮景点名，来自 SchedulePanel 点击，marker 弹跳+居中 */
   highlightSpot?: string
   amapKey?: string
@@ -87,7 +87,7 @@ const props = withDefaults(defineProps<Props>(), {
   spots: () => ({}),
   polylines: () => ({}),
   dailySchedules: () => [],
-  highlightDay: -1,
+  highlightDays: () => [],
   highlightSpot: '',
   amapKey: '',
   securityCode: '',
@@ -180,7 +180,7 @@ function render() {
 
   // 绘制每日驾车路径（每条路段独立 Polyline，无 polyline 数据时不绘制）
   ;(props.routes as number[][]).forEach((route, di) => {
-    if (props.highlightDay >= 0 && di !== props.highlightDay) return  // 非高亮日完全隐藏
+    if (props.highlightDays.length > 0 && !props.highlightDays.includes(di)) return  // 非高亮日完全隐藏
     const color = ROUTE_COLORS[di % ROUTE_COLORS.length]
 
     for (let i = 0; i < route.length - 1; i++) {
@@ -269,7 +269,7 @@ onActivated(() => {
 })
 
 // 任意地图数据变化时重新渲染
-watch(() => [props.routes, props.spots, props.polylines, props.highlightDay], render, { deep: true })
+watch(() => [props.routes, props.spots, props.polylines, props.highlightDays], render, { deep: true })
 
 /** 左右联动：行程表点击景点 → 对应 marker 弹跳 + 居中 */
 watch(() => props.highlightSpot, (name) => {

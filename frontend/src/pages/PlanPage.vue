@@ -48,10 +48,10 @@
 
       <div class="plan-layout">
         <div v-if="showMap" class="plan-map">
-          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :highlight-day="highlightDay" :highlight-spot="highlightSpot" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
+          <AmapMap :routes="solution.routes" :spots="store.planResult?.spots || {}" :polylines="store.planResult?.polylines" :daily-schedules="store.planResult?.daily_schedules" :highlight-days="[...highlightDays]" :highlight-spot="highlightSpot" :amap-key="(store.planResult?.amap_api_key) || ''" :security-code="(store.planResult?.amap_security_code) || ''" /><!-- 路线/景点/真实轨迹 + 高德 JS API 凭据 -->
         </div>
         <div class="plan-schedule">
-          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :active-day="highlightDay" @select-day="highlightDay = $event" @select-spot="highlightSpot = $event" />
+          <SchedulePanel :daily-schedules="store.planResult?.daily_schedules" :all-expanded="!showMap" :highlight-days="[...highlightDays]" @toggle-day="toggleDay" @select-spot="highlightSpot = $event" />
         </div>
       </div>
     </template>
@@ -70,8 +70,13 @@ import { postHistory, getDeviceId } from '@/services/api'
 const store = usePlanStore()
 const solution = computed<PlanResultSolution>(() => (store.planResult?.solution || { routes: [], total_cost: 0, total_dist: 0, wait: 0, late: 0, valid: false }) as PlanResultSolution)
 
-/** 当前高亮日索引，-1 表示全部显示。点击 SchedulePanel 日期标题切换。 */
-const highlightDay = ref(-1)
+/** 当前高亮日集合，空集合表示全部显示。SchedulePanel 高显按钮切换。 */
+const highlightDays = ref<Set<number>>(new Set())
+function toggleDay(di: number) {
+  const next = new Set(highlightDays.value)
+  if (next.has(di)) { next.delete(di) } else { next.add(di) }
+  highlightDays.value = next
+}
 /** 地图是否已显示（懒加载，首次点击按钮后常驻）。 */
 const showMap = ref(false)
 /** 行程表中点击的景点名，用于地图 marker 高亮。 */
@@ -101,11 +106,11 @@ async function sharePlan() {
       note: note || undefined,
       city: r.city || store.city,
       hotel: store.hotelName,
-      n_days: r.best_days,
+      n_days: r.best_days ?? 1,
       cost: r.solution?.total_cost,
       spot_count: store.spots.length,
       plan_result: r as unknown as Record<string, unknown>,
-      request_params: store.buildRequest(r.best_days),
+      request_params: store.buildRequest(r.best_days ?? null),
     })
     alert('✅ 方案已分享到分享站！可在"历史记录"页面查看。')
   } catch {
@@ -115,10 +120,10 @@ async function sharePlan() {
   }
 }
 
-// 新方案加载时重置 UI 状态：全部显示 → 收起地图 → 清空选中景点
+// 新方案加载时重置 UI 状态：全部折叠 → 收起地图 → 清空选中景点
 watch(() => store.planResult, (val) => {
   if (val) {
-    highlightDay.value = -1
+    highlightDays.value = new Set()
     showMap.value = false
     highlightSpot.value = ''
   }

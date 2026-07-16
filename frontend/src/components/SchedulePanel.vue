@@ -4,13 +4,10 @@
     <div v-if="!dailySchedules?.length" class="empty">暂无行程数据</div>
     <div v-for="(day, di) in dailySchedules" v-else :key="di" class="day-section">
       <div class="day-header">
-        <span class="day-toggle" @click="toggleDay(di)">
-          <span class="day-arrow">{{ collapsedDays.has(di) ? '▶' : '▼' }}</span>
-          <span class="day-title" :class="{ 'day-active': activeDay === di }">第 {{ di + 1 }} 天</span>
-        </span>
-        <button class="btn-highlight" :class="{ active: activeDay === di }" @click="emit('select-day', activeDay === di ? -1 : di)">◎ 高显</button>
+        <span class="day-title" :class="{ 'day-active': highlightDays?.includes(di) }">第 {{ di + 1 }} 天</span>
+        <button class="btn-highlight" :class="{ active: highlightDays?.includes(di) }" @click="emit('toggle-day', di)">◎ 高显</button>
       </div>
-      <table v-show="!collapsedDays.has(di)" class="schedule-table">
+      <table v-show="allExpanded || highlightDays?.includes(di)" class="schedule-table">
         <thead>
           <tr>
             <th>景点</th>
@@ -51,8 +48,13 @@
  * Props:
  *   dailySchedules: ScheduleItem[][]  — 每日行程，每项含 name/arrival/departure/tw/stay/status
  *   onRemovePoi: ((name: string) => void) | null  — 移除景点回调，null 时不显示移除按钮
+ *   allExpanded: boolean  — 地图收起时强制全部展开
+ *   highlightDays: number[]  — 高亮日索引数组，空数组表示全部显示
+ *
+ * Events:
+ *   toggle-day(dayIndex): 高显按钮点击，切换某日高亮状态
+ *   select-spot(spotName): 景点行点击，选中某景点
  */
-import { ref, watch } from 'vue'
 import type { ScheduleItem } from '@/types'
 
 // ====== 工具函数 ======
@@ -60,30 +62,16 @@ import type { ScheduleItem } from '@/types'
 const props = defineProps<{
   dailySchedules?: ScheduleItem[][]
   onRemovePoi?: ((name: string) => void) | null
-  /** 当前高亮日索引，-1 表示全部显示。用于在标题上标记选中状态。 */
-  activeDay?: number
+  /** 地图收起时强制全部展开 */
+  allExpanded?: boolean
+  /** 当前高亮日索引数组，空数组表示全部显示。用于在标题上标记选中状态 + 控制表格显隐。 */
+  highlightDays?: number[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'select-day', dayIndex: number): void
+  (e: 'toggle-day', dayIndex: number): void
   (e: 'select-spot', spotName: string): void
 }>()
-
-/** 已折叠的天数集合，默认展开第 1 天。 */
-const collapsedDays = ref<Set<number>>(new Set())
-
-function resetCollapsed() {
-  const n = props.dailySchedules?.length || 0
-  collapsedDays.value = new Set(Array.from({ length: n }, (_, i) => i).filter(i => i !== 0))
-}
-resetCollapsed()
-watch(() => props.dailySchedules, resetCollapsed)
-
-function toggleDay(di: number) {
-  const next = new Set(collapsedDays.value)
-  if (next.has(di)) { next.delete(di) } else { next.add(di) }
-  collapsedDays.value = next
-}
 
 /**
  * 将分钟数转换为 HH:MM 格式。
@@ -122,9 +110,6 @@ function statusColor(s: string | null | undefined) {
 .empty { color: #999; font-size: 13px; padding: 20px 0; text-align: center; }
 .day-section { margin-bottom: 16px; }
 .day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; }
-.day-toggle { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
-.day-toggle:hover .day-title { opacity: 0.7; }
-.day-arrow { font-size: 10px; color: #aaa; }
 .day-title { font-size: 14px; color: #999; font-weight: 400; }
 .day-title.day-active { color: #1a73e8; font-weight: 700; }
 .btn-highlight { background: none; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 11px; color: #bbb; cursor: pointer; padding: 2px 8px; transition: all .15s; }

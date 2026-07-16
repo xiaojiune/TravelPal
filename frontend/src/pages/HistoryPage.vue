@@ -38,13 +38,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
 import { getHistoryList, getHistoryDetail, deleteHistory, getDeviceId } from '@/services/api'
 import type { HistorySummary } from '@/services/api'
 
 const router = useRouter()
+const route = useRoute()
 const store = usePlanStore()
 
 const items = ref<HistorySummary[]>([])
@@ -102,7 +103,9 @@ async function deleteRecord(r: HistorySummary) {
   }
 }
 
-onMounted(loadList)
+watch(() => route.path, (path) => {
+  if (path === '/history') loadList()
+}, { immediate: true })
 </script>
 
 <style scoped>

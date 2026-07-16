@@ -67,7 +67,7 @@
       <h3>算法参数</h3>
       <div class="form-grid-3">
         <div><label>启程时间</label><input :value="store.dayStart || ''" type="number" min="0" max="1440" placeholder="请输入" @input="store.dayStart = Number(($event.target as HTMLInputElement).value) || 0" /><span class="unit-info">0=午夜, 480=08:00</span></div>
-        <div><label>最小天数</label><input :value="store.minDays ?? ''" type="number" min="1" placeholder="自动" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" /><span class="unit-info">n_spots//8+1={{ minDaysHint }}</span></div>
+        <div><label>最小天数</label><input :value="store.minDays ?? ''" type="number" min="1" placeholder="自动" @input="store.minDays = Number(($event.target as HTMLInputElement).value) || null" /><span class="unit-info">默认 n_spots//8+1={{ minDaysHint }}</span></div>
         <div><label>迟到惩罚</label><input v-model.number="store.penaltyWeight" type="number" step="10" /></div>
         <div><label>等待惩罚</label><input v-model.number="store.earlyWaitWeight" type="number" step="0.1" /></div>
         <div><label>晚归惩罚</label><input v-model.number="store.lateReturnWeight" type="number" step="10" /></div>

@@ -1,4 +1,4 @@
-.PHONY: dev serve lint build test clean dc-up dc-up-d dc-down dc-logs dc-ps
+.PHONY: dev serve lint typecheck build test clean dc-up dc-up-d dc-down dc-logs dc-ps
 
 dev:
 	cd frontend && npm run dev
@@ -8,6 +8,9 @@ serve:
 
 lint:
 	cd frontend && npm run lint
+
+typecheck:
+	cd frontend && npx vue-tsc --noEmit
 
 build:
 	cd frontend && npm run build

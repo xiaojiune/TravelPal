@@ -1,10 +1,10 @@
-.PHONY: dev serve lint build test clean dc-up dc-down dc-logs dc-ps
+.PHONY: dev serve lint build test clean dc-up dc-up-d dc-down dc-logs dc-ps
 
 dev:
 	cd frontend && npm run dev
 
 serve:
-	.venv/bin/python -m backend.api.server --reload
+	.venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
 
 lint:
 	cd frontend && npm run lint
@@ -16,6 +16,9 @@ test:
 	.venv/bin/pytest
 
 dc-up:
+	docker compose up
+
+dc-up-d:
 	docker compose up -d
 
 dc-down:

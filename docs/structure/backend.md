@@ -22,7 +22,7 @@
     └── POST /api/chat ───────→ Agent (Function Calling)
 ```
 
-核心原则：**Agent 是交互层，Engine 是计算层**。Agent 不参与路径计算，只做意图识别与参数提取。当前 Agent 通过 tools.py 直接调用函数，后续 MCP 迁移后可统一接管 API 入口。
+核心原则：**Agent 是交互层，Engine 是计算层**。Agent 不参与路径计算，只做意图识别与参数提取。当前 Agent 通过 chat_tools.py 直接调用函数，后续 MCP 迁移后可统一接管 API 入口。
 
 ## 二、目录结构
 
@@ -37,7 +37,7 @@ backend/
 │   └── schemas.py         Pydantic 请求/响应模型
 │
 ├── agent/                 LLM Agent 层
-│   ├── tools.py           工具函数（parse_biz_hours、build_chat_messages）
+│   ├── chat_tools.py       工具函数（parse_biz_hours、build_chat_messages）
 │   ├── planner.py         行程调整三指令（加/删景点、调天数）
 │   └── commentator.py     方案评语生成
 │
@@ -58,6 +58,7 @@ backend/
 │   └── chroma_db/         向量数据库（待填充）
 │
 └── tools/                 工具脚本
+    ├── deprecated.py       @legacy_only 装饰器（标记遗留函数）
     ├── gen_openapi.py     导出 OpenAPI 规范 JSON
     └── sync_all.py        自动同步 __init__.py 的 __all__
 ```
@@ -120,7 +121,7 @@ Pydantic 请求/响应模型，按功能分组：
 
 ## 五、LLM Agent 层 (agent/)
 
-### tools.py
+### chat_tools.py
 
 工具函数，Agent 通过 Function Calling 调用：
 
@@ -225,6 +226,7 @@ cluster_and_solve(spots, cost_mat, mode, n_days)
 
 | 脚本 | 用途 |
 |------|------|
+| `deprecated.py` | `@legacy_only` 装饰器，标记仅作遗留参考的函数 |
 | `gen_openapi.py` | 导出 `openapi.json`（供 openapi-typescript 生成前端类型） |
 | `sync_all.py` | 扫描 `__init__.py` 的 import 语句，自动同步 `__all__` |
 

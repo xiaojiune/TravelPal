@@ -14,7 +14,7 @@ from backend.api.schemas import (
 from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
-from backend.agent.tools import parse_biz_hours, build_chat_messages, chat_stream
+from backend.agent.chat_tools import parse_biz_hours, build_chat_messages, chat_stream
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord
 from fastapi.responses import StreamingResponse

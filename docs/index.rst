@@ -25,7 +25,7 @@
    :caption: 项目结构与部署
 
    structure/project
-   structure/back
+   structure/backend
    structure/data
    structure/frontend
    dev-env

@@ -20,8 +20,6 @@ CA_DEFAULT_PARAMS = {
     'use_compressed_annealing': True,
     'compressed_penalty_start': 0.1,
     'compressed_penalty_end': 1.0,
-    'min_clusters': 1,
-    'max_clusters': 10,
     'early_stop_gain_threshold': 1.0,
     'stop_consecutive_worse': 3,
 }

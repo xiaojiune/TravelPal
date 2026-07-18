@@ -16,9 +16,10 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          pip install --no-cache-dir poetry poetry-plugin-export
-          poetry export --without-hashes -o requirements.txt
-          pip install --no-cache-dir -r requirements.txt pytest-cov
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-interaction
+          pip install pytest-cov
       - name: Run tests with coverage
         run: pytest --cov --cov-report=xml
       - uses: codecov/codecov-action@v5

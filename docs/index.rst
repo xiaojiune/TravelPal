@@ -26,9 +26,10 @@
 
    structure/project
    structure/backend
-   structure/data
    structure/frontend
-   dev-env
+   structure/data
+   structure/docs
+   deploy
 
 .. toctree::
    :maxdepth: 2

@@ -81,7 +81,7 @@ def find_dataset(subdir: str, instance: int = 1) -> str:
     Raises:
         FileNotFoundError: 数据集文件不存在。
     """
-    base = os.path.join(os.path.dirname(__file__), "..", "data", "DataSets")
+    base = os.path.join(os.path.dirname(__file__), "..", "raw_data", "DataSets")
     path = os.path.join(base, subdir, f"{subdir}.{instance:03d}.txt")
     if not os.path.exists(path):
         raise FileNotFoundError(f"Dataset not found: {path}")

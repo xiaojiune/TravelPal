@@ -1,11 +1,11 @@
 # 不应该被提交的文件
 AAA-test/
 docs++/
-data/DataSets/
-!data/DataSets/n20w20/n20w20.001.txt
-!data/DataSets/n60w60/n60w60.003.txt
-!data/DataSets/n100w20/n100w20.001.txt
-!data/DataSets/n200w40/n200w40.005.txt
+raw_data/DataSets/
+!raw_data/DataSets/n20w20/n20w20.001.txt
+!raw_data/DataSets/n60w60/n60w60.003.txt
+!raw_data/DataSets/n100w20/n100w20.001.txt
+!raw_data/DataSets/n200w40/n200w40.005.txt
 frontend/static/
 
 # 敏感配置

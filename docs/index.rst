@@ -12,6 +12,8 @@
    ADR/003
    ADR/004
    ADR/005
+   ADR/006
+   ADR/007
 
 .. toctree::
    :maxdepth: 1
@@ -25,10 +27,12 @@
    :caption: 项目结构与部署
 
    structure/project
-   structure/back
-   structure/data
+   structure/backend
    structure/frontend
-   dev-env
+   structure/agent
+   structure/data
+   structure/docs
+   deploy
 
 .. toctree::
    :maxdepth: 2

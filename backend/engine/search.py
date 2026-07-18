@@ -1,9 +1,12 @@
+"""双模式分发：CA 全参数搜索建议 + 指定天数求解。"""
+
+import time
 import numpy as np
 from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 from backend.engine.vns import VNSSolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
-from backend.types import SpotDict, RouteResult
+from backend.typedefs import SpotDict, RouteResult
 
 # ================== 分组求解 ==================
 
@@ -139,24 +142,23 @@ def _deduplicate(results: list) -> list:
 # ================== CA 全参数搜索 ==================
 
 def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
-               min_days: int | None = None, max_days: int | None = None,
+               min_days: int | None = None,
                early_stop_gain_threshold: float | None = None,
                stop_consecutive_worse: int | None = None,
                travel_speed: float = 1.0, penalty_weight: float = 100.0,
                early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
                use_real_time_matrix: bool = False) -> dict:
     """
-    全参数搜索，输出 top-5 建议。
+    全参数搜索，输出全部可行方案建议（去重后）。
 
-    遍历 6 种聚类方法 × min_days~max_days 天数，使用 CA 快速求解各组，
-    按成本排序去重后返回前 5 个最优方案。支持增益阈值式早退。
+    遍历 6 种聚类方法 × min_days 向上递增，使用 CA 快速求解各组，
+    按成本排序去重后返回全部方案。支持增益阈值式早退。
 
     Args:
         spots: 景点字典。
         depot: depot 索引。
         cost_mat: 距离/成本矩阵。
-        min_days: 最小天数（默认 CA_DEFAULT_PARAMS["min_clusters"]）。
-        max_days: 最大天数（默认 CA_DEFAULT_PARAMS["max_clusters"]）。
+        min_days: 最小天数（默认 n_spots//8+1）。
         early_stop_gain_threshold: 增益阈值百分比（默认 1.0%），低于此视为无效改善。
         stop_consecutive_worse: 连续无效改善次数上限（默认 3）。
         travel_speed: 行驶速度。
@@ -166,29 +168,26 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
-        dict: type="suggestion"，suggestions 为前 5 个最优方案的列表（含 n_days、method、cost、groups）。
+        dict: type="suggestion"；顶层含 algo_time（引擎求解耗时秒数）、
+        suggestions 为全部可行方案的列表（含 n_days、method、cost、routes 等）。
     """
+    n_spots = len(spots) - 1
     if min_days is None:
-        min_days = CA_DEFAULT_PARAMS["min_clusters"]
-    if max_days is None:
-        max_days = CA_DEFAULT_PARAMS["max_clusters"]
+        min_days = max(1, n_spots // 8 + 1)
     if early_stop_gain_threshold is None:
         early_stop_gain_threshold = CA_DEFAULT_PARAMS["early_stop_gain_threshold"]
     if stop_consecutive_worse is None:
         stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
 
-    n_spots = len(spots) - 1
-    # 天数不能超过景点数，否则必然有空组
-    max_days = min(max_days, n_spots)
-
     raw_results = []
+    algo_start = time.time()  # 计时仅覆盖引擎求解阶段（不含 API 拉取）
 
     for method_name, method_func in CLUSTER_METHODS:
         best_cost = float("inf")
         best_days = min_days
         worse_count = 0
 
-        for n_days in range(min_days, max_days + 1):
+        for n_days in range(min_days, n_spots + 1):
             groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
             res = solve_groups(
                 groups, spots, cost_mat, "CA",
@@ -196,11 +195,17 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
+            if len(res["routes"]) != n_days:  # 聚类可能产生空天（组数与 n_days 不匹配），跳过该方案
+                continue
             raw_results.append({
                 "method": method_name,
                 "n_days": n_days,
                 "cost": res["total_cost"],
+                "total_dist": res["total_dist"],
+                "wait": res["wait"],
+                "late": res["late"],
                 "groups": groups,
+                "routes": res["routes"],
             })
             # 增益阈值早退：改善不明显（< early_stop_gain_threshold%）或连续变差达到上限时停止该聚类方法的搜索
             if res["total_cost"] < best_cost:
@@ -221,18 +226,21 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
     # 先按成本排序再去重：不同聚类方法可能产出相同分组，靠后的运行轮次因 CA 随机性成本可能更低，排序确保每组保留最优解
     raw_results.sort(key=lambda x: x["cost"])
     deduped = _deduplicate(raw_results)
-    top5 = deduped[:5]
 
     return {
         "type": "suggestion",
+        "algo_time": round(time.time() - algo_start, 2),
         "suggestions": [
             {
                 "n_days": item["n_days"],
                 "method": item["method"],
                 "cost": item["cost"],
-                "groups": item["groups"],
+                "total_dist": item["total_dist"],
+                "wait": item["wait"],
+                "late": item["late"],
+                "routes": item["routes"],
             }
-            for item in top5
+            for item in deduped
         ],
         "message": "请指定行程天数以获得最终方案",
     }
@@ -241,6 +249,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
 
 def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                       mode: str = "fast", n_days: int | None = None,
+                      min_days: int | None = None,
                       travel_speed: float = 1.0, penalty_weight: float = 100.0,
                       early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
                       use_real_time_matrix: bool = False) -> dict:
@@ -257,6 +266,7 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
         cost_mat: 距离/成本矩阵。
         mode: "fast"（CA，秒级）或 "deep"（VNS，分钟级）。
         n_days: 行程天数。deep 模式必填。
+        min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
         travel_speed: 行驶速度。
         penalty_weight: 违规惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
@@ -284,8 +294,9 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
                 early_wait_weight, late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
+            if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
+                continue
             if res["total_cost"] < best_cost:
-                best_cost = res["total_cost"]
                 best_result = res
                 best_m = method_name
                 best_groups = groups
@@ -302,6 +313,7 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
 
     return ca_suggest(
         spots, depot, cost_mat,
+        min_days=min_days,
         travel_speed=travel_speed,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,

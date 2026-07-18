@@ -4,7 +4,10 @@ import type { components } from '@/api/types.generated'
 // ==================== API 类型（由 OpenAPI 驱动） ====================
 
 /** 发送给后端的 PlanRequest */
-export type PlanRequestPayload = components['schemas']['PlanRequest']
+export type PlanRequestPayload = components['schemas']['PlanRequest'] & {
+  cost_matrix?: number[][]
+  dist_matrix?: number[][]
+}
 
 /** POI 查找结果 */
 export type POILookupItem = components['schemas']['POILookupItem']
@@ -19,6 +22,11 @@ export interface SuggestionItem {
   n_days: number
   method: string
   cost: number
+  total_dist: number
+  wait: number
+  late: number
+  routes: number[][]
+  daily_schedules?: ScheduleItem[][]
 }
 
 /** 规划结果的 solution 子对象 */
@@ -45,7 +53,10 @@ export interface PlanResult {
   cost_matrix?: number[][]
   dist_matrix?: number[][]
   amap_api_key?: string
+  amap_security_code?: string
   algo_time?: number
+  /** 真实路径坐标字典。key 为 "fromIdx_toIdx"（如 "0_3"），value 为高德 polyline 格式 "lng,lat;lng,lat" */
+  polylines?: Record<string, string>
 }
 
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
@@ -58,8 +69,8 @@ export interface SpotFormItem {
   twStart: number
   twEnd: number
   stay: number
-  address?: string
   expectedArrival?: number
+  address?: string
 }
 
 /** 行程项 */

@@ -1,37 +1,24 @@
+"""高德地图 API 封装：POI 搜索、营业时间解析、驾车路径规划与成本矩阵构建。"""
+
 import os, time, datetime
 import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
-
-# ================== POI 坐标查询 ==================
-
-def get_poi_location(poi_name: str, city: str = "北京") -> tuple[float, float]:
-    """
-    通过高德地点搜索 API 获取 POI 坐标。
-
-    Args:
-        poi_name: 景点名称。
-        city: 城市名，默认北京。
-
-    Returns:
-        Tuple[float, float]: (经度, 纬度)，失败时返回 (116.4, 39.9)。
-    """
-    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY}
-    try:
-        resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
-        data = resp.json()
-        if data["status"] == "1" and int(data["count"]) > 0:
-            loc = data["pois"][0]["location"]
-            lon, lat = map(float, loc.split(','))
-            return lon, lat
-        else:
-            print(f"警告：未找到 '{poi_name}'，使用默认坐标")
-            return 116.4, 39.9
-    except Exception as e:
-        print(f"POI请求失败: {e}")
-        return 116.4, 39.9
+from backend.utils.deprecated import legacy_only
 
 # ---------- 工具函数 ----------
+
+def normalize_text(text: str) -> str:
+    """全角字符转为半角字符，用于名称匹配前归一化。"""
+    result = []
+    for char in text:
+        code = ord(char)
+        if 0xFF01 <= code <= 0xFF5E:
+            result.append(chr(code - 0xFEE0))
+        else:
+            result.append(char)
+    return ''.join(result)
+
 
 def _parse_date(date_str: str, year: int) -> datetime.date | None:
     """解析高德营业时间中的日期段，如 '04月01日' → datetime.date。成功返回 date，失败返回 None。"""
@@ -44,6 +31,14 @@ def _parse_date(date_str: str, year: int) -> datetime.date | None:
     return None
 
 
+# ================== 营业时间解析（兜底方案） ==================
+# 当前生产环境使用 LLM 解析（tools.poi.py parse_biz_hours），
+# 此函数保留用途：
+# 1. LLM 解析失败时的 emergency fallback
+# 2. 规则解析的参考实现
+# 3. 单元测试的对照组（用于对比 LLM 解析的质量）
+# 注意：不再维护新格式，仅保持可用状态。
+@legacy_only
 def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
     """
     解析高德营业时间字符串为时间窗元组。
@@ -102,40 +97,80 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
 
 # ================== POI 详细信息 ==================
 
-def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str]:
+def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str, str] | str:
     """
-    获取 POI 详细信息（坐标 + 营业时间 + 地址）。
+    获取 POI 详细信息（坐标 + 营业时间 + 地址 + 省/市名 + 实际名称 + 行业分类）。
 
     Args:
         poi_name: 景点名称。
         city: 城市名。
 
     Returns:
-        Tuple[float, float, str, str]: (经度, 纬度, 营业时间字符串, 完整地址)。失败返回默认值。
+        tuple[float, float, str, str, str, str, str, str]: 成功返回 8 元组
+        第 8 项 poi_type 为高德行业分类（如 "住宿服务;宾馆酒店"）。
+        str: 失败返回错误信息字符串。
     """
-    params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY, "extensions": "all"}
+
+    def _match_name(query: str, result_name: str) -> bool:
+        """双向子串匹配：归一化全角符号后再比较。"""
+        q = normalize_text(query)
+        r = normalize_text(result_name)
+        return q in r or r in q
+
+    def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str, str]:
+        loc = poi["location"]
+        lon, lat = map(float, loc.split(','))
+        biz_hours = ""
+        if "biz_ext" in poi and "opentime2" in poi["biz_ext"]:
+            biz_hours = poi["biz_ext"]["opentime2"]
+        pname = poi.get("pname", "")
+        cityname = poi.get("cityname", "")
+        adname = poi.get("adname", "")
+        street = poi.get("address", "")
+        full_address = f"{pname}{cityname}{adname}{street}"
+        actual_name = poi.get("name", poi_name)
+        poi_type = poi.get("type", "")
+        return lon, lat, biz_hours, full_address, pname, cityname, actual_name, poi_type
+
     try:
+        # 策略1：types=风景名胜 + city_limit，高德分类准确时直接命中
+        params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
+                  "extensions": "all", "city_limit": True, "types": "风景名胜"}
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
         data = resp.json()
-        if data["status"] == "1" and int(data["count"]) > 0:
+        if data["status"] == "1" and int(data.get("count", 0)) > 0:
             poi = data["pois"][0]
-            loc = poi["location"]
-            lon, lat = map(float, loc.split(','))
-            biz_hours = ""
-            if "biz_ext" in poi and "opentime2" in poi["biz_ext"]:
-                biz_hours = poi["biz_ext"]["opentime2"]
-            pname = poi.get("pname", "")
-            cityname = poi.get("cityname", "")
-            adname = poi.get("adname", "")
-            street = poi.get("address", "")
-            full_address = f"{pname}{cityname}{adname}{street}"
-            return lon, lat, biz_hours, full_address
-        else:
-            print(f"\n警告：未找到 '{poi_name}' 的信息，请尝试更换搜索词")
-            return 116.4, 39.9, "", ""
+            if _match_name(poi_name, poi.get("name", "")):
+                return _extract_poi(poi)
+
+        # 策略2：去掉 types，按关键词相关性自然排序（如岭南印象园→中山纪念堂的误配）
+        params2 = {k: v for k, v in params.items() if k != "types"}
+        resp2 = requests.get("https://restapi.amap.com/v3/place/text", params=params2, timeout=10)
+        data2 = resp2.json()
+        if data2["status"] == "1" and int(data2.get("count", 0)) > 0:
+            poi2 = data2["pois"][0]
+            if _match_name(poi_name, poi2.get("name", "")):
+                return _extract_poi(poi2)
+
+        # 策略3：全国搜索，仅用于判定跨城市（city_limit 排除了不在本市的景点）
+        relax_params = {k: v for k, v in params2.items() if k != "city_limit"}
+        resp3 = requests.get("https://restapi.amap.com/v3/place/text", params=relax_params, timeout=10)
+        data3 = resp3.json()
+        if data3["status"] == "1" and int(data3.get("count", 0)) > 0:
+            poi3 = data3["pois"][0]
+            pname = poi3.get("pname", "")
+            cityname = poi3.get("cityname", "")
+            # 同城市则返回，不限名字（高德全国搜索默认按相关性排序）
+            if city and cityname and city in cityname:
+                if _match_name(poi_name, poi3.get("name", "")):
+                    return _extract_poi(poi3)
+                return f"未找到 '{poi_name}' 的信息"
+            return f"'{poi_name}' 不在 {city}，可能在 {pname}{cityname}"
+
+        return f"未找到 '{poi_name}' 的信息"
     except Exception as e:
         print(f"POI请求失败: {e}")
-        return 116.4, 39.9, "", ""
+        return f"'{poi_name}' 查询失败"
 
 # ================== 驾车路径规划 ==================
 
@@ -150,6 +185,9 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
 
     Returns:
         Tuple[float | None, int | None, str | None]: (距离 km, 耗时 秒, 折线字符串)。
+
+    Raises:
+        Exception: 网络请求异常时重试，重试耗尽后返回 (None, None, None)。
     """
     url = "https://restapi.amap.com/v3/direction/driving"
     params = {
@@ -202,6 +240,9 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
 
     Returns:
         Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
+
+    Raises:
+        Exception: 驾车 API 调用失败时输出警告，对应矩阵元素置为 -1 标记不可达。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))
@@ -212,11 +253,10 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
         for j in range(n):
             if i == j:
                 continue
-            # 利用对称性：A→B 已请求过则 B→A 直接填入，减少 API 调用量
+            # cost/dist 对称复用，polyline 因方向相关不作对称（由 pipeline._supplement_polylines 补调）
             if cost[j][i] > 0:
                 cost[i][j] = cost[j][i]
                 dist[i][j] = dist[j][i]
-                polylines[(i, j)] = polylines.get((j, i), "")
                 continue
             d_km, dur, poly = _get_driving_data(coords[i], coords[j])
             if dur is not None:

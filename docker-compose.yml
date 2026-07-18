@@ -24,6 +24,42 @@ services:
     volumes:
       - redis_data:/data
 
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
+    container_name: travelpal-backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
+      AMAP_API_KEY: ${AMAP_API_KEY}
+      AMAP_JS_KEY: ${AMAP_JS_KEY}
+      AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_MODEL: ${LLM_MODEL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NPM_REGISTRY: https://registry.npmmirror.com
+    container_name: travelpal-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:

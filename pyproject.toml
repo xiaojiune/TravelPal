@@ -23,11 +23,16 @@ dependencies = [
     "matplotlib (>=3.10.0,<4.0.0)",
     "streamlit (>=1.40.0,<2.0.0)",
     "openai (>=1.60.0,<2.0.0)",
-    "chromadb (>=1.5.9,<2.0.0)"
+    "chromadb (>=1.5.9,<2.0.0)",
+    "redis (>=5.0.0,<6.0.0)",
+    "jieba (>=0.42.0,<0.43.0)"
 ]
 
 [tool.poetry]
 package-mode = false
+
+[tool.poetry.scripts]
+dev = "backend.api.server:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.1.1"

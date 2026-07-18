@@ -1,38 +1,36 @@
 /** 规划点管理表格 composable：维护编辑行数据，提供确认/删除操作，与 store 数据解耦。 */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 
 interface EditRow {
   isHotel: boolean; name: string; address: string
   lon: number; lat: number
-  twStart: number; twEnd: number; stay: number; expectedArrival: number; delete: boolean
+  twStart: number; twEnd: number; stay: number
+  expectedArrival: number; delete: boolean
 }
 
-/**
- * @param hasResults - 是否有 POI 搜索结果（由 usePoiSearch 传入），控制管理表格是否隐藏
- */
-export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
+export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
+  let _rebuilding = false  // 重建中标志，阻止 editRows watch 触发解锁
+  let _saving = false      // 保存中标志，阻止 store watch 重建
 
-  /** 管理表格显隐：搜索结果展示时隐藏，已有已确认点位时展示。避免表格和搜索结果同时出现。 */
-  const showManagement = computed(() => {
-    if (hasResults.value) return false
-    if (store.spots.length > 0) return true
-    if (store.hotelName && store.hotelLon) return true
-    return false
-  })
+  rebuildEditRows()  // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
+
+  /** 已有确认点位时展示管理表格。 */
+  const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
 
   /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
   function rebuildEditRows() {
+    _rebuilding = true
     const rows: EditRow[] = []
     if (store.hotelName && store.hotelLon) {
       rows.push({
         isHotel: true, name: store.hotelName, address: store.hotelAddress,
         lon: store.hotelLon, lat: store.hotelLat,
         twStart: store.hotelTwStart, twEnd: store.hotelTwEnd,
-        stay: 0, expectedArrival: store.hotelTwStart, delete: false,
+        stay: 0, expectedArrival: 0, delete: false,
       })
     }
     store.spots.forEach(s => {
@@ -40,13 +38,29 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
         isHotel: false, name: s.name, address: s.address || '',
         lon: s.lon, lat: s.lat,
         twStart: s.twStart, twEnd: s.twEnd,
-        stay: s.stay, expectedArrival: s.expectedArrival ?? s.twStart, delete: false,
+        stay: s.stay, expectedArrival: s.expectedArrival ?? 0, delete: false,
       })
     })
     editRows.value = rows
+    nextTick(() => { _rebuilding = false })
   }
 
-  watch([() => store.spots, () => store.hotelName, () => store.hotelLon], rebuildEditRows, { deep: true })
+  /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
+  watch([() => store.spots, () => store.hotelName, () => store.hotelLon, () => store.hotelAddress], () => {
+    if (!_saving) {
+      store.isParamsSaved = false
+      editHint.value = ''
+    }
+    rebuildEditRows()
+  }, { deep: true, flush: 'sync' })
+
+  /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
+  watch(editRows, () => {
+    if (!_rebuilding) {
+      store.isParamsSaved = false
+      editHint.value = ''
+    }
+  }, { deep: true })
 
   /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */
   function formatBiz(start: number, end: number) {
@@ -72,27 +86,34 @@ export function useEditTable(hasResults: ReturnType<typeof ref<boolean>>) {
     store.spots = remaining.filter(r => !r.isHotel).map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
+      expectedArrival: r.expectedArrival,
       address: r.address,
     }))
     editHint.value = ''
-    rebuildEditRows()
   }
 
-  /** 将编辑行数据回写 store（时间窗/停留/预计到达），触发重建。 */
+  /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
   function applyEdits() {
     const hotelRow = editRows.value.find(r => r.isHotel)
     if (hotelRow) {
       store.hotelTwStart = hotelRow.twStart
       store.hotelTwEnd = hotelRow.twEnd
     }
-    store.spots = editRows.value.filter(r => !r.isHotel).map(r => ({
+    const spotsOnly = editRows.value.filter(r => !r.isHotel)
+    if (spotsOnly.length === 0) {
+      editHint.value = '请先搜索并添加景点'
+      return
+    }
+    _saving = true
+    store.isParamsSaved = true
+    store.spots = spotsOnly.map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
       twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
+      expectedArrival: r.expectedArrival,
       address: r.address,
     }))
+    _saving = false
     editHint.value = '参数已保存'
-    setTimeout(() => { editHint.value = '' }, 2000)
-    rebuildEditRows()
   }
 
   return { editRows, editHint, showManagement, rebuildEditRows, formatBiz, deleteSelectedRows, applyEdits }

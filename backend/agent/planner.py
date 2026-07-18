@@ -1,6 +1,8 @@
+"""方案调整功能：改天数、添加/移除景点并重新求解。"""
+
 import numpy as np
 from backend.engine.search import cluster_and_solve, solve_groups
-from backend.types import SpotDict, RouteResult
+from backend.typedefs import SpotDict, RouteResult
 
 
 def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:
@@ -9,7 +11,7 @@ def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, d
     Args:
         spots_dict: 景点字典（与 run_planning 格式一致）。
         cost_matrix: np.ndarray 成本矩阵。
-        dist_matrix: np.ndarray 距离矩阵。
+        dist_matrix: np.ndarray 距离矩阵（仅接收，不参与求解，用于矩阵一致性维护）。
         new_n_days: 新的行程天数。
 
     Returns:
@@ -31,7 +33,7 @@ def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, d
         return result
 
     solution = result["solution"]
-    daily_schedules = _rebuild_schedule(solution["routes"], spots, dist)
+    daily_schedules = _rebuild_schedule(solution["routes"], spots, cost)
     return {
         "solution": solution,
         "best_days": new_n_days,
@@ -49,7 +51,7 @@ def add_poi_to_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, di
     Args:
         spots_dict: 景点字典（含新 POI，矩阵已对应展开）。
         cost_matrix: 展开后的成本矩阵（ndarray）。
-        dist_matrix: 展开后的距离矩阵（ndarray）。
+        dist_matrix: 展开后的距离矩阵（ndarray，仅接收，不参与求解）。
         routes: 当前方案的路径列表（仅用于获取天数）。
 
     Returns:
@@ -62,7 +64,7 @@ def add_poi_to_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, di
     if result["type"] != "solution":
         return result
     solution = result["solution"]
-    daily_schedules = _rebuild_schedule(solution["routes"], spots_dict, dist_matrix)
+    daily_schedules = _rebuild_schedule(solution["routes"], spots_dict, cost_matrix)
     return {
         "solution": solution,
         "best_days": n_days,
@@ -80,7 +82,7 @@ def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarra
     Args:
         spots_dict: 景点字典。
         cost_matrix: np.ndarray 成本矩阵。
-        dist_matrix: np.ndarray 距离矩阵。
+        dist_matrix: np.ndarray 距离矩阵（仅接收，用于矩阵一致性维护，不参与求解）。
         routes: 当前方案的路径列表。
         poi_name: 要移除的景点名称。
 
@@ -129,7 +131,7 @@ def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarra
         if result["type"] != "solution":
             return result
         solution = result["solution"]
-        daily_schedules = _rebuild_schedule(solution["routes"], new_spots, dist)
+        daily_schedules = _rebuild_schedule(solution["routes"], new_spots, cost)
         return {
             "solution": solution,
             "best_days": new_n_days,
@@ -140,7 +142,7 @@ def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarra
     groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in new_routes]
     result = solve_groups(groups, new_spots, cost, solver_type="CA")
     routes = result["routes"]
-    daily_schedules = _rebuild_schedule(routes, new_spots, dist)
+    daily_schedules = _rebuild_schedule(routes, new_spots, cost)
 
     return {
         "solution": result,

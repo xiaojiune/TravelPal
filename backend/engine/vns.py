@@ -1,9 +1,10 @@
+"""变邻域搜索求解器（VNS），集成多种邻域算子和自适应权重机制。"""
 
 import random
 import math
 from typing import Tuple, List
 import numpy as np
-from backend.types import SpotDict
+from backend.typedefs import SpotDict
 from numba import njit
 from backend.engine.fitness import analyze_solution
 
@@ -226,6 +227,7 @@ class VNSSolver:
         return route
 
     def _init_time_window(self) -> list[int]:
+        """按时间窗起始排序生成初始解（启发式，起终点闭合路径）。"""
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
             cities_with_time.sort(key=lambda x: x[1])

@@ -11,7 +11,7 @@
 | 条目 | 类型 | 说明 |
 |------|------|------|
 | `ADR/` | 目录 | 架构决策记录（5 份，编号 001-005） |
-| `structure/` | 目录 | 项目结构文档（本目录） |
+| `structure/` | 目录 | 项目结构文档（6 份：project/backend/agent/frontend/data/docs） |
 | `_build/` | 目录 | Sphinx HTML 构建产物（.gitignore） |
 | `_static/` | 目录 | Sphinx 静态资源 |
 | `coding.md` | 文件 | 编码规范（P0-P3 四级注释体系） |
@@ -27,6 +27,7 @@
 |------|------|
 | 项目全局概览 | [`project.md`](project.md) |
 | 后端架构详解 | [`backend.md`](backend.md) |
+| Agent 层详解 | [`agent.md`](agent.md) |
 | 前端架构详解 | [`frontend.md`](frontend.md) |
 | 全链路数据字典 | [`data.md`](data.md) |
 | 架构决策记录 | `ADR/001.md` ~ `ADR/005.md` |

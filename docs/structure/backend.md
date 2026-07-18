@@ -22,7 +22,7 @@
     └── POST /api/chat ───────→ Agent (Function Calling)
 ```
 
-核心原则：**Agent 是交互层，Engine 是计算层**。Agent 不参与路径计算，只做意图识别与参数提取。当前 Agent 通过 chat_tools.py 直接调用函数，后续 MCP 迁移后可统一接管 API 入口。
+核心原则：**Agent 是交互层，Engine 是计算层**。Agent 不参与路径计算，只做意图识别与参数提取。当前 Agent 通过 chat.py + tools/ 直接调用函数，后续 MCP 迁移后可统一接管 API 入口。
 
 ## 二、目录结构
 
@@ -37,9 +37,14 @@ backend/
 │   └── schemas.py         Pydantic 请求/响应模型
 │
 ├── agent/                 LLM Agent 层
-│   ├── chat_tools.py       工具函数（parse_biz_hours、build_chat_messages）
+│   ├── chat.py             对话调度（chat_stream、build_chat_messages、MOCK_MODE）
 │   ├── planner.py         行程调整三指令（加/删景点、调天数）
-│   └── commentator.py     方案评语生成
+│   ├── commentator.py     方案评语生成
+│   └── tools/             工具函数子包
+│       ├── __init__.py    TOOL_REGISTRY 注册表（统一导出）
+│       ├── poi.py         POI 工具（parse_biz_hours、poi_lookup）
+│       ├── prompts.py     LLM prompt 模板（CHAT_SYSTEM、PARSE_PROMPT、TOOL_DEFINITIONS）
+│       └── rag.py         RAG 工具（预留）
 │
 ├── engine/                求解引擎核心
 │   ├── pipeline.py        流程编排入口（run_planning）
@@ -57,7 +62,7 @@ backend/
 │   ├── knowledge_base.py  知识库检索
 │   └── chroma_db/         向量数据库（待填充）
 │
-└── tools/                 工具脚本
+└── utils/                 通用工具
     ├── deprecated.py       @legacy_only 装饰器（标记遗留函数）
     ├── gen_openapi.py     导出 OpenAPI 规范 JSON
     └── sync_all.py        自动同步 __init__.py 的 __all__
@@ -121,31 +126,14 @@ Pydantic 请求/响应模型，按功能分组：
 
 ## 五、LLM Agent 层 (agent/)
 
-### chat_tools.py
+负责 LLM 对话、工具调用和评语生成。详见 [`agent.md`](agent.md) 独立文档。
 
-工具函数，Agent 通过 Function Calling 调用：
-
-- `parse_biz_hours(amap_opentime2, spot_name)` → LLM 解析营业时间为 `(start_min, end_min)`
-- `build_chat_messages(messages, plan_result)` → 构造对话上下文
-- `chat_stream(messages)` → SSE 流式响应
-
-### planner.py
-
-三指令规划器：
-
-- `add_spot` — 加景点（重算路径）
-- `remove_spot` — 去景点（重算路径）
-- `adjust_days` — 调天数（重分配行程）
-
-当前通过 Function Calling 调用。详见 [`docs/ADR/001.md`](../ADR/001.md#67) 引擎架构决策。
-
-### commentator.py
-
-方案评语生成器：
-
-- `generate_commentary(plan_result)` → 自然语言评语（规则模板 + LLM 润色混合）
-
-详见 [`docs/产品路线图.md`](../产品路线图.md) 第一阶段 Commentator。
+| 组件 | 文件 | 说明 |
+|------|------|------|
+| 对话流 | `chat.py` | SSE 流式聊天入口 |
+| 工具系统 | `tools/` | Function Calling 工具注册与执行 |
+| 评语生成 | `commentator.py` | 规划结果解说 |
+| 规划调整 | `planner.py` | 加/删景点、调天数（函数已就绪，未接入 Function Calling） |
 
 ## 六、求解引擎层 (engine/)
 

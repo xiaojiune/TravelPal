@@ -27,6 +27,7 @@
    structure/project
    structure/backend
    structure/frontend
+   structure/agent
    structure/data
    structure/docs
    deploy

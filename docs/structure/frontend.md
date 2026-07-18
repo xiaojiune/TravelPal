@@ -82,9 +82,10 @@ frontend/
 
 - **PlanPage.vue**（`/plan`）
   纯展示页：指标栏（成本/距离/等待）、评语、AmapMap 地图、SchedulePanel 行程表、原始请求参数折叠面板。
-
 - **AgentPage.vue**（`/agent`）
-  LLM Agent 对话：输入框 + SSE 流式消息列表 + 打字机效果。
+
+  LLM Agent 对话：输入框 + SSE 流式消息列表 + 打字机效果 + 左侧待选栏。
+  后端协议详见 [`agent.md`](agent.md)。
 
 - **HistoryPage.vue**（`/history`）
   历史记录分页列表，点击拉取完整数据跳转 /plan。

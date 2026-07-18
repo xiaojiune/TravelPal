@@ -11,6 +11,7 @@
 [![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
+
 🌐 在线演示：<http://119.29.222.100>（域名 `trippal.site` 备案中）
 
 ---

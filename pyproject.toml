@@ -36,6 +36,7 @@ dev = "backend.api.server:main"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.1.1"
+pytest-cov = "^7.1.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^9"

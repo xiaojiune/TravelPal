@@ -4,7 +4,7 @@ import os, time, datetime
 import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
-from backend.tools.deprecated import deprecated
+from backend.tools.deprecated import legacy_only
 
 # ---------- 工具函数 ----------
 
@@ -38,7 +38,7 @@ def _parse_date(date_str: str, year: int) -> datetime.date | None:
 # 2. 规则解析的参考实现
 # 3. 单元测试的对照组（用于对比 LLM 解析的质量）
 # 注意：不再维护新格式，仅保持可用状态。
-@deprecated
+@legacy_only
 def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
     """
     解析高德营业时间字符串为时间窗元组。

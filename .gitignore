@@ -116,3 +116,6 @@ docs_buildhtml/
 
 # openapi-typescript 中间产物
 frontend/openapi.json
+
+# Sphinx 构建时自动生成
+docs/openapi.json

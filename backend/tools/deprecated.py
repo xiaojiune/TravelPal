@@ -4,11 +4,14 @@ import functools
 import warnings
 
 
-def deprecated(func):
-    """标记函数已废弃的装饰器，调用时打印 DeprecationWarning。
+def legacy_only(func):
+    """标记仅作遗留参考的函数，调用时打印 DeprecationWarning。
+
+    与 typing_extensions.deprecated 不同，此装饰器明确表示函数
+    不再维护、不应被新代码调用，仅保留作参考或单元测试对照组。
 
     用法:
-        @deprecated
+        @legacy_only
         def old_function():
             ...
     """

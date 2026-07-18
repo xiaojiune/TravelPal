@@ -31,8 +31,10 @@ TravelPal/
 │   └── spots/       景点 MD 仓库（待填充）
 ├── tests/          测试目录
 ├── docker-compose.yml    四服务编排（postgres/redis/backend/nginx）
-├── Dockerfile.backend    后端容器镜像（Poetry export + pip）
-├── Dockerfile.frontend   前端容器镜像（双阶段：Node build → Nginx serve）
+├── docker/
+│   ├── Dockerfile.backend    后端容器镜像（Poetry export + pip）
+│   ├── Dockerfile.frontend   前端容器镜像（双阶段：Node build → Nginx serve）
+│   └── nginx.conf            Nginx 反向代理配置（API proxy + 前端静态 + SSE）
 ├── deploy.sh             一键部署脚本
 ├── .env.example          环境变量模板
 ├── Makefile              开发命令（dev/serve/lint/build/test/docker）

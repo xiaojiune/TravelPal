@@ -1,29 +1,40 @@
-"""RAG 检索引擎：BM25 全文检索，零外部依赖。
+"""RAG 检索引擎：BM25 全文检索。
 
 扫描 docs/*.md + README.md，按 ## 标题切块后建立 BM25 索引。
-分词策略：英文按空白拆分，中文单字索引，不依赖 jieba 等分词库。
+分词策略：中文用 jieba 分词，英文按空白拆分。
 """
 
 import os
 import math
 import re
 from collections import Counter, defaultdict
+import jieba
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 _DOC_DIR = os.path.join(_PROJECT_ROOT, "docs")
 
+_STOP_WORDS = frozenset({
+    "的", "了", "是", "在", "和", "与", "也", "就", "都", "而",
+    "及", "或", "这", "那", "哪", "一", "不", "很", "会", "可以",
+    "什么", "怎么", "如何", "为什么", "哪个", "哪些", "好吗",
+    "吗", "呢", "吧", "啊", "哦", "嗯", "哈", "呀", "嘛",
+    "我", "你", "他", "她", "它", "我们", "你们", "他们",
+    "有", "要", "来", "去", "把", "被", "让", "给", "对", "从",
+    "到", "上", "下", "中", "里", "外", "前", "后", "个", "种",
+})
+
 
 def _tokenize(text: str) -> list[str]:
-    """中英文混合分词：英文按空白分割，中文拆为单字。"""
+    """中英文混合分词：中文用 jieba，英文按空白分割，过滤停用词。"""
     tokens = []
     for part in re.split(r'([\u4e00-\u9fff]+)', text):
         if not part:
             continue
         if re.match(r'^[\u4e00-\u9fff]+$', part):
-            tokens.extend(list(part))
+            tokens.extend(jieba.lcut(part))
         else:
             tokens.extend(part.lower().split())
-    return [t for t in tokens if t.strip()]
+    return [t for t in tokens if t.strip() and t not in _STOP_WORDS]
 
 
 class RagEngine:
@@ -93,16 +104,7 @@ class RagEngine:
         for term, count in df.items():
             self._idf[term] = math.log((n - count + 0.5) / (count + 0.5) + 1.0)
 
-    def search(self, query: str, k: int = 3) -> list[dict]:
-        """BM25 检索，返回 top-k 条结果。"""
-        if not self._initialized:
-            self.init()
-        if not self._docs:
-            return []
-        q_tokens = _tokenize(query)
-        if not q_tokens:
-            return []
-
+    def _bm25_score(self, q_tokens: list[str]) -> list[tuple[float, dict]]:
         k1, b = 1.5, 0.75
         results = []
         for d in self._docs:
@@ -116,8 +118,29 @@ class RagEngine:
                 score += idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / self._avgdl))
             if score > 0:
                 results.append((score, d))
-
         results.sort(key=lambda x: -x[0])
+        return results
+
+    def search(self, query: str, k: int = 3) -> list[dict]:
+        """BM25 检索，返回 top-k 条结果。低分时自动提取关键词重试。"""
+        if not self._initialized:
+            self.init()
+        if not self._docs:
+            return []
+        q_tokens = _tokenize(query)
+        if not q_tokens:
+            return []
+
+        results = self._bm25_score(q_tokens)
+        if results and results[0][0] > 0.5:
+            return [
+                {"score": round(s, 4), "source": d["source"],
+                 "heading": d["heading"], "text": d["text"][:300]}
+                for s, d in results[:k]
+            ]
+        keywords = [t for t in q_tokens if len(t) > 1]
+        if keywords and keywords != q_tokens:
+            results = self._bm25_score(keywords)
         return [
             {"score": round(s, 4), "source": d["source"],
              "heading": d["heading"], "text": d["text"][:300]}

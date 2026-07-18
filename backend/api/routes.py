@@ -70,7 +70,7 @@ async def poi_lookup(req: POILookupRequest):
             if isinstance(result, str):
                 failed.append(result)
             else:
-                lon, lat, biz_hours, address, pname, cityname, actual_name = result
+                lon, lat, biz_hours, address, pname, cityname, actual_name, _ = result
                 parsed = parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else None
                 tw_end = parsed[1] if parsed else None
@@ -191,6 +191,7 @@ async def chat(req: ChatRequest):
             )
             choice = resp.choices[0]
             if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+                messages.append(choice.message)
                 for tc in choice.message.tool_calls:
                     tool_name = tc.function.name
                     try:
@@ -202,19 +203,24 @@ async def chat(req: ChatRequest):
                         yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
                         result = tool_fn(**args)
                         yield f"data: {json.dumps({'type': 'tool_result', 'data': result})}\n\n"
-                        messages.append(choice.message)
                         messages.append({
                             "role": "tool",
                             "tool_call_id": tc.id,
                             "content": json.dumps(result, ensure_ascii=False),
                         })
                 # 第二阶段：流式输出 LLM 回复
-                async for token in chat_stream(messages):
-                    yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+                try:
+                    async for token in chat_stream(messages):
+                        yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+                except Exception:
+                    yield f"data: {json.dumps({'type': 'error', 'data': '对话生成失败，请重试'})}\n\n"
             else:
                 # 无工具调用，直接流式输出
-                async for token in chat_stream(messages):
-                    yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+                try:
+                    async for token in chat_stream(messages):
+                        yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+                except Exception:
+                    yield f"data: {json.dumps({'type': 'error', 'data': '对话生成失败，请重试'})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         return StreamingResponse(

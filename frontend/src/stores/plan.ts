@@ -19,9 +19,26 @@ export const usePlanStore = defineStore('plan', () => {
   const lateReturnWeight = ref(50)
   const minDays = ref<number | null>(null)
 
-  /** 从 Agent 页面添加一个景点到输入列表。 */
-  function addSpot(poi: SpotFormItem) {
-    spots.value.push(poi)
+  /** 从 Agent 页面添加一个 POI 到输入列表。自动识别酒店或景点。 */
+  function addSpot(poi: SpotFormItem & { poi_type?: string }) {
+    if (poi.poi_type === 'hotel') {
+      hotelName.value = poi.name
+      hotelLon.value = poi.lon
+      hotelLat.value = poi.lat
+      hotelAddress.value = poi.address ?? ''
+      hotelTwStart.value = poi.twStart ?? 0
+      hotelTwEnd.value = poi.twEnd ?? 1440
+    } else {
+      spots.value.push({
+        name: poi.name,
+        lon: poi.lon,
+        lat: poi.lat,
+        twStart: poi.twStart ?? 480,
+        twEnd: poi.twEnd ?? 1020,
+        stay: poi.stay ?? 0,
+        address: poi.address,
+      })
+    }
     isParamsSaved.value = false
   }
 

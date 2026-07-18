@@ -16,6 +16,8 @@ export function useEditTable() {
   let _rebuilding = false  // 重建中标志，阻止 editRows watch 触发解锁
   let _saving = false      // 保存中标志，阻止 store watch 重建
 
+  rebuildEditRows()  // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
+
   /** 已有确认点位时展示管理表格。 */
   const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
 

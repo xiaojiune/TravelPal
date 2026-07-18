@@ -97,20 +97,18 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
 
 # ================== POI 详细信息 ==================
 
-def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str] | str:
+def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str, str] | str:
     """
-    获取 POI 详细信息（坐标 + 营业时间 + 地址 + 省/市名 + 实际名称）。
+    获取 POI 详细信息（坐标 + 营业时间 + 地址 + 省/市名 + 实际名称 + 行业分类）。
 
     Args:
         poi_name: 景点名称。
         city: 城市名。
 
     Returns:
-        tuple[float, float, str, str, str, str, str]: 成功返回 7 元组
+        tuple[float, float, str, str, str, str, str, str]: 成功返回 8 元组
+        第 8 项 poi_type 为高德行业分类（如 "住宿服务;宾馆酒店"）。
         str: 失败返回错误信息字符串。
-
-    Raises:
-        Exception: 网络请求异常时透传，由调用方捕获。
     """
 
     def _match_name(query: str, result_name: str) -> bool:
@@ -119,7 +117,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         r = normalize_text(result_name)
         return q in r or r in q
 
-    def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str]:
+    def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str, str]:
         loc = poi["location"]
         lon, lat = map(float, loc.split(','))
         biz_hours = ""
@@ -131,7 +129,8 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         street = poi.get("address", "")
         full_address = f"{pname}{cityname}{adname}{street}"
         actual_name = poi.get("name", poi_name)
-        return lon, lat, biz_hours, full_address, pname, cityname, actual_name
+        poi_type = poi.get("type", "")
+        return lon, lat, biz_hours, full_address, pname, cityname, actual_name, poi_type
 
     try:
         # 策略1：types=风景名胜 + city_limit，高德分类准确时直接命中

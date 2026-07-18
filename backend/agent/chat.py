@@ -34,7 +34,7 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
 
 
 async def mock_stream_chat(messages: list[dict]):
-    """Mock SSE 流式聊天，模拟 1 条自然回复用于联调。"""
+    """调试用：MOCK_MODE=True 时模拟 SSE 流式回复，无需 LLM API Key。"""
     reply = "今天的安排不错，下午可以去附近的公园走走！"
     for char in reply:
         yield char

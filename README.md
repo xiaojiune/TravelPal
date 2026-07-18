@@ -7,6 +7,8 @@
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
 [![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
 
+🏷️ `运筹优化 · LLM Agent · 地图可视化 · 全栈工程化`
+
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 🌐 在线演示：*（待部署）*
@@ -16,6 +18,8 @@
 ## ✨ 核心功能
 
 - **双引擎求解**：CA 秒级出可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
+  
+  > 算法基于 Dumas 经典 TSPTW 基准测试集（n20 ~ n200 多规模算例）验证，中等规模（n100）求解时间秒至分钟级，约束满足率优于同类启发式算法。
 - **对话式规划**：LLM Agent 理解自然语言需求，支持边聊边调
 - **地图可视化**：真实驾车路径实时渲染，景点标注精确到达/离开时间与状态
 - **方案选择**：一次生成多组方案，按总成本/时长/等待时间灵活选择
@@ -46,6 +50,7 @@ cp .env.example .env
 
 # 3. 一键启动（四服务编排：PostgreSQL + Redis + 后端 + 前端 Nginx）
 docker compose up -d
+# 首次启动自动完成数据库建表，无需手动初始化
 
 # 4. 打开 http://localhost
 # 后端启动后可访问 http://localhost:8000/docs 查看交互式 Swagger API 文档
@@ -63,6 +68,7 @@ docker compose up -d
 ## 🔧 开发模式
 
 前置条件：Python 3.12、Node.js 22、PostgreSQL、Redis。
+本地数据库依赖也可通过 `docker compose up -d postgres redis` 快速启动，无需本地安装。
 
 ```bash
 make install            # 一键安装前后端依赖
@@ -94,8 +100,6 @@ TravelPal/
 
 ## 🏗️ 技术栈
 
-算法基于 TSPTW 标准测试集（n100w20 / n60w60 / n200w40）验证，优先保证路径可行性与约束满足。
-
 | 层 | 技术 | 用途 |
 |---|------|------|
 | 后端框架 | Python 3.12 + FastAPI | REST API / SSE 流式服务 |
@@ -124,4 +128,8 @@ TravelPal/
 
 ## 许可
 
-MIT License
+Copyright © 2026 xiaojiune. Released under the MIT License.
+
+---
+
+> 欢迎 [Star ⭐](https://github.com/xiaojiune/TravelPal) / [Issue](https://github.com/xiaojiune/TravelPal/issues) / PR 交流

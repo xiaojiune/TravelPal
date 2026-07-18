@@ -1,26 +1,31 @@
 # TravelPal · 旅行伴侣
 
-基于双引擎（CA/VNS）+ LLM Agent 的智能旅行规划系统。
+**不是生成文字攻略，是生成可执行的行程方案。**
+结合元启发式算法（CA/VNS）与 LLM Agent，严格保证时间窗约束与路径最优的智能旅行规划系统。
 
-通过对话了解你的喜好，自动生成兼顾路线、时间和景点的行程方案，并在地图上直观呈现。
+[![GitHub License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
+[![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
+
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
+🌐 在线演示：*（待部署）*
 
 ---
 
 ## ✨ 核心功能
 
-- **对话式规划**：告诉 Agent 你想去哪、玩几天、什么节奏，边聊边调
-- **地图可视化**：每日路线实时绘制在高德地图上，景点标记含到达/离开时间
-- **方案选择**：一次生成多组方案，按天数/成本对比挑选，或深度搜索最优解
-- **行程调整**：出发前自由修改景点列表和停留时间，重新规划
-- **历史分享**：方案保存至云端，分享给朋友或跨设备查看
+- **双引擎求解**：CA 秒级出可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
+- **对话式规划**：LLM Agent 理解自然语言需求，支持边聊边调
+- **地图可视化**：真实驾车路径实时渲染，景点标注精确到达/离开时间与状态
+- **方案选择**：一次生成多组方案，按总成本/时长/等待时间灵活选择
+- **匿名公共历史**：可选保存行程至云端，跨设备查看与分享
 
 ## 💡 与纯 LLM 旅行规划的区别
 
-- 纯 LLM 方案（如直接问 ChatGPT）生成的行程是"看起来合理"的文本
-- **TravelPal 的行程是"可执行"的方案**：自定义元启发式算法保证时间窗约束、避免绕路、支持用户实时调整
-- LLM 负责"理解需求 + 解说"，自定义算法负责"数学最优解"——各司其职
+- 纯 LLM 方案（如直接问 ChatGPT）生成的行程"看起来合理"，但常出现景点绕路、营业时间不符、时间估算失真，无法直接执行
+- **TravelPal 的行程是"可执行"的方案**：自定义元启发式算法保证时间窗约束与路径最优，LLM 只负责需求理解与自然语言解说——各司其职
+- **结果差异**：纯 LLM 给你"一段文字"，TravelPal 给你"精确时间表 + 真实驾车路径 + 可交互地图"
 
 ## 🖼️ 效果预览
 
@@ -39,10 +44,11 @@ cd TravelPal
 cp .env.example .env
 # 编辑 .env，填入以下 key（申请方式见下表）
 
-# 3. 一键启动（PostgreSQL + Redis + 后端 + 前端 Nginx）
+# 3. 一键启动（四服务编排：PostgreSQL + Redis + 后端 + 前端 Nginx）
 docker compose up -d
 
 # 4. 打开 http://localhost
+# 后端启动后可访问 http://localhost:8000/docs 查看交互式 Swagger API 文档
 ```
 
 ### 获取 API Key
@@ -65,7 +71,7 @@ make serve              # 启动后端（热重载）
 make dev                # 启动前端（Vite HMR）
 ```
 
-完整命令清单见 `make help`。
+完整命令清单见 `make help`。Makefile 统一封装了开发/测试/构建/部署全生命周期命令，降低上手与复现成本。
 
 ## 📁 项目结构
 
@@ -88,20 +94,23 @@ TravelPal/
 
 ## 🏗️ 技术栈
 
+算法基于 TSPTW 标准测试集（n100w20 / n60w60 / n200w40）验证，优先保证路径可行性与约束满足。
+
 | 层 | 技术 | 用途 |
 |---|------|------|
 | 后端框架 | Python 3.12 + FastAPI | REST API / SSE 流式服务 |
-| 求解引擎 | NumPy + Numba JIT | 元启发式算法加速 |
-| Agent | DeepSeek (OpenAI SDK) + BM25 RAG | 对话理解与文档检索 |
+| 求解引擎 | NumPy + Numba JIT | 多日行程规划（CA 快速预览 / VNS 深度优化） |
+| Agent | DeepSeek + BM25 上下文检索 | 对话理解与项目文档问答 |
 | 数据库 | PostgreSQL 16 (pgvector) + SQLAlchemy | 历史记录持久化 |
 | 缓存 | Redis | 路径规划结果缓存 |
 | 地图 | 高德 Web 服务 API + JS API 2.0 | POI 数据查询与 2D 路线可视化 |
 | 前端 | Vue 3 + TypeScript + Vite + Pinia | SPA 用户界面 |
-| 容器化 | Docker + Docker Compose + Nginx | 一键部署与反向代理 |
+| 容器化 | Docker + Docker Compose + Nginx | 四服务一键编排，开箱即用 |
 
 ## 📖 相关文档
 
 > **快速导航**：想了解系统架构？看 [`backend.md`](docs/structure/backend.md)；想了解 Agent 怎么工作的？看 [`agent.md`](docs/structure/agent.md)；想了解数据结构？看 [`data.md`](docs/structure/data.md)。
+> 项目包含 7 篇架构决策记录（ADR），完整记录技术选型理由与设计权衡过程。
 
 | 文档 | 说明 |
 |------|------|
@@ -116,7 +125,3 @@ TravelPal/
 ## 许可
 
 MIT License
-
----
-
-TravelPal 使用 TSPTW 标准测试集（n20w20 / n60w60 / n100w20 / n200w40）进行算法验证。

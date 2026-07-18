@@ -1,9 +1,13 @@
 """Async SQLAlchemy 引擎与会话管理。"""
 
+import os
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
 from backend.config import DATABASE_URL
+
+SKIP_DB = os.getenv("SKIP_DB", "").lower() in ("1", "true")
 
 # 引擎配置说明：
 # - pool_size=5：连接池最小保持连接数，PostgreSQL 默认 max_connections=100，
@@ -20,6 +24,8 @@ class Base(DeclarativeBase):
 
 async def get_session() -> AsyncSession:
     """获取异步数据库会话，用于 FastAPI Depends 注入。"""
+    if SKIP_DB:
+        raise HTTPException(status_code=503, detail="数据库未启用（SKIP_DB 模式）")
     async with async_session() as session:
         yield session
 

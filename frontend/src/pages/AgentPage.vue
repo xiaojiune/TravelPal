@@ -11,6 +11,18 @@
         :role="msg.role"
         :content="msg.content"
       />
+      <div v-if="lastPoiResult" class="poi-card">
+        <div class="poi-header">{{ lastPoiResult.name }}</div>
+        <div class="poi-detail">📍 {{ lastPoiResult.address }}</div>
+        <div class="poi-detail">坐标：{{ lastPoiResult.lon?.toFixed(4) }}, {{ lastPoiResult.lat?.toFixed(4) }}</div>
+        <div v-if="lastPoiResult.tw_start != null && lastPoiResult.tw_end != null" class="poi-detail">
+          营业时间：{{ Math.floor(lastPoiResult.tw_start! / 60) }}:{{ String(lastPoiResult.tw_start! % 60).padStart(2, '0') }} ~
+          {{ Math.floor(lastPoiResult.tw_end! / 60) }}:{{ String(lastPoiResult.tw_end! % 60).padStart(2, '0') }}
+        </div>
+        <button class="btn-add" :disabled="poiAdded" @click="addPoiToForm">
+          {{ poiAdded ? '✅ 已添加' : '➕ 添加该景点' }}
+        </button>
+      </div>
     </div>
     <div class="input-bar">
       <input
@@ -27,21 +39,44 @@
 </template>
 
 <script setup lang="ts">
-/** 智能 Agent 对话页：支持 SSE 流式响应 + 打字机效果渲染。 */
+/** 智能 Agent 对话页：支持 SSE 流式响应 + 打字机效果渲染 + Function Calling 工具结果展示。 */
 // ====== 状态定义 ======
 import { ref, nextTick } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
+import { usePlanStore } from '@/stores/plan'
 import type { ChatMessage as ChatMessageType } from '@/types'
 
 defineOptions({ name: 'AgentPage' })
 
+const store = usePlanStore()
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
 const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
 // 打字机速度 30ms/字，适合 Mock 流式节奏
 const { displayText, append, reset, stop } = useTypewriter({ speed: 30 })
+
+/** POI 查询结果卡片展示 */
+interface PoiResult { name?: string; lon?: number; lat?: number; address?: string; tw_start?: number; tw_end?: number; error?: string }
+const lastPoiResult = ref<PoiResult | null>(null)
+const poiAdded = ref(false)
+
+/** 将 POI 添加到 HomePage 景点列表并提示用户。 */
+function addPoiToForm() {
+  const poi = lastPoiResult.value
+  if (!poi || poiAdded.value || !poi.name || poi.lon == null || poi.lat == null) return
+  store.addSpot({
+    name: poi.name,
+    lon: poi.lon,
+    lat: poi.lat,
+    twStart: poi.tw_start ?? 480,
+    twEnd: poi.tw_end ?? 1020,
+    stay: 0,
+    address: poi.address,
+  })
+  poiAdded.value = true
+}
 
 // ====== 聊天逻辑 ======
 
@@ -95,6 +130,15 @@ async function send() {
             append(parsed.data)
             messages.value[msgIndex].content = displayText.value
           }
+          if (parsed.type === 'tool_result' && parsed.data) {
+            if (parsed.data.error) {
+              messages.value[msgIndex].content = '查询失败：' + parsed.data.error
+            } else {
+              messages.value[msgIndex].content = '找到 ' + (parsed.data.name || '') + ' 的信息'
+              lastPoiResult.value = parsed.data
+              poiAdded.value = false
+            }
+          }
         } catch {
           append(data)
           messages.value[msgIndex].content = displayText.value
@@ -144,6 +188,37 @@ function scrollToBottom() {
 }
 .welcome h2 {
   margin-bottom: 8px;
+}
+.poi-card {
+  margin: 8px 16px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background: #f9f9f9;
+}
+.poi-header {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.poi-detail {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 2px;
+}
+.btn-add {
+  margin-top: 8px;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #007aff;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-add:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .input-bar {
   display: flex;

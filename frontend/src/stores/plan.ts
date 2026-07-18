@@ -19,6 +19,12 @@ export const usePlanStore = defineStore('plan', () => {
   const lateReturnWeight = ref(50)
   const minDays = ref<number | null>(null)
 
+  /** 从 Agent 页面添加一个景点到输入列表。 */
+  function addSpot(poi: SpotFormItem) {
+    spots.value.push(poi)
+    isParamsSaved.value = false
+  }
+
   // ====== 参数确认锁 ======
   /** 用户是否已确认当前规划点参数。false 时阻止获取方案建议。 */
   const isParamsSaved = ref(false)
@@ -119,6 +125,6 @@ export const usePlanStore = defineStore('plan', () => {
     isParamsSaved, historyRecordId, historyRequestParams,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
     planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestPolylines, suggestAlgoTime, amapApiKey, amapSecurityCode, loading,
-    buildRequest, reset,
+    buildRequest, reset, addSpot,
   }
 })

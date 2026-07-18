@@ -14,7 +14,9 @@ from backend.api.schemas import (
 from backend.engine.pipeline import run_planning
 from backend.data.amap_loader import get_poi_details
 from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
-from backend.agent.chat_tools import parse_biz_hours, build_chat_messages, chat_stream
+from backend.agent.chat import build_chat_messages, chat_stream
+from backend.agent.tools import parse_biz_hours, TOOL_REGISTRY
+from backend.agent.tools.prompts import TOOL_DEFINITIONS
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord
 from fastapi.responses import StreamingResponse
@@ -175,9 +177,44 @@ async def chat(req: ChatRequest):
         messages = build_chat_messages(req.message, req.plan_result)
 
         async def _stream():
-            """SSE 生成器：逐 token 推送 chat_stream 输出，最后发 done 信号。"""
-            async for token in chat_stream(messages):
-                yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+            # 第一阶段：非流式调用检测工具意图
+            from openai import OpenAI
+            from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+            client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+            resp = client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=messages,
+                tools=TOOL_DEFINITIONS,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            choice = resp.choices[0]
+            if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
+                for tc in choice.message.tool_calls:
+                    tool_name = tc.function.name
+                    try:
+                        args = json.loads(tc.function.arguments)
+                    except Exception:
+                        args = {}
+                    tool_fn = TOOL_REGISTRY.get(tool_name)
+                    if tool_fn:
+                        yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
+                        result = tool_fn(**args)
+                        yield f"data: {json.dumps({'type': 'tool_result', 'data': result})}\n\n"
+                        messages.append(choice.message)
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.id,
+                            "content": json.dumps(result, ensure_ascii=False),
+                        })
+                # 第二阶段：流式输出 LLM 回复
+                async for token in chat_stream(messages):
+                    yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
+            else:
+                # 无工具调用，直接流式输出
+                async for token in chat_stream(messages):
+                    yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         return StreamingResponse(

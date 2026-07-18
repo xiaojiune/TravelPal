@@ -1,10 +1,13 @@
-.PHONY: dev serve lint typecheck build test clean dc-up dc-up-d dc-down dc-logs dc-ps
+.PHONY: dev serve serve-nodb lint typecheck build test clean dc-up dc-up-d dc-down dc-logs dc-ps
 
 dev:
 	cd frontend && npm run dev
 
 serve:
 	.venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
+
+serve-nodb:
+	SKIP_DB=true .venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
 
 lint:
 	cd frontend && npm run lint

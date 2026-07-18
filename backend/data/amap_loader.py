@@ -4,7 +4,7 @@ import os, time, datetime
 import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
-from backend.tools.deprecated import legacy_only
+from backend.utils.deprecated import legacy_only
 
 # ---------- 工具函数 ----------
 
@@ -32,7 +32,7 @@ def _parse_date(date_str: str, year: int) -> datetime.date | None:
 
 
 # ================== 营业时间解析（兜底方案） ==================
-# 当前生产环境使用 LLM 解析（chat_tools.py parse_biz_hours），
+# 当前生产环境使用 LLM 解析（tools.poi.py parse_biz_hours），
 # 此函数保留用途：
 # 1. LLM 解析失败时的 emergency fallback
 # 2. 规则解析的参考实现

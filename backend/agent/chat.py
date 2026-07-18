@@ -8,7 +8,7 @@ from backend.agent.tools.prompts import CHAT_SYSTEM
 
 
 def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
-    """构建对话消息列表。
+    """构建对话消息列表，自动注入 RAG 文档上下文。
 
     Args:
         message: 用户输入的消息。
@@ -26,6 +26,18 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
             "commentary": plan_result.get("commentary", ""),
         }
         system += f"\n\n当前规划概要（供参考）：\n{json.dumps(summary, ensure_ascii=False)}"
+
+    try:
+        from backend.agent.tools.rag import search_rag
+        results = search_rag(message, k=2)
+        if results:
+            ctx = "\n\n".join(
+                f"[{r['source']}#{r['heading']}]\n{r['text']}"
+                for r in results
+            )
+            system += f"\n\n以下是项目文档中相关的片段（可参考但不必须引用）：\n{ctx}"
+    except Exception:
+        pass
 
     return [
         {"role": "system", "content": system},

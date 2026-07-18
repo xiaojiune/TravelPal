@@ -59,7 +59,6 @@ backend/
 │   ├── model/
 │   │   ├── database.py    async SQLAlchemy 引擎 + 会话工厂
 │   │   └── models.py      HistoryRecord ORM（详见 data.md）
-│   ├── knowledge_base.py  知识库检索
 │   └── chroma_db/         向量数据库（待填充）
 │
 └── utils/                 通用工具
@@ -206,9 +205,9 @@ cluster_and_solve(spots, cost_mat, mode, n_days)
 
 详见 [`docs/structure/data.md`](data.md) 数据定义。
 
-### knowledge_base.py / chroma_db/
+### chroma_db/
 
-知识库检索接口与向量数据库（预留，当前主要依赖 LLM 实时解析）。
+向量数据库存储目录（预留）。
 
 ## 八、工具层 (tools/)
 

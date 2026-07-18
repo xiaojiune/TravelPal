@@ -3,12 +3,11 @@
 **不是生成文字攻略，是生成可执行的行程方案。**
 结合元启发式算法（CA/VNS）与 LLM Agent，严格保证时间窗约束与路径最优的智能旅行规划系统。
 
+🏷️ `运筹优化 · LLM Agent · 地图可视化 · 全栈工程化`
+
 [![GitHub License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
 [![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
-
-🏷️ `运筹优化 · LLM Agent · 地图可视化 · 全栈工程化`
-
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 🌐 在线演示：*（待部署）*
@@ -18,8 +17,7 @@
 ## ✨ 核心功能
 
 - **双引擎求解**：CA 秒级出可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
-  
-  > 算法基于 Dumas 经典 TSPTW 基准测试集（n20 ~ n200 多规模算例）验证，中等规模（n100）求解时间秒至分钟级，约束满足率优于同类启发式算法。
+- **算法验证**：基于 Dumas TSPTW 基准测试集（n20~n200）多规模算例验证，n100 求解时间秒至分钟级
 - **对话式规划**：LLM Agent 理解自然语言需求，支持边聊边调
 - **地图可视化**：真实驾车路径实时渲染，景点标注精确到达/离开时间与状态
 - **方案选择**：一次生成多组方案，按总成本/时长/等待时间灵活选择
@@ -132,4 +130,4 @@ Copyright © 2026 xiaojiune. Released under the MIT License.
 
 ---
 
-> 欢迎 [Star ⭐](https://github.com/xiaojiune/TravelPal) / [Issue](https://github.com/xiaojiune/TravelPal/issues) / PR 交流
+欢迎 Star / Issue / PR 交流。

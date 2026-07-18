@@ -33,7 +33,7 @@ backend/agent/
     ├── __init__.py   工具注册表 TOOL_REGISTRY
     ├── prompts.py    所有 LLM prompt 模板集中管理
     ├── poi.py        POI 查询工具：poi_lookup / parse_biz_hours
-    └── rag.py        RAG 工具（预留）
+    └── rag.py        BM25 检索引擎：search_rag() / RagEngine
 ```
 
 ## 三、对话流
@@ -56,6 +56,16 @@ backend/agent/
 
 `build_chat_messages()` 从 `prompts.py` 读取 `CHAT_SYSTEM`，附加规划上下文后组装为 OpenAI 格式。
 
+### RAG 上下文注入
+
+每次调用 `build_chat_messages()` 时自动触发 BM25 全文检索（[`rag.py`](../../backend/agent/tools/rag.py)）：
+
+1. `search_rag(query)` 对用户消息分词后检索 `docs/*.md` + `README.md`
+2. 取 top-3 相关片段，格式化为 `相关知识：\n- [来源] 标题：片段...`
+3. 以 `system` 角色注入消息列表（位于 `CHAT_SYSTEM` 之后，user 消息之前）
+
+匹配策略：中文拆单字、英文空白分词，无需 jieba 等外部库。
+
 ### 调试模式
 
 `MOCK_MODE=True` 时走 `mock_stream_chat()` 固定回复，无需 API Key。
@@ -65,7 +75,7 @@ backend/agent/
 
 ### 注册表
 
-`TOOL_REGISTRY` 字典集中管理所有可调用工具（[`tools/__init__.py`](https://github.com/xiaojiune/TravelPal/blob/dev/backend/agent/tools/__init__.py)）：
+`TOOL_REGISTRY` 字典集中管理所有可调用工具（[`tools/__init__.py`](../../backend/agent/tools/__init__.py)）：
 
 ```text
 TOOL_REGISTRY: dict[str, Callable] = {
@@ -86,7 +96,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
 
 ### poi_lookup 工具
 
-详见 [`tools/poi.py`](https://github.com/xiaojiune/TravelPal/blob/dev/backend/agent/tools/poi.py)。
+详见 [`tools/poi.py`](../../backend/agent/tools/poi.py)。
 
 通过高德 API 查询 POI 坐标、地址和营业时间。自动识别酒店与景点：
 
@@ -127,6 +137,8 @@ TOOL_REGISTRY: dict[str, Callable] = {
 
 ## 七、数据流
 
+### Function Calling 流程
+
 ```
 用户: "查一下广州的白云山"
   → POST /api/chat { message: "查一下广州的白云山" }
@@ -138,5 +150,18 @@ TOOL_REGISTRY: dict[str, Callable] = {
   → pendingPois[] 追加 ← 前端左侧待选栏
   → messages 追加 tool result → LLM 二次调用
   → SSE: content → "找到了！白云山..."
+  → SSE: done
+```
+
+### RAG 检索流程
+
+```
+用户: "这个项目是做什么的"
+  → POST /api/chat { message: "这个项目是做什么的" }
+  → build_chat_messages()
+      ├─ search_rag("这个项目是做什么的") → BM25 检索 docs/ 相关片段
+      └─ 注入 system message（知识段位于 user 之前）
+  → OpenAI 无 tools 调用 → SSE 直接流式输出
+  → SSE: content → "这是一个基于 VNS+ 引擎的..."
   → SSE: done
 ```

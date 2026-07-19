@@ -14,7 +14,7 @@ from backend.engine.fitness import analyze_solution
 # - shaking_neighbors：抖动强度候选集合，数值越大扰动越剧烈。
 # - local_search_iter：局部搜索迭代上限（当前未使用，保留扩展）。
 # - no_improve_limit：连续无改善阈值，控制早停敏感度。
-# - sa_initial_temp / sa_cooling_rate：SA 接收准则的退火速度与冷却率。
+# - sa_initial_temp / sa_cooling_rate：接受准则的退火参数（标准 SA 概率接受，但 delta 中的 penalty 部分经压缩因子加权）
 # - elite_size：精英池容量，保留历史上最优解结构。
 # - final_vnd_rounds：主循环结束后对精英解额外进行 VND，提升最终解稳定性。
 VNS_DEFAULT_PARAMS = {
@@ -22,7 +22,7 @@ VNS_DEFAULT_PARAMS = {
     'shaking_neighbors': [1, 2, 3],
     'local_search_iter': 50,
     'no_improve_limit': 30,
-    'sa_initial_temp': 100.0,
+    'sa_initial_temp': 1000.0,
     'sa_cooling_rate': 0.99,
     'elite_size': 3,
     'final_vnd_rounds': 2,
@@ -127,11 +127,12 @@ class VNSSolver:
     集成多种邻域结构（swap/inversion/insert/2opt）与 VND 局部搜索，
     通过 SA 准则控制扰动接受，并维护精英池保留历史最优解。
 
-    增强特性：
-    - SA 混合接受准则：改善解直接接受，劣化解按概率接受（避免陷入局部最优）
-    - 早期定向约束扰动：迭代前期针对违规时间窗的节点执行针对性扰动（加速可行解发现）
-    - 自适应算子权重：根据历史成功率动态调节各邻域算子的被选中概率（加速收敛）
-    - 精英池后优化：主循环结束后对精英池中的多组候选解执行 VND，提升最终解稳定性
+     增强特性：
+     - SA 混合接受准则：改善解直接接受，劣化解按概率接受（避免陷入局部最优）
+     - 压缩退火：penalty 权重从 0.1 线性增长至 1.0（早期允许探索不可行区域，后期收敛到可行解）
+     - 早期定向约束扰动：迭代前期针对违规时间窗的节点执行针对性扰动（加速可行解发现）
+     - 自适应算子权重：根据历史成功率动态调节各邻域算子的被选中概率（加速收敛）
+     - 精英池后优化：主循环结束后对精英池中的多组候选解执行 VND，提升最终解稳定性
     """
 
     def __init__(self, city_indices: list[int], spots_dict: dict[int, SpotDict],
@@ -560,12 +561,15 @@ class VNSSolver:
             x_local = self._vnd(x_shake, cost_mat)
 
             new_cost, new_dist, new_pen = self._cal_fitness(x_local, cost_mat)
-            delta = new_cost - cur_cost
 
-            # SA 接收准则
-            accept = delta < 0
+            # 压缩退火：penalty 权重从 0.1 线性增长至 1.0
+            compress_factor = 0.1 + 0.9 * iter_ratio
+            compressed_delta = (new_dist - cur_dist) + compress_factor * (new_pen - cur_pen)
+
+            # 接受准则（标准 SA 概率接受 + 压缩退火加权 delta）
+            accept = compressed_delta < 0
             if not accept and temperature > 0:
-                if random.random() < math.exp(-delta / temperature):
+                if random.random() < math.exp(-compressed_delta / temperature):
                     accept = True
 
             if accept:
@@ -574,17 +578,13 @@ class VNSSolver:
                     best_sol, best_cost, best_dist, best_pen = cur_sol.copy(), new_cost, new_dist, new_pen
                     no_improve = 0
                     self._update_elite(best_sol, best_cost)
-                    # 自适应算子权重奖励：成功改善的算子获得 +2% 权重，让高效算子更易被选中
                     if self.last_operator:
                         self.operator_weights[self.last_operator] *= WEIGHT_REWARD_FACTOR
                         total = sum(self.operator_weights.values())
                         for op in self.operator_weights:
                             self.operator_weights[op] /= total
-                # 改善但未超越全局最优，连续无改善计数递增
-                else:
-                    no_improve += 1
-            # 未被接受，连续无改善计数递增，用于触发早停
             else:
+                # 仅拒绝时递增 no_improve（SA 探索性接受不触发早停）
                 no_improve += 1
 
             conv.append(best_cost)

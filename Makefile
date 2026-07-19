@@ -1,6 +1,7 @@
 .PHONY: install build gen-api serve serve-nodb dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
+        dc-migration \
         clean help
 
 # ======== 安装构建 ========
@@ -48,10 +49,11 @@ ruff-format: ## 后端 Python 代码格式化（ruff）
 pyright: ## 后端 Python 类型检查
 	.venv/bin/pyright backend/
 
-check: ## 前后端全量检查（格式 + lint + 类型 + 测试）
+check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类型 + 测试）
 	.venv/bin/ruff format --check backend/ && \
 	.venv/bin/ruff check backend/ && \
 	.venv/bin/pyright backend/ && \
+	.venv/bin/pytest && \
 	cd frontend && npm run lint && npx vue-tsc --noEmit
 
 # ======== 测试 ========
@@ -88,10 +90,13 @@ deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + 前端 Nginx）
 deploy-down: ## 停止全量部署
 	docker compose down
 
+dc-migration: ## [Alembic 占位] 生成数据库迁移（需 docker compose up -d）
+	@echo "待接入 Alembic，当前 models.py 改动后需手动 DROP/CREATE"
+
 # ======== 工具 ========
 
 clean: ## 清理构建缓存与临时文件
-	rm -rf frontend/dist .pytest_cache frontend/node_modules/.vite
+	rm -rf frontend/dist .pytest_cache .ruff_cache frontend/node_modules/.vite
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 help: ## 显示此帮助信息

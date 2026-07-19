@@ -65,7 +65,7 @@ def _build_poi_cache(req: PlanRequest):
         }
         for s in req.spots
     ]
-    return {"hotel": hotel, "spots": spots}
+    return {"hotel": hotel, "spots": spots}  # type: ignore
 
 
 # ================== 路由端点 ==================
@@ -136,7 +136,7 @@ async def suggest(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache,
+            poi_cache,  # type: ignore[arg-type]
             req.city,
             req.hotel_name,
             penalty_weight=req.penalty_weight,
@@ -144,11 +144,11 @@ async def suggest(req: PlanRequest):
             late_return_weight=req.late_return_weight,
             mode="fast",
             n_days=None,
-            day_start=req.day_start,
+            day_start=int(req.day_start),
             min_days=req.min_days,
         )
-        result["amap_api_key"] = AMAP_JS_KEY
-        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
+        result["amap_api_key"] = AMAP_JS_KEY  # pyright: ignore[reportGeneralTypeIssues]
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE  # pyright: ignore[reportGeneralTypeIssues]
         return result
     except Exception as e:
         traceback.print_exc()
@@ -176,7 +176,7 @@ async def plan(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache,
+            poi_cache,  # type: ignore[arg-type]
             req.city,
             req.hotel_name,
             penalty_weight=req.penalty_weight,
@@ -184,12 +184,12 @@ async def plan(req: PlanRequest):
             late_return_weight=req.late_return_weight,
             mode=req.mode,
             n_days=req.n_days,
-            day_start=req.day_start,
+            day_start=int(req.day_start),
             cost_matrix_override=req.cost_matrix,
             dist_matrix_override=req.dist_matrix,
         )
-        result["amap_api_key"] = AMAP_JS_KEY
-        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
+        result["amap_api_key"] = AMAP_JS_KEY  # pyright: ignore[reportGeneralTypeIssues]
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE  # pyright: ignore[reportGeneralTypeIssues]
         return result
     except Exception as e:
         traceback.print_exc()
@@ -219,17 +219,17 @@ async def chat(req: ChatRequest):
             from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 
             client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-            resp = client.chat.completions.create(
+            resp = client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
                 model=LLM_MODEL,
-                messages=messages,
-                tools=TOOL_DEFINITIONS,
+                messages=messages,  # pyright: ignore[reportArgumentType]
+                tools=TOOL_DEFINITIONS,  # pyright: ignore[reportArgumentType]
                 tool_choice="auto",
                 temperature=0.7,
                 max_tokens=1024,
             )
             choice = resp.choices[0]
             if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
-                messages.append(choice.message)
+                messages.append(choice.message)  # pyright: ignore[reportArgumentType]
                 for tc in choice.message.tool_calls:
                     tool_name = tc.function.name  # type: ignore[union-attr]
                     try:
@@ -306,13 +306,13 @@ async def list_history(
     items = [
         HistorySummary(
             id=str(r.id),
-            city=r.city,
-            hotel=r.hotel,
-            n_days=r.n_days,
-            cost=r.cost,
-            spot_count=r.spot_count,
-            note=r.note,
-            created_at=r.created_at.isoformat() if r.created_at else "",
+            city=r.city,  # type: ignore[arg-type]
+            hotel=r.hotel,  # type: ignore[arg-type]
+            n_days=r.n_days,  # type: ignore[arg-type]
+            cost=r.cost,  # type: ignore[arg-type]
+            spot_count=r.spot_count,  # type: ignore[arg-type]
+            note=r.note,  # type: ignore[arg-type]
+            created_at=r.created_at.isoformat() if r.created_at is not None else "",
         )
         for r in rows
     ]
@@ -337,15 +337,15 @@ async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(ge
         raise HTTPException(status_code=404, detail="记录不存在")
     return HistoryDetail(
         id=str(r.id),
-        city=r.city,
-        hotel=r.hotel,
-        n_days=r.n_days,
-        cost=r.cost,
-        spot_count=r.spot_count,
-        note=r.note,
-        plan_result=r.plan_result,
-        request_params=r.request_params,
-        created_at=r.created_at.isoformat() if r.created_at else "",
+        city=r.city,  # type: ignore[arg-type]
+        hotel=r.hotel,  # type: ignore[arg-type]
+        n_days=r.n_days,  # type: ignore[arg-type]
+        cost=r.cost,  # type: ignore[arg-type]
+        spot_count=r.spot_count,  # type: ignore[arg-type]
+        note=r.note,  # type: ignore[arg-type]
+        plan_result=r.plan_result,  # type: ignore[arg-type]
+        request_params=r.request_params,  # type: ignore[arg-type]
+        created_at=r.created_at.isoformat() if r.created_at is not None else "",
     )
 
 
@@ -406,7 +406,7 @@ async def delete_history(
     r = await session.get(HistoryRecord, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    if r.device_id and r.device_id != req.device_id:
+    if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
         raise HTTPException(status_code=403, detail="无权删除此记录")
     await session.delete(r)
     await session.commit()

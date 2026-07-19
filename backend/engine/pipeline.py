@@ -48,7 +48,7 @@ def _supplement_polylines(
 
     print(f"正在补调 {len(needed)} 段缺失 polyline...")
     for f, t in sorted(needed):
-        _, _, poly = _get_driving_data(coords[f], coords[t])
+        _, _, poly = _get_driving_data(coords[f], coords[t])  # pyright: ignore[reportGeneralTypeIssues]
         if poly:
             polylines[(f, t)] = poly
         time.sleep(0.4)
@@ -248,7 +248,7 @@ def _rebuild_schedule(
             from_node = route[i]
             to_node = route[i + 1]
             travel_time = cost_matrix[from_node][to_node]
-            arrival_time = round(current_time + travel_time)
+            arrival_time = round(current_time + travel_time)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
             if to_node != 0:
                 original_start, original_end = spots_dict[to_node]["original_tw"]
@@ -377,7 +377,7 @@ def adjust_plan(
 
         poi = adjustments["add_poi"]
         new_idx = max(spots_dict.keys()) + 1
-        spots_dict[new_idx] = {
+        spots_dict[new_idx] = {  # pyright: ignore[reportArgumentType]
             "name": poi["name"],
             "x": poi["lon"],
             "y": poi["lat"],
@@ -396,10 +396,10 @@ def adjust_plan(
                 new_cost[i][i] = 0
                 new_dist[i][i] = 0
                 continue
-            d_km, dur, _ = _get_driving_data((poi["lon"], poi["lat"]), (spot["x"], spot["y"]))
+            d_km, dur, _ = _get_driving_data((poi["lon"], poi["lat"]), (spot["x"], spot["y"]))  # pyright: ignore[reportGeneralTypeIssues]
             if dur is not None:
                 new_cost[new_idx][i] = new_cost[i][new_idx] = round(dur / 60.0, 2)
-                new_dist[new_idx][i] = new_dist[i][new_idx] = round(d_km, 2)
+                new_dist[new_idx][i] = new_dist[i][new_idx] = round(d_km, 2)  # pyright: ignore[reportCallIssue, reportArgumentType]
             else:
                 new_cost[new_idx][i] = new_cost[i][new_idx] = -1
                 new_dist[new_idx][i] = new_dist[i][new_idx] = -1
@@ -433,7 +433,7 @@ def adjust_plan(
     assert best_days is not None
     assert best_m is not None
     assert daily_schedules is not None
-    commentary = generate_commentary(result, spots_dict, dist_matrix)
+    commentary = generate_commentary(result, spots_dict, dist_matrix)  # pyright: ignore[reportArgumentType]
 
     return {  # type: ignore[return-type]
         "solution": result,

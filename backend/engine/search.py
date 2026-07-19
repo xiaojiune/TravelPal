@@ -36,7 +36,7 @@ def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> 
 
     k = len(groups)
     new_groups = [[] for _ in range(k)]
-    day_loads = [0] * k
+    day_loads: list[float] = [0.0] * k
 
     for spot in all_spots:
         stay = spots[spot]["stay"]

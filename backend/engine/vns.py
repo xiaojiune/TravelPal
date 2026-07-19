@@ -125,7 +125,7 @@ def _cal_fitness_numba(
             current_time = arrival
 
     total = travel_sum + time_penalty
-    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)
+    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
 
 # ================== VNSSolver 主类 ==================

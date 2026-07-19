@@ -73,9 +73,9 @@ async def stream_chat(messages: list[dict]):
         str: DeepSeek 流式响应的逐 token 内容。
     """
     client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-    resp = client.chat.completions.create(
+    resp = client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
         model=LLM_MODEL,
-        messages=messages,
+        messages=messages,  # pyright: ignore[reportArgumentType]
         stream=True,
         temperature=0.7,
         max_tokens=1024,

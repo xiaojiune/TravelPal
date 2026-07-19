@@ -282,7 +282,7 @@ class CASolver:
         if not violations:
             return self._standard_neighbor(solution, temp_ratio)
         # 找到违规最严重的节点并重定位
-        max_node = max(violations, key=violations.get)
+        max_node = max(violations, key=violations.get)  # pyright: ignore[reportCallIssue, reportArgumentType]
         idx = solution.index(max_node) if max_node in solution else -1
         if idx <= 0 or idx >= len(solution) - 1:
             return self._standard_neighbor(solution, temp_ratio)

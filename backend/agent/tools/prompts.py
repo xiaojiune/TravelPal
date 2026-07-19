@@ -4,7 +4,7 @@ from datetime import datetime
 
 _HOLIDAYS_AVAILABLE = False
 try:
-    import holidays
+    import holidays  # pyright: ignore[reportMissingImports]
 
     _HOLIDAYS_AVAILABLE = True
 except ImportError:

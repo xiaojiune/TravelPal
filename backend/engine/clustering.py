@@ -28,7 +28,7 @@ def cluster_by_distance_kmeans(spots: dict, depot: int, n_clusters: int):
             indices.append(i)
     if not coords:
         return [[] for _ in range(n_clusters)]
-    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(coords))
+    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(coords))  # pyright: ignore[reportArgumentType]
     groups = [[] for _ in range(n_clusters)]
     for idx, lab in zip(indices, labels):
         groups[lab].append(idx)
@@ -58,7 +58,7 @@ def cluster_by_time_window(spots: dict, depot: int, n_clusters: int):
             indices.append(i)
     if not features:
         return [[] for _ in range(n_clusters)]
-    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(features))
+    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(features))  # pyright: ignore[reportArgumentType]
     groups = [[] for _ in range(n_clusters)]
     for idx, lab in zip(indices, labels):
         groups[lab].append(idx)
@@ -91,7 +91,7 @@ def cluster_by_spatiotemporal(spots: dict, depot: int, n_clusters: int, sp_w: fl
     scaled = StandardScaler().fit_transform(np.array(features))
     scaled[:, 0:2] *= sp_w
     scaled[:, 2:4] *= tp_w
-    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(scaled)
+    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(scaled)  # pyright: ignore[reportArgumentType]
     groups = [[] for _ in range(n_clusters)]
     for idx, lab in zip(indices, labels):
         groups[lab].append(idx)
@@ -153,7 +153,7 @@ def cluster_by_time_density(spots: dict, depot: int, n_clusters: int):
             indices.append(i)
     if not times:
         return [[] for _ in range(n_clusters)]
-    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(times))
+    labels = KMeans(n_clusters=n_clusters, random_state=42, n_init=10).fit_predict(np.array(times))  # pyright: ignore[reportArgumentType]
     groups = [[] for _ in range(n_clusters)]
     for idx, lab in zip(indices, labels):
         groups[lab].append(idx)

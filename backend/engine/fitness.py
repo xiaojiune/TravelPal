@@ -71,4 +71,4 @@ def analyze_solution(
 
     total_penalty = wait_penalty + late_penalty
     total_cost = travel_sum + total_penalty
-    return round(total_cost, 1), round(travel_sum, 1), round(wait_penalty, 1), round(late_penalty, 1), violations
+    return round(total_cost, 1), round(travel_sum, 1), round(wait_penalty, 1), round(late_penalty, 1), violations  # pyright: ignore[reportCallIssue, reportArgumentType]

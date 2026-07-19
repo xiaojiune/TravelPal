@@ -1,6 +1,6 @@
 """高德地图 API 封装：POI 搜索、营业时间解析、驾车路径规划与成本矩阵构建。"""
 
-import os, time, datetime
+import os, re, time, datetime
 import numpy as np
 import requests
 from backend.config import AMAP_API_KEY
@@ -8,16 +8,25 @@ from backend.utils.deprecated import legacy_only
 
 # ---------- 工具函数 ----------
 
+# 中点符号变体集合（统一归一化为空白后移除）
+_MIDDLE_DOTS = set('·・‧•･∙')
+
 def normalize_text(text: str) -> str:
-    """全角字符转为半角字符，用于名称匹配前归一化。"""
+    """全角→半角 + 空白压缩 + 中点符号归一化，用于名称匹配。
+    
+    用户输入与高德返回的名称常有空格/中点符号的细微差异，
+    归一化后做双向子串匹配，提高酒店/景点名称匹配成功率。
+    """
     result = []
     for char in text:
         code = ord(char)
-        if 0xFF01 <= code <= 0xFF5E:
+        if char in _MIDDLE_DOTS:
+            result.append(' ')
+        elif 0xFF01 <= code <= 0xFF5E:
             result.append(chr(code - 0xFEE0))
         else:
             result.append(char)
-    return ''.join(result)
+    return re.sub(r'\s+', '', ''.join(result))
 
 
 def _parse_date(date_str: str, year: int) -> datetime.date | None:

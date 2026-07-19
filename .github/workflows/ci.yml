@@ -2,36 +2,28 @@ name: CI
 
 on:
   push:
+    branches: [dev, main]
   pull_request:
-    branches: [main]
+    branches: [dev, main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]
-
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        run: pip install poetry
-
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pypoetry/virtualenvs
-          key: ${{ runner.os }}-poetry-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
+          python-version: "3.12"
+          cache: pip
       - name: Install dependencies
-        run: poetry install
-
-      - name: Run tests
-        run: poetry run pytest tests/ -v --ignore-glob="*slow*" -x
+        run: |
+          pip install poetry
+          poetry config virtualenvs.create false
+          poetry install --no-interaction
+          pip install pytest-cov
+      - name: Run tests with coverage
+        run: pytest --cov --cov-report=xml
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

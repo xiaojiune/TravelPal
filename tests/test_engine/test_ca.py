@@ -1,7 +1,6 @@
-import pytest
 import numpy as np
-from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
 
+from backend.engine.ca import CASolver
 
 # ================== CA 求解器 ==================
 

@@ -3,33 +3,49 @@
 import json
 import traceback
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlalchemy import select, func, delete
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas import (
-    PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest,
-    HistoryCreate, HistorySummary, HistoryDetail, HistoryListResponse, HistoryDeleteRequest,
-)
-from backend.engine.pipeline import run_planning
-from backend.data.amap_loader import get_poi_details
-from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
 from backend.agent.chat import build_chat_messages, chat_stream
-from backend.agent.tools import parse_biz_hours, TOOL_REGISTRY
+from backend.agent.tools import TOOL_REGISTRY, parse_biz_hours
 from backend.agent.tools.prompts import TOOL_DEFINITIONS
+from backend.api.schemas import (
+    ChatRequest,
+    HistoryCreate,
+    HistoryDeleteRequest,
+    HistoryDetail,
+    HistoryListResponse,
+    HistorySummary,
+    PlanRequest,
+    POILookupItem,
+    POILookupRequest,
+    POILookupResponse,
+)
+from backend.config import AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
+from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord
-from fastapi.responses import StreamingResponse
+from backend.engine.pipeline import run_planning
 
 router = APIRouter()
 
 # ================== 辅助函数 ==================
+
 
 def _build_poi_cache(req: PlanRequest):
     """将 PlanRequest 转换为 run_planning 所需的 poi_cache 格式。
 
     前端传来的坐标数据可直接映射，无需额外转换。
     时间窗以 (start, end) 元组形式传递。
+
+    Args:
+        req: 前端传入的规划请求，含酒店/景点坐标及时间窗。
+
+    Returns:
+        dict: {"hotel": {...酒店信息...}, "spots": [...景点列表...]}。
     """
     hotel = {
         "name": req.hotel_name,
@@ -49,9 +65,11 @@ def _build_poi_cache(req: PlanRequest):
         }
         for s in req.spots
     ]
-    return {"hotel": hotel, "spots": spots}
+    return {"hotel": hotel, "spots": spots}  # type: ignore
+
 
 # ================== 路由端点 ==================
+
 
 @router.post("/api/poi-lookup", response_model=POILookupResponse)
 async def poi_lookup(req: POILookupRequest):
@@ -60,6 +78,12 @@ async def poi_lookup(req: POILookupRequest):
     前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
     返回每个名称的坐标和地址。未找到的名称列入 failed 列表，
     若跨城市则附带建议地址。
+
+    Args:
+        req: POI 查询请求，含城市名和名称列表。
+
+    Returns:
+        POILookupResponse: 查询结果，items 为成功项，failed 为失败列表。
     """
     items: list[POILookupItem] = []
     failed: list[str] = []
@@ -74,17 +98,25 @@ async def poi_lookup(req: POILookupRequest):
                 parsed = parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else None
                 tw_end = parsed[1] if parsed else None
-                items.append(POILookupItem(
-                    name=actual_name, lon=lon, lat=lat, address=address,
-                    tw_start=tw_start, tw_end=tw_end,
-                ))
+                items.append(
+                    POILookupItem(
+                        name=actual_name,
+                        lon=lon,
+                        lat=lat,
+                        address=address,
+                        tw_start=tw_start,
+                        tw_end=tw_end,
+                    )
+                )
         except Exception:
             traceback.print_exc()
             failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
 
     return POILookupResponse(items=items, failed=failed)
 
+
 # ---------- 规划相关 ----------
+
 
 @router.post("/api/suggest")
 async def suggest(req: PlanRequest):
@@ -104,17 +136,19 @@ async def suggest(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache, req.city, req.hotel_name,
+            poi_cache,  # type: ignore[arg-type]
+            req.city,
+            req.hotel_name,
             penalty_weight=req.penalty_weight,
             early_wait_weight=req.early_wait_weight,
             late_return_weight=req.late_return_weight,
             mode="fast",
             n_days=None,
-            day_start=req.day_start,
+            day_start=int(req.day_start),
             min_days=req.min_days,
         )
-        result["amap_api_key"] = AMAP_JS_KEY
-        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
+        result["amap_api_key"] = AMAP_JS_KEY  # pyright: ignore[reportGeneralTypeIssues]
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE  # pyright: ignore[reportGeneralTypeIssues]
         return result
     except Exception as e:
         traceback.print_exc()
@@ -142,26 +176,28 @@ async def plan(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache, req.city, req.hotel_name,
+            poi_cache,  # type: ignore[arg-type]
+            req.city,
+            req.hotel_name,
             penalty_weight=req.penalty_weight,
             early_wait_weight=req.early_wait_weight,
             late_return_weight=req.late_return_weight,
             mode=req.mode,
             n_days=req.n_days,
-            day_start=req.day_start,
+            day_start=int(req.day_start),
             cost_matrix_override=req.cost_matrix,
             dist_matrix_override=req.dist_matrix,
         )
-        result["amap_api_key"] = AMAP_JS_KEY
-        result["amap_security_code"] = AMAP_JS_SECURITY_CODE
+        result["amap_api_key"] = AMAP_JS_KEY  # pyright: ignore[reportGeneralTypeIssues]
+        result["amap_security_code"] = AMAP_JS_SECURITY_CODE  # pyright: ignore[reportGeneralTypeIssues]
         return result
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 # ---------- Agent 对话 ----------
+
 
 @router.post("/api/chat")
 async def chat(req: ChatRequest):
@@ -179,23 +215,25 @@ async def chat(req: ChatRequest):
         async def _stream():
             # 第一阶段：非流式调用检测工具意图
             from openai import OpenAI
+
             from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+
             client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-            resp = client.chat.completions.create(
+            resp = client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
                 model=LLM_MODEL,
-                messages=messages,
-                tools=TOOL_DEFINITIONS,
+                messages=messages,  # pyright: ignore[reportArgumentType]
+                tools=TOOL_DEFINITIONS,  # pyright: ignore[reportArgumentType]
                 tool_choice="auto",
                 temperature=0.7,
                 max_tokens=1024,
             )
             choice = resp.choices[0]
             if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
-                messages.append(choice.message)
+                messages.append(choice.message)  # pyright: ignore[reportArgumentType]
                 for tc in choice.message.tool_calls:
-                    tool_name = tc.function.name
+                    tool_name = tc.function.name  # type: ignore[union-attr]
                     try:
-                        args = json.loads(tc.function.arguments)
+                        args = json.loads(tc.function.arguments)  # type: ignore[union-attr]
                     except Exception:
                         args = {}
                     tool_fn = TOOL_REGISTRY.get(tool_name)
@@ -203,11 +241,13 @@ async def chat(req: ChatRequest):
                         yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
                         result = tool_fn(**args)
                         yield f"data: {json.dumps({'type': 'tool_result', 'data': result})}\n\n"
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tc.id,
-                            "content": json.dumps(result, ensure_ascii=False),
-                        })
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": json.dumps(result, ensure_ascii=False),
+                            }
+                        )
                 # 第二阶段：流式输出 LLM 回复
                 try:
                     async for token in chat_stream(messages):
@@ -260,24 +300,19 @@ async def list_history(
     count_q = select(func.count(HistoryRecord.id))
     total = (await session.execute(count_q)).scalar() or 0
 
-    q = (
-        select(HistoryRecord)
-        .order_by(HistoryRecord.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
+    q = select(HistoryRecord).order_by(HistoryRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(q)).scalars().all()
 
     items = [
         HistorySummary(
             id=str(r.id),
-            city=r.city,
-            hotel=r.hotel,
-            n_days=r.n_days,
-            cost=r.cost,
-            spot_count=r.spot_count,
-            note=r.note,
-            created_at=r.created_at.isoformat() if r.created_at else "",
+            city=r.city,  # type: ignore[arg-type]
+            hotel=r.hotel,  # type: ignore[arg-type]
+            n_days=r.n_days,  # type: ignore[arg-type]
+            cost=r.cost,  # type: ignore[arg-type]
+            spot_count=r.spot_count,  # type: ignore[arg-type]
+            note=r.note,  # type: ignore[arg-type]
+            created_at=r.created_at.isoformat() if r.created_at is not None else "",
         )
         for r in rows
     ]
@@ -302,15 +337,15 @@ async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(ge
         raise HTTPException(status_code=404, detail="记录不存在")
     return HistoryDetail(
         id=str(r.id),
-        city=r.city,
-        hotel=r.hotel,
-        n_days=r.n_days,
-        cost=r.cost,
-        spot_count=r.spot_count,
-        note=r.note,
-        plan_result=r.plan_result,
-        request_params=r.request_params,
-        created_at=r.created_at.isoformat() if r.created_at else "",
+        city=r.city,  # type: ignore[arg-type]
+        hotel=r.hotel,  # type: ignore[arg-type]
+        n_days=r.n_days,  # type: ignore[arg-type]
+        cost=r.cost,  # type: ignore[arg-type]
+        spot_count=r.spot_count,  # type: ignore[arg-type]
+        note=r.note,  # type: ignore[arg-type]
+        plan_result=r.plan_result,  # type: ignore[arg-type]
+        request_params=r.request_params,  # type: ignore[arg-type]
+        created_at=r.created_at.isoformat() if r.created_at is not None else "",
     )
 
 
@@ -371,10 +406,8 @@ async def delete_history(
     r = await session.get(HistoryRecord, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    if r.device_id and r.device_id != req.device_id:
+    if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
         raise HTTPException(status_code=403, detail="无权删除此记录")
     await session.delete(r)
     await session.commit()
     return {"ok": True}
-
-

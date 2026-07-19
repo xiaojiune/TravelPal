@@ -15,6 +15,7 @@ class POIItem(BaseModel):
         stay: 建议停留时长（分钟），影响时间窗有效结束时间。
         expected_arrival: 用户期望到达时间，可为空。
     """
+
     name: str
     lon: float
     lat: float
@@ -33,6 +34,7 @@ class POILookupRequest(BaseModel):
     调用高德 POI 搜索 API 批量获取坐标和地址。
     酒店也作为普通 POI 查询，前端根据名称匹配区分。
     """
+
     city: str
     names: list[str] = Field(min_length=1, description="POI 名称列表（酒店+景点）")
 
@@ -43,6 +45,7 @@ class POILookupItem(BaseModel):
     tw_start/tw_end 由 LLM 解析 opentime2 后返回，
     前端不再硬编码默认营业时间。
     """
+
     name: str
     lon: float
     lat: float
@@ -57,6 +60,7 @@ class POILookupResponse(BaseModel):
     items: 查询成功的 POI 列表。
     failed: 未找到的 POI 名称列表。
     """
+
     items: list[POILookupItem]
     failed: list[str]
 
@@ -86,29 +90,30 @@ class PlanRequest(BaseModel):
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
     """
+
     city: str
     hotel_name: str
     hotel_lon: float
     hotel_lat: float
-    hotel_tw_start: float = Field(default=0, ge=0, le=1440,
-                                   description="酒店开放时间开始，距午夜分钟数（默认 0 = 全天）")
-    hotel_tw_end: float = Field(default=1440, ge=0, le=1440,
-                                 description="酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）")
+    hotel_tw_start: float = Field(
+        default=0, ge=0, le=1440, description="酒店开放时间开始，距午夜分钟数（默认 0 = 全天）"
+    )
+    hotel_tw_end: float = Field(
+        default=1440, ge=0, le=1440, description="酒店开放时间结束，距午夜分钟数（默认 1440 = 24:00）"
+    )
     min_days: int | None = Field(default=None, description="搜索最小天数，不传则由引擎自动推断 (n_spots//8+1)")
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
-    mode: str = Field(default="fast", pattern="^(fast|deep)$",
-                      description="求解模式：fast(CA) 或 deep(VNS)")
-    day_start: float = Field(default=0, ge=0, le=1440,
-                              description="一天启程时间（距午夜分钟数），0=午夜")
-    cost_matrix: list[list[float]] | None = Field(default=None, description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API")
+    mode: str = Field(default="fast", pattern="^(fast|deep)$", description="求解模式：fast(CA) 或 deep(VNS)")
+    day_start: float = Field(default=0, ge=0, le=1440, description="一天启程时间（距午夜分钟数），0=午夜")
+    cost_matrix: list[list[float]] | None = Field(
+        default=None,
+        description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API",
+    )
     dist_matrix: list[list[float]] | None = Field(default=None, description="距离矩阵（km），与 cost_matrix 一同传入")
-    penalty_weight: float = Field(default=100.0, ge=0,
-                                  description="迟到惩罚权重（默认 100.0）")
-    early_wait_weight: float = Field(default=0.1, ge=0,
-                                     description="早到等待惩罚权重（默认 0.1）")
-    late_return_weight: float = Field(default=50.0, ge=0,
-                                      description="晚归惩罚权重（默认 50.0）")
+    penalty_weight: float = Field(default=100.0, ge=0, description="迟到惩罚权重（默认 100.0）")
+    early_wait_weight: float = Field(default=0.1, ge=0, description="早到等待惩罚权重（默认 0.1）")
+    late_return_weight: float = Field(default=50.0, ge=0, description="晚归惩罚权重（默认 50.0）")
 
 
 # ================== Agent 对话 ==================
@@ -120,6 +125,7 @@ class ChatRequest(BaseModel):
     message: 用户输入的消息。
     plan_result: 可选的规划结果上下文，供 Agent 参考。
     """
+
     message: str = Field(min_length=1, description="用户输入的消息")
     plan_result: dict | None = Field(default=None, description="规划结果上下文")
 
@@ -133,12 +139,12 @@ class PlanAdjustRequest(BaseModel):
     前端在查看方案后希望调整（如均衡天、改天数、移除/添加景点）时调用。
     支持 balance / adjust_days / remove_poi / add_poi。
     """
+
     spots: dict
     cost_matrix: list[list[float]] = Field(description="成本矩阵（分钟），用于调整时重新规划")
     dist_matrix: list[list[float]] = Field(description="距离矩阵（km），用于调整时重新规划")
     routes: list
-    adjustments: dict = Field(default_factory=lambda: {"balance": True},
-                               description="调整指令，如 {'balance': true}")
+    adjustments: dict = Field(default_factory=lambda: {"balance": True}, description="调整指令，如 {'balance': true}")
 
 
 # ================== 历史记录（分享站） ==================
@@ -151,6 +157,7 @@ class HistoryCreate(BaseModel):
     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
     request_params 为用户输入参数，方便复现。
     """
+
     device_id: str | None = Field(default=None, description="匿名设备标识")
     note: str | None = Field(default=None, description="用户备注")
     city: str
@@ -164,6 +171,7 @@ class HistoryCreate(BaseModel):
 
 class HistorySummary(BaseModel):
     """历史记录列表中的摘要信息。"""
+
     id: str
     city: str
     hotel: str | None = None
@@ -176,6 +184,7 @@ class HistorySummary(BaseModel):
 
 class HistoryDetail(BaseModel):
     """历史记录完整信息，含全量 plan_result。"""
+
     id: str
     city: str
     hotel: str | None = None
@@ -190,6 +199,7 @@ class HistoryDetail(BaseModel):
 
 class HistoryListResponse(BaseModel):
     """历史记录分页列表响应。"""
+
     items: list[HistorySummary]
     total: int
     page: int
@@ -198,4 +208,5 @@ class HistoryListResponse(BaseModel):
 
 class HistoryDeleteRequest(BaseModel):
     """删除历史记录的请求体，需与创建时的 device_id 一致。"""
+
     device_id: str

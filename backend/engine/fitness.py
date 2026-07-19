@@ -3,12 +3,17 @@
 import numpy as np
 
 
-def analyze_solution(line: list, cost_mat: np.ndarray, spots_dict: dict, travel_speed: float,
-                     early_wait_weight=0.1,
-                     penalty_weight=100.0,
-                     late_return_weight=50.0,
-                     depot=0,
-                     use_real_time_matrix=False):
+def analyze_solution(
+    line: list,
+    cost_mat: np.ndarray,
+    spots_dict: dict,
+    travel_speed: float,
+    early_wait_weight=0.1,
+    penalty_weight=100.0,
+    late_return_weight=50.0,
+    depot=0,
+    use_real_time_matrix=False,
+):
     """
     解析指定路径的详细成本与违规信息。
 
@@ -51,12 +56,12 @@ def analyze_solution(line: list, cost_mat: np.ndarray, spots_dict: dict, travel_
                 wait = start_t - arrival
                 wait_penalty += wait * early_wait_weight
                 current_time = start_t + stay
-                violations.append((to, 'wait', wait))
+                violations.append((to, "wait", wait))
             elif arrival > end_t:
                 late = arrival - end_t
                 late_penalty += late * penalty_weight
                 current_time = arrival + stay
-                violations.append((to, 'late', late))
+                violations.append((to, "late", late))
             else:
                 current_time = arrival + stay
         else:
@@ -66,4 +71,4 @@ def analyze_solution(line: list, cost_mat: np.ndarray, spots_dict: dict, travel_
 
     total_penalty = wait_penalty + late_penalty
     total_cost = travel_sum + total_penalty
-    return round(total_cost, 1), round(travel_sum, 1), round(wait_penalty, 1), round(late_penalty, 1), violations
+    return round(total_cost, 1), round(travel_sum, 1), round(wait_penalty, 1), round(late_penalty, 1), violations  # pyright: ignore[reportCallIssue, reportArgumentType]

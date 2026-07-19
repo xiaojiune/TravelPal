@@ -5,8 +5,9 @@
     python tests/test_data/debug_poi.py "岭南印象园" 广州
 """
 
-import sys
 import os
+import sys
+
 import requests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))

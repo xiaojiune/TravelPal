@@ -2,11 +2,12 @@
 
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router
-from backend.data.model.database import init_db, close_db
+from backend.data.model.database import close_db, init_db
 
 
 @asynccontextmanager
@@ -23,6 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 # ================== 应用工厂 ==================
+
 
 def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用实例。
@@ -52,9 +54,11 @@ app = create_app()
 
 # ---------- 启动入口 ----------
 
+
 def main():
     """启动 uvicorn 开发服务器，DEV_RELOAD 环境变量控制热重载。"""
     import uvicorn
+
     reload = os.getenv("DEV_RELOAD", "").lower() in ("1", "true")
     uvicorn.run("backend.api.server:app", host="0.0.0.0", port=8000, reload=reload)
 

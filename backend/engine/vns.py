@@ -1,12 +1,14 @@
 """变邻域搜索求解器（VNS），集成多种邻域算子和自适应权重机制。"""
 
-import random
 import math
-from typing import Tuple, List
+import random
+from typing import Tuple
+
 import numpy as np
-from backend.typedefs import SpotDict
 from numba import njit
+
 from backend.engine.fitness import analyze_solution
+from backend.typedefs import SpotDict
 
 # ================== VNS 默认参数 ==================
 # VNS_DEFAULT_PARAMS 设计说明：
@@ -14,18 +16,18 @@ from backend.engine.fitness import analyze_solution
 # - shaking_neighbors：抖动强度候选集合，数值越大扰动越剧烈。
 # - local_search_iter：局部搜索迭代上限（当前未使用，保留扩展）。
 # - no_improve_limit：连续无改善阈值，控制早停敏感度。
-# - sa_initial_temp / sa_cooling_rate：SA 接收准则的退火速度与冷却率。
+# - sa_initial_temp / sa_cooling_rate：接受准则的退火参数（标准 SA 概率接受，但 delta 中的 penalty 部分经压缩因子加权）
 # - elite_size：精英池容量，保留历史上最优解结构。
 # - final_vnd_rounds：主循环结束后对精英解额外进行 VND，提升最终解稳定性。
 VNS_DEFAULT_PARAMS = {
-    'max_iter': 200,
-    'shaking_neighbors': [1, 2, 3],
-    'local_search_iter': 50,
-    'no_improve_limit': 30,
-    'sa_initial_temp': 100.0,
-    'sa_cooling_rate': 0.99,
-    'elite_size': 3,
-    'final_vnd_rounds': 2,
+    "max_iter": 200,
+    "shaking_neighbors": [1, 2, 3],
+    "local_search_iter": 50,
+    "no_improve_limit": 30,
+    "sa_initial_temp": 1000.0,
+    "sa_cooling_rate": 0.99,
+    "elite_size": 3,
+    "final_vnd_rounds": 2,
 }
 
 # ================== VNS 算法常量 ==================
@@ -41,13 +43,21 @@ WEIGHT_REWARD_FACTOR = 1.02
 
 # ================== Numba 适应度内核 ==================
 
+
 @njit(cache=True)
-def _cal_fitness_numba(line: np.ndarray, cost_mat: np.ndarray, travel_speed: float,
-                       penalty_weight: float, early_wait_weight: float,
-                       late_return_weight: float, depot_index: int,
-                       spots_start: np.ndarray, spots_end: np.ndarray,
-                       spots_stay: np.ndarray,
-                       use_real_time_matrix: bool = False) -> Tuple[float, float, float]:
+def _cal_fitness_numba(
+    line: np.ndarray,
+    cost_mat: np.ndarray,
+    travel_speed: float,
+    penalty_weight: float,
+    early_wait_weight: float,
+    late_return_weight: float,
+    depot_index: int,
+    spots_start: np.ndarray,
+    spots_end: np.ndarray,
+    spots_stay: np.ndarray,
+    use_real_time_matrix: bool = False,
+) -> Tuple[float, float, float]:
     """
     Numba JIT 编译的适应度计算内核。
 
@@ -115,10 +125,11 @@ def _cal_fitness_numba(line: np.ndarray, cost_mat: np.ndarray, travel_speed: flo
             current_time = arrival
 
     total = travel_sum + time_penalty
-    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)
+    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
 
 # ================== VNSSolver 主类 ==================
+
 
 class VNSSolver:
     """
@@ -127,18 +138,26 @@ class VNSSolver:
     集成多种邻域结构（swap/inversion/insert/2opt）与 VND 局部搜索，
     通过 SA 准则控制扰动接受，并维护精英池保留历史最优解。
 
-    增强特性：
-    - SA 混合接受准则：改善解直接接受，劣化解按概率接受（避免陷入局部最优）
-    - 早期定向约束扰动：迭代前期针对违规时间窗的节点执行针对性扰动（加速可行解发现）
-    - 自适应算子权重：根据历史成功率动态调节各邻域算子的被选中概率（加速收敛）
-    - 精英池后优化：主循环结束后对精英池中的多组候选解执行 VND，提升最终解稳定性
+     增强特性：
+     - SA 混合接受准则：改善解直接接受，劣化解按概率接受（避免陷入局部最优）
+     - 压缩退火：penalty 权重从 0.1 线性增长至 1.0（早期允许探索不可行区域，后期收敛到可行解）
+     - 早期定向约束扰动：迭代前期针对违规时间窗的节点执行针对性扰动（加速可行解发现）
+     - 自适应算子权重：根据历史成功率动态调节各邻域算子的被选中概率（加速收敛）
+     - 精英池后优化：主循环结束后对精英池中的多组候选解执行 VND，提升最终解稳定性
     """
 
-    def __init__(self, city_indices: list[int], spots_dict: dict[int, SpotDict],
-                 travel_speed: float = 1.0, penalty_weight: float = 100.0,
-                 early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
-                 depot_index: int = 0, use_real_time_matrix: bool = False,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        city_indices: list[int],
+        spots_dict: dict[int, SpotDict],
+        travel_speed: float = 1.0,
+        penalty_weight: float = 100.0,
+        early_wait_weight: float = 0.1,
+        late_return_weight: float = 50.0,
+        depot_index: int = 0,
+        use_real_time_matrix: bool = False,
+        **kwargs,
+    ) -> None:
         """
         初始化 VNS 求解器。
 
@@ -169,8 +188,8 @@ class VNSSolver:
         # Numba 预提取数组
         n = len(spots_dict)
         self.spots_start = np.array([spots_dict[i]["tw"][0] for i in range(n)], dtype=np.float64)
-        self.spots_end   = np.array([spots_dict[i]["tw"][1] for i in range(n)], dtype=np.float64)
-        self.spots_stay  = np.array([spots_dict[i]["stay"] for i in range(n)], dtype=np.float64)
+        self.spots_end = np.array([spots_dict[i]["tw"][1] for i in range(n)], dtype=np.float64)
+        self.spots_stay = np.array([spots_dict[i]["stay"] for i in range(n)], dtype=np.float64)
 
         # 适应度缓存：避免同一解重复触发 Numba 调用的开销
         # 警告：key 使用 id(cost_mat) 而非矩阵哈希（避免哈希开销），
@@ -180,8 +199,8 @@ class VNSSolver:
         # 精英池：保留搜索过程中最优的几条路径
         self.elite_pool = []
         # 自适应算子权重：让历史上更有效的算子获得更高被选中概率，加速收敛
-        self.operator_weights = {'swap': 1.0, 'inversion': 1.0, 'insert': 1.0, '2opt': 1.0}
-        self.last_operator = None
+        self.operator_weights = {"swap": 1.0, "inversion": 1.0, "insert": 1.0, "2opt": 1.0}
+        self.last_operator: str | None = None
 
     # ---------- 适应度（带缓存） ----------
 
@@ -201,12 +220,17 @@ class VNSSolver:
         line_arr = np.array(line, dtype=np.int32)
         dis_arr = np.asarray(cost_mat, dtype=np.float64)
         result = _cal_fitness_numba(
-            line_arr, dis_arr,
-            self.travel_speed, self.penalty_weight,
-            self.early_wait_weight, self.late_return_weight,
+            line_arr,
+            dis_arr,
+            self.travel_speed,
+            self.penalty_weight,
+            self.early_wait_weight,
+            self.late_return_weight,
             self.depot_index,
-            self.spots_start, self.spots_end, self.spots_stay,
-            self.use_real_time_matrix
+            self.spots_start,
+            self.spots_end,
+            self.spots_stay,
+            self.use_real_time_matrix,
         )
         self.fitness_cache[key] = result
         return result
@@ -253,7 +277,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i, j = random.sample(range(len(inner)), 2)
         inner[i], inner[j] = inner[j], inner[i]
         r[1:-1] = inner
@@ -270,10 +295,11 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i = random.randint(0, len(inner) - 2)
         j = random.randint(i + 1, len(inner) - 1)
-        inner[i:j + 1] = reversed(inner[i:j + 1])
+        inner[i : j + 1] = reversed(inner[i : j + 1])
         r[1:-1] = inner
         return r
 
@@ -288,7 +314,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i = random.randint(0, len(inner) - 1)
         j = random.randint(0, len(inner) - 1)
         while i == j:
@@ -309,10 +336,11 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 3: return r
+        if len(inner) < 3:
+            return r
         i = random.randint(0, len(inner) - 3)
         j = random.randint(i + 2, len(inner) - 1)
-        inner[i:j+1] = reversed(inner[i:j+1])
+        inner[i : j + 1] = reversed(inner[i : j + 1])
         r[1:-1] = inner
         return r
 
@@ -335,17 +363,22 @@ class VNSSolver:
             Tuple[List[int], str | None]: (抖动后的解, 最后使用的算子名称).
         """
         sol = solution.copy()
-        ops = ['swap', 'inversion', 'insert', '2opt']
+        ops = ["swap", "inversion", "insert", "2opt"]
 
         # 收集违规节点
         # 注意：analyze_solution（Python 版）与 _cal_fitness_numba（Numba 版）逻辑需同步
         violators = []
         if iter_ratio < EARLY_EXPLORE_RATIO and cost_mat is not None:
             _, _, _, _, violations = analyze_solution(
-                sol, cost_mat, self.spots_dict, self.travel_speed,
-                self.early_wait_weight, self.penalty_weight,
-                self.late_return_weight, self.depot_index,
-                use_real_time_matrix=self.use_real_time_matrix
+                sol,
+                cost_mat,
+                self.spots_dict,
+                self.travel_speed,
+                self.early_wait_weight,
+                self.penalty_weight,
+                self.late_return_weight,
+                self.depot_index,
+                use_real_time_matrix=self.use_real_time_matrix,
             )
             violators = list(set(v[0] for v in violations))
 
@@ -365,10 +398,14 @@ class VNSSolver:
             op = random.choices(ops, weights=weights)[0]
             last_op = op
 
-            if op == 'swap': sol = self._swap(sol)
-            elif op == 'inversion': sol = self._inversion(sol)
-            elif op == 'insert': sol = self._insert(sol)
-            elif op == '2opt': sol = self._2opt(sol)
+            if op == "swap":
+                sol = self._swap(sol)
+            elif op == "inversion":
+                sol = self._inversion(sol)
+            elif op == "insert":
+                sol = self._insert(sol)
+            elif op == "2opt":
+                sol = self._2opt(sol)
 
         return sol, last_op
 
@@ -387,12 +424,12 @@ class VNSSolver:
         if target not in inner:
             return route
         idx = inner.index(target)
-        if op == 'swap' and len(inner) >= 2:
+        if op == "swap" and len(inner) >= 2:
             j = (idx + 1) % len(inner)
             inner[idx], inner[j] = inner[j], inner[idx]
-        elif op == 'inversion' and idx + 2 < len(inner):
-            inner[idx:idx+3] = reversed(inner[idx:idx+3])
-        elif op == 'insert' and len(inner) >= 2:
+        elif op == "inversion" and idx + 2 < len(inner):
+            inner[idx : idx + 3] = reversed(inner[idx : idx + 3])
+        elif op == "insert" and len(inner) >= 2:
             j = (idx + 2) % len(inner)
             val = inner.pop(idx)
             inner.insert(j, val)
@@ -420,7 +457,7 @@ class VNSSolver:
         inner = best_sol[1:-1]
         n = len(inner)
 
-        if move_type == 'swap':
+        if move_type == "swap":
             for i in range(n - 1):
                 for j in range(i + 1, n):
                     new_inner = inner.copy()
@@ -429,18 +466,19 @@ class VNSSolver:
                     c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
-        elif move_type == 'inversion':
+        elif move_type == "inversion":
             for i in range(n - 1):
                 for j in range(i + 2, n):
-                    new_inner = inner[:i] + inner[i:j+1][::-1] + inner[j+1:]
+                    new_inner = inner[:i] + inner[i : j + 1][::-1] + inner[j + 1 :]
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
                     c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
-        elif move_type == 'insert':
+        elif move_type == "insert":
             for i in range(n):
                 for j in range(n):
-                    if i == j: continue
+                    if i == j:
+                        continue
                     new_inner = inner.copy()
                     val = new_inner.pop(i)
                     new_inner.insert(j, val)
@@ -448,10 +486,10 @@ class VNSSolver:
                     c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
                         return new_sol
-        elif move_type == '2opt':
+        elif move_type == "2opt":
             for i in range(n - 1):
                 for j in range(i + 2, n):
-                    new_inner = inner[:i] + inner[i:j+1][::-1] + inner[j+1:]
+                    new_inner = inner[:i] + inner[i : j + 1][::-1] + inner[j + 1 :]
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
                     c, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if c < best_cost:
@@ -474,7 +512,7 @@ class VNSSolver:
         """
         sol = solution.copy()
         k = 0
-        neighborhoods = ['swap', 'inversion', 'insert', '2opt']
+        neighborhoods = ["swap", "inversion", "insert", "2opt"]
 
         while k < len(neighborhoods):
             sol_new = self._local_search(sol, cost_mat, neighborhoods[k])
@@ -496,7 +534,7 @@ class VNSSolver:
             solution: 当前解路径。
             cost: 当前解成本。
         """
-        if len(self.elite_pool) < self.params['elite_size']:
+        if len(self.elite_pool) < self.params["elite_size"]:
             self.elite_pool.append((solution.copy(), cost))
         else:
             worst_idx = max(range(len(self.elite_pool)), key=lambda i: self.elite_pool[i][1])
@@ -529,11 +567,7 @@ class VNSSolver:
         if initial_solution is not None:
             cur_sol = initial_solution
         else:
-            candidates = [
-                self._init_nearest_neighbor(cost_mat),
-                self._init_time_window(),
-                self._init_random()
-            ]
+            candidates = [self._init_nearest_neighbor(cost_mat), self._init_time_window(), self._init_random()]
             cur_sol = min(candidates, key=lambda s: self._cal_fitness(s, cost_mat)[0])
 
         cur_cost, cur_dist, cur_pen = self._cal_fitness(cur_sol, cost_mat)
@@ -543,10 +577,10 @@ class VNSSolver:
 
         self.elite_pool = [(best_sol.copy(), best_cost)]
 
-        shaking_list = self.params['shaking_neighbors'].copy()
+        shaking_list = self.params["shaking_neighbors"].copy()
         no_improve = 0
-        max_iter = self.params['max_iter']
-        temperature = self.params['sa_initial_temp']
+        max_iter = self.params["max_iter"]
+        temperature = self.params["sa_initial_temp"]
 
         for it in range(max_iter):
             iter_ratio = it / max_iter
@@ -560,12 +594,15 @@ class VNSSolver:
             x_local = self._vnd(x_shake, cost_mat)
 
             new_cost, new_dist, new_pen = self._cal_fitness(x_local, cost_mat)
-            delta = new_cost - cur_cost
 
-            # SA 接收准则
-            accept = delta < 0
+            # 压缩退火：penalty 权重从 0.1 线性增长至 1.0
+            compress_factor = 0.1 + 0.9 * iter_ratio
+            compressed_delta = (new_dist - cur_dist) + compress_factor * (new_pen - cur_pen)
+
+            # 接受准则（标准 SA 概率接受 + 压缩退火加权 delta）
+            accept = compressed_delta < 0
             if not accept and temperature > 0:
-                if random.random() < math.exp(-delta / temperature):
+                if random.random() < math.exp(-compressed_delta / temperature):
                     accept = True
 
             if accept:
@@ -574,27 +611,23 @@ class VNSSolver:
                     best_sol, best_cost, best_dist, best_pen = cur_sol.copy(), new_cost, new_dist, new_pen
                     no_improve = 0
                     self._update_elite(best_sol, best_cost)
-                    # 自适应算子权重奖励：成功改善的算子获得 +2% 权重，让高效算子更易被选中
                     if self.last_operator:
                         self.operator_weights[self.last_operator] *= WEIGHT_REWARD_FACTOR
                         total = sum(self.operator_weights.values())
                         for op in self.operator_weights:
                             self.operator_weights[op] /= total
-                # 改善但未超越全局最优，连续无改善计数递增
-                else:
-                    no_improve += 1
-            # 未被接受，连续无改善计数递增，用于触发早停
             else:
+                # 仅拒绝时递增 no_improve（SA 探索性接受不触发早停）
                 no_improve += 1
 
             conv.append(best_cost)
-            temperature *= self.params['sa_cooling_rate']
+            temperature *= self.params["sa_cooling_rate"]
 
-            if no_improve >= self.params['no_improve_limit']:
+            if no_improve >= self.params["no_improve_limit"]:
                 break
 
         # ***** 最终精细化：对最优解和精英池中的解额外执行 VND，提升最终解的质量稳定性 *****
-        for _ in range(self.params['final_vnd_rounds']):
+        for _ in range(self.params["final_vnd_rounds"]):
             refined = self._vnd(best_sol, cost_mat)
             r_cost, _, _ = self._cal_fitness(refined, cost_mat)
             if r_cost < best_cost:
@@ -607,9 +640,9 @@ class VNSSolver:
                 best_sol, best_cost, best_dist, best_pen = refined, r_cost, r_dist, r_pen
 
         return {
-            'best_solution': best_sol,
-            'best_cost': best_cost,
-            'best_distance': best_dist,
-            'best_penalty': best_pen,
-            'convergence_history': conv
+            "best_solution": best_sol,
+            "best_cost": best_cost,
+            "best_distance": best_dist,
+            "best_penalty": best_pen,
+            "convergence_history": conv,
         }

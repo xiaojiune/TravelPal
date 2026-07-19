@@ -1,6 +1,7 @@
-import pytest
 import numpy as np
-from tests.dataset_loader import load_tsptw_dataset, find_dataset
+import pytest
+
+from tests.dataset_loader import find_dataset, load_tsptw_dataset
 
 # 数据集 fixture 覆盖四种规模：n20（小）、n60（中）、n100（中大）、n200（大）
 

@@ -37,6 +37,18 @@ dev = "backend.api.server:main"
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.1.1"
 pytest-cov = "^7.1.0"
+ruff = "^0.11.0"
+pyright = "^1.1.411"
+
+[tool.pyright]
+reportMissingImports = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^9"

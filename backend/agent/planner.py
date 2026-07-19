@@ -1,11 +1,17 @@
 """方案调整功能：改天数、添加/移除景点并重新求解。"""
 
 import numpy as np
+
 from backend.engine.search import cluster_and_solve, solve_groups
-from backend.typedefs import SpotDict, RouteResult
+from backend.typedefs import SpotDict
 
 
-def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, new_n_days: int) -> dict:
+def adjust_plan_days(
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    new_n_days: int,
+) -> dict:
     """调整方案天数，保持景点不变，用新 n_days 重新规划。
 
     Args:
@@ -21,11 +27,13 @@ def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, d
 
     spots = {k: v for k, v in spots_dict.items()}
     cost = np.array(cost_matrix) if not isinstance(cost_matrix, np.ndarray) else cost_matrix
-    dist = np.array(dist_matrix) if not isinstance(dist_matrix, np.ndarray) else dist_matrix
     depot = 0
 
     result = cluster_and_solve(
-        spots, depot, cost, mode="fast",
+        spots,
+        depot,
+        cost,
+        mode="fast",
         n_days=new_n_days,
     )
 
@@ -38,14 +46,19 @@ def adjust_plan_days(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, d
         "solution": solution,
         "best_days": new_n_days,
         "best_m": result["best_m"],
-    "daily_schedules": daily_schedules,
-}
+        "daily_schedules": daily_schedules,
+    }
 
 
 # ================== 添加景点 ==================
 
 
-def add_poi_to_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, routes: list) -> dict:
+def add_poi_to_plan(
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    routes: list,
+) -> dict:
     """向方案添加新景点并重新求解（矩阵已由调用方展开）。
 
     Args:
@@ -76,7 +89,13 @@ def add_poi_to_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, di
 # ================== 移除景点 ==================
 
 
-def remove_poi_from_plan(spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray, dist_matrix: np.ndarray, routes: list, poi_name: str) -> dict:
+def remove_poi_from_plan(
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    routes: list,
+    poi_name: str,
+) -> dict:
     """从方案中移除指定景点并重新求解。
 
     Args:

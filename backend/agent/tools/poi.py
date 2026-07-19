@@ -1,13 +1,19 @@
 """POI 工具：营业时间 LLM 解析 + POI 查询 Function Calling。"""
 
 import json
+
 from openai import OpenAI
+
+from backend.agent.tools.prompts import PARSE_PROMPT, build_date_context
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
-from backend.agent.tools.prompts import build_date_context, PARSE_PROMPT
 
 
 def _classify_poi(poi_type: str, name: str) -> str:
     """根据高德行业分类和名称判定 POI 类型。
+
+    Args:
+        poi_type: 高德行业分类字符串（如 "住宿服务;宾馆酒店"）。
+        name: POI 名称，辅助判定。
 
     Returns:
         "hotel" | "spot" | "unknown"
@@ -36,6 +42,7 @@ def poi_lookup(city: str, name: str) -> dict:
         查询失败时返回 { error: str }。
     """
     from backend.data.amap_loader import get_poi_details
+
     try:
         result = get_poi_details(name, city)
         if isinstance(result, str):
@@ -71,7 +78,11 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
     Returns:
         (start_min, end_min) 或 None（解析失败时）。
     """
-    if not opentime2 or not opentime2.strip():
+    if not opentime2:
+        return None
+    stripped = opentime2.strip()
+    if not stripped:
+        return None
         return None
 
     date_context = build_date_context()
@@ -85,7 +96,8 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
             temperature=0.1,
             max_tokens=128,
         )
-        text = resp.choices[0].message.content.strip()
+        content = resp.choices[0].message.content
+        text = content.strip() if content else ""
         data = json.loads(text)
         if data is not None:
             start = int(data["start"])

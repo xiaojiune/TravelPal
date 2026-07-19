@@ -15,6 +15,7 @@ def legacy_only(func):
         def old_function():
             ...
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         warnings.warn(
@@ -23,4 +24,5 @@ def legacy_only(func):
             stacklevel=2,
         )
         return func(*args, **kwargs)
+
     return wrapper

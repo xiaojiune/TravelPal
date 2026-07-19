@@ -9,8 +9,18 @@ import numpy as np
 
 # ---------- 子规则 ----------
 
+
 def check_wait(solution, spots, cost_mat):
-    """等待惩罚超过阈值时提醒早到。"""
+    """等待惩罚超过阈值时提醒早到。
+
+    Args:
+        solution: 求解结果，含 wait/late/routes 等。
+        spots: 景点字典。
+        cost_mat: 距离矩阵（km）。
+
+    Returns:
+        str | None: 超过 50 分钟等待时返回提醒文本，否则 None。
+    """
     wait = solution.get("wait", 0)
     if wait > 50:
         return f"总共有 {int(wait)} 分钟的等待时间，可以考虑晚点出门哦"
@@ -18,7 +28,16 @@ def check_wait(solution, spots, cost_mat):
 
 
 def check_late(solution, spots, cost_mat):
-    """迟到惩罚超过阈值时提醒安排太满。"""
+    """迟到惩罚超过阈值时提醒安排太满。
+
+    Args:
+        solution: 求解结果。
+        spots: 景点字典。
+        cost_mat: 距离矩阵。
+
+    Returns:
+        str | None: 超过 50 分钟迟到惩罚时返回提醒文本，否则 None。
+    """
     late = solution.get("late", 0)
     if late > 50:
         return f"产生了 {int(late)} 分钟的迟到惩罚，当天的景点也许可以减掉一两个"
@@ -26,7 +45,16 @@ def check_late(solution, spots, cost_mat):
 
 
 def check_density(solution, spots, cost_mat):
-    """单日景点过多时提醒行程紧凑。"""
+    """单日景点过多时提醒行程紧凑。
+
+    Args:
+        solution: 求解结果，含 routes 路径列表。
+        spots: 景点字典。
+        cost_mat: 距离矩阵。
+
+    Returns:
+        str | None: 存在超过 5 个景点的天数时返回提醒，否则 None。
+    """
     max_per_day = 5
     triggered = []
     for di, route in enumerate(solution["routes"]):
@@ -40,7 +68,16 @@ def check_density(solution, spots, cost_mat):
 
 
 def check_distance(solution, spots, cost_mat):
-    """单日路程过长时提醒注意交通时间。"""
+    """单日路程过长时提醒注意交通时间。
+
+    Args:
+        solution: 求解结果，含 routes 路径列表。
+        spots: 景点字典。
+        cost_mat: 距离矩阵（km）。
+
+    Returns:
+        str | None: 存在超过 50km 的天数时返回提醒，否则 None。
+    """
     threshold_km = 50
     triggered = []
     for di, route in enumerate(solution["routes"]):
@@ -54,7 +91,16 @@ def check_distance(solution, spots, cost_mat):
 
 
 def check_normal(solution, spots, cost_mat):
-    """兜底：一切正常时给出正面评语。"""
+    """兜底：一切正常时给出正面评语。
+
+    Args:
+        solution: 求解结果。
+        spots: 景点字典。
+        cost_mat: 距离矩阵。
+
+    Returns:
+        str: 固定正面评语。
+    """
     return "整体节奏适中，是个舒服的安排"
 
 
@@ -63,8 +109,17 @@ RULES = [check_wait, check_late, check_density, check_distance, check_normal]
 
 # ================== LLM 润色 ==================
 
+
 def polish_with_llm(text: str, enabled: bool = False) -> str:
-    # TODO: enabled=True 时调用 DeepSeek API 将评语润色为更口语化的表达
+    """LLM 润色评语（预留）。
+
+    Args:
+        text: 原始评语文本。
+        enabled: 是否启用 LLM 润色，默认关闭。
+
+    Returns:
+        str: 原文本（润色功能暂未实现）。
+    """
     return text
 
 

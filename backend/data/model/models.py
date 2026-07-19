@@ -1,9 +1,9 @@
 """SQLAlchemy ORM 模型定义。"""
 
 import uuid
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from backend.data.model.database import Base
@@ -20,6 +20,7 @@ class HistoryRecord(Base):
     - device_id 由前端 localStorage 自动生成，仅用于删除鉴权——软鉴权设计，
       不引入真实用户系统，对访客零门槛。
     """
+
     __tablename__ = "history_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

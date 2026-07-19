@@ -12,7 +12,9 @@
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 
-🌐 在线演示：<http://119.29.222.100>（域名 `trippal.site` 备案中）
+🌐 在线演示：<http://119.29.222.100>
+
+🌐 正式域名：<http://trippal.site>（备案中，暂无法访问）
 
 ---
 
@@ -68,7 +70,8 @@ docker compose up -d
 ## 🔧 开发模式
 
 前置条件：Python 3.12、Node.js 22、PostgreSQL、Redis。
-本地数据库依赖也可通过 `docker compose up -d postgres redis` 快速启动，无需本地安装。
+本地数据库依赖通过 Docker 启动（无需本地安装）：
+docker compose up -d postgres redis
 
 ```bash
 make install            # 一键安装前后端依赖
@@ -77,7 +80,8 @@ make serve              # 启动后端（热重载）
 make dev                # 启动前端（Vite HMR）
 ```
 
-完整命令清单见 `make help`。Makefile 统一封装了开发/测试/构建/部署全生命周期命令，降低上手与复现成本。
+完整命令清单：
+make help
 
 ## 📁 项目结构
 

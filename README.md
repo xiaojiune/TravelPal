@@ -70,6 +70,7 @@ docker compose up -d
 ## 🔧 开发模式
 
 前置条件：Python 3.12、Node.js 22、PostgreSQL、Redis。
+
 本地数据库依赖通过 Docker 启动（无需本地安装）：
 docker compose up -d postgres redis
 

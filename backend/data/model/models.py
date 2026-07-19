@@ -20,6 +20,7 @@ class HistoryRecord(Base):
     - device_id 由前端 localStorage 自动生成，仅用于删除鉴权——软鉴权设计，
       不引入真实用户系统，对访客零门槛。
     """
+
     __tablename__ = "history_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

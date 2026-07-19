@@ -42,6 +42,7 @@ def poi_lookup(city: str, name: str) -> dict:
         查询失败时返回 { error: str }。
     """
     from backend.data.amap_loader import get_poi_details
+
     try:
         result = get_poi_details(name, city)
         if isinstance(result, str):
@@ -77,7 +78,11 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
     Returns:
         (start_min, end_min) 或 None（解析失败时）。
     """
-    if not opentime2 or not opentime2.strip():
+    if not opentime2:
+        return None
+    stripped = opentime2.strip()
+    if not stripped:
+        return None
         return None
 
     date_context = build_date_context()
@@ -91,7 +96,8 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
             temperature=0.1,
             max_tokens=128,
         )
-        text = resp.choices[0].message.content.strip()
+        content = resp.choices[0].message.content
+        text = content.strip() if content else ""
         data = json.loads(text)
         if data is not None:
             start = int(data["start"])

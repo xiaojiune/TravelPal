@@ -14,24 +14,83 @@ import jieba
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 _DOC_DIR = os.path.join(_PROJECT_ROOT, "docs")
 
-_STOP_WORDS = frozenset({
-    "的", "了", "是", "在", "和", "与", "也", "就", "都", "而",
-    "及", "或", "这", "那", "哪", "一", "不", "很", "会", "可以",
-    "什么", "怎么", "如何", "为什么", "哪个", "哪些", "好吗",
-    "吗", "呢", "吧", "啊", "哦", "嗯", "哈", "呀", "嘛",
-    "我", "你", "他", "她", "它", "我们", "你们", "他们",
-    "有", "要", "来", "去", "把", "被", "让", "给", "对", "从",
-    "到", "上", "下", "中", "里", "外", "前", "后", "个", "种",
-})
+_STOP_WORDS = frozenset(
+    {
+        "的",
+        "了",
+        "是",
+        "在",
+        "和",
+        "与",
+        "也",
+        "就",
+        "都",
+        "而",
+        "及",
+        "或",
+        "这",
+        "那",
+        "哪",
+        "一",
+        "不",
+        "很",
+        "会",
+        "可以",
+        "什么",
+        "怎么",
+        "如何",
+        "为什么",
+        "哪个",
+        "哪些",
+        "好吗",
+        "吗",
+        "呢",
+        "吧",
+        "啊",
+        "哦",
+        "嗯",
+        "哈",
+        "呀",
+        "嘛",
+        "我",
+        "你",
+        "他",
+        "她",
+        "它",
+        "我们",
+        "你们",
+        "他们",
+        "有",
+        "要",
+        "来",
+        "去",
+        "把",
+        "被",
+        "让",
+        "给",
+        "对",
+        "从",
+        "到",
+        "上",
+        "下",
+        "中",
+        "里",
+        "外",
+        "前",
+        "后",
+        "个",
+        "种",
+    }
+)
 
 
 def _tokenize(text: str) -> list[str]:
     """中英文混合分词：中文用 jieba，英文按空白分割，过滤停用词。"""
     tokens = []
-    for part in re.split(r'([\u4e00-\u9fff]+)', text):
+    for part in re.split(r"([\u4e00-\u9fff]+)", text):
         if not part:
             continue
-        if re.match(r'^[\u4e00-\u9fff]+$', part):
+        if re.match(r"^[\u4e00-\u9fff]+$", part):
             tokens.extend(jieba.lcut(part))
         else:
             tokens.extend(part.lower().split())
@@ -74,7 +133,7 @@ class RagEngine:
                     content = fh.read()
             except Exception:
                 continue
-            raw_sections = re.split(r'(?=^## )', content, flags=re.MULTILINE)
+            raw_sections = re.split(r"(?=^## )", content, flags=re.MULTILINE)
             for sec in raw_sections:
                 sec = sec.strip()
                 if not sec:
@@ -89,11 +148,16 @@ class RagEngine:
                 if not tokens:
                     continue
                 doc_id = f"{rel}#{heading}" if heading else rel
-                self._docs.append({
-                    "id": doc_id, "source": rel, "heading": heading,
-                    "text": f"{heading}\n{body}", "tokens": tokens,
-                    "_tf": Counter(tokens),
-                })
+                self._docs.append(
+                    {
+                        "id": doc_id,
+                        "source": rel,
+                        "heading": heading,
+                        "text": f"{heading}\n{body}",
+                        "tokens": tokens,
+                        "_tf": Counter(tokens),
+                    }
+                )
 
     def _build_index(self) -> None:
         """计算文档平均长度 + 每个词的 IDF，供 BM25 打分使用。"""
@@ -139,16 +203,14 @@ class RagEngine:
         results = self._bm25_score(q_tokens)
         if results and results[0][0] > 0.5:
             return [
-                {"score": round(s, 4), "source": d["source"],
-                 "heading": d["heading"], "text": d["text"][:300]}
+                {"score": round(s, 4), "source": d["source"], "heading": d["heading"], "text": d["text"][:300]}
                 for s, d in results[:k]
             ]
         keywords = [t for t in q_tokens if len(t) > 1]
         if keywords and keywords != q_tokens:
             results = self._bm25_score(keywords)
         return [
-            {"score": round(s, 4), "source": d["source"],
-             "heading": d["heading"], "text": d["text"][:300]}
+            {"score": round(s, 4), "source": d["source"], "heading": d["heading"], "text": d["text"][:300]}
             for s, d in results[:k]
         ]
 

@@ -9,6 +9,7 @@ import numpy as np
 
 # ---------- 子规则 ----------
 
+
 def check_wait(solution, spots, cost_mat):
     """等待惩罚超过阈值时提醒早到。
 
@@ -108,6 +109,7 @@ RULES = [check_wait, check_late, check_density, check_distance, check_normal]
 
 # ================== LLM 润色 ==================
 
+
 def polish_with_llm(text: str, enabled: bool = False) -> str:
     """LLM 润色评语（预留）。
 
@@ -118,6 +120,7 @@ def polish_with_llm(text: str, enabled: bool = False) -> str:
     Returns:
         str: 原文本（润色功能暂未实现）。
     """
+    return text
 
 
 def generate_commentary(solution: dict, spots: dict, cost_mat: np.ndarray) -> str:

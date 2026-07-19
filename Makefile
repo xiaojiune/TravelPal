@@ -1,5 +1,5 @@
 .PHONY: install build gen-api serve serve-nodb dev lint format typecheck \
-        test check ruff ruff-fix \
+        test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
         clean help
 
@@ -42,8 +42,17 @@ ruff: ## 后端 Python lint 检查（ruff）
 ruff-fix: ## 后端 Python lint 自动修复
 	.venv/bin/ruff check --fix backend/
 
-check: ## 前后端全量检查
-	.venv/bin/ruff check backend/ && cd frontend && npm run lint && npx vue-tsc --noEmit
+ruff-format: ## 后端 Python 代码格式化（ruff）
+	.venv/bin/ruff format backend/
+
+pyright: ## 后端 Python 类型检查
+	.venv/bin/pyright backend/
+
+check: ## 前后端全量检查（格式 + lint + 类型 + 测试）
+	.venv/bin/ruff format --check backend/ && \
+	.venv/bin/ruff check backend/ && \
+	.venv/bin/pyright backend/ && \
+	cd frontend && npm run lint && npx vue-tsc --noEmit
 
 # ======== 测试 ========
 

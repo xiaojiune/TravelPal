@@ -38,6 +38,16 @@ dev = "backend.api.server:main"
 pytest = "^9.1.1"
 pytest-cov = "^7.1.0"
 ruff = "^0.11.0"
+pyright = "^1.1.411"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+reportMissingImports = false
+reportCallIssue = "warning"
+reportArgumentType = "warning"
+reportGeneralTypeIssues = "warning"
+reportOptionalSubscript = "warning"
+reportOptionalMemberAccess = "warning"
 
 [tool.ruff]
 target-version = "py312"

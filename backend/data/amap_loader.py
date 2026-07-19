@@ -13,10 +13,11 @@ from backend.utils.deprecated import legacy_only
 # ---------- 工具函数 ----------
 
 # 中点符号变体集合（统一归一化为空白后移除）
-_MIDDLE_DOTS = set('·・‧•･∙')
+_MIDDLE_DOTS = set("·・‧•･∙")
+
 
 def normalize_text(text: str) -> str:
-    """    全角→半角 + 空白压缩 + 中点符号归一化，用于名称匹配。
+    """全角→半角 + 空白压缩 + 中点符号归一化，用于名称匹配。
 
     用户输入与高德返回的名称常有空格/中点符号的细微差异，
     归一化后做双向子串匹配，提高酒店/景点名称匹配成功率。
@@ -25,18 +26,18 @@ def normalize_text(text: str) -> str:
     for char in text:
         code = ord(char)
         if char in _MIDDLE_DOTS:
-            result.append(' ')
+            result.append(" ")
         elif 0xFF01 <= code <= 0xFF5E:
             result.append(chr(code - 0xFEE0))
         else:
             result.append(char)
-    return re.sub(r'\s+', '', ''.join(result))
+    return re.sub(r"\s+", "", "".join(result))
 
 
 def _parse_date(date_str: str, year: int) -> datetime.date | None:
     """解析高德营业时间中的日期段，如 '04月01日' → datetime.date。成功返回 date，失败返回 None。"""
-    date_str = date_str.replace('日', '').replace('月', '-')
-    parts = date_str.split('-')
+    date_str = date_str.replace("日", "").replace("月", "-")
+    parts = date_str.split("-")
     if len(parts) == 2:
         month = int(parts[0])
         day = int(parts[1])
@@ -70,27 +71,27 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
         return None
     today = datetime.date.today()
     current_year = today.year
-    segments = opentime_str.replace('：', ':').split('；')
+    segments = opentime_str.replace("：", ":").split("；")
     for seg in segments:
         seg = seg.strip()
-        if ':' not in seg:
+        if ":" not in seg:
             continue
-        date_part, time_part = seg.rsplit(':', 1)
+        date_part, time_part = seg.rsplit(":", 1)
         date_part = date_part.strip()
         time_part = time_part.strip()
-        time_match = time_part.split('-')
+        time_match = time_part.split("-")
         if len(time_match) != 2:
             continue
         try:
-            h1, m1 = map(int, time_match[0].strip().split(':'))
-            h2, m2 = map(int, time_match[1].strip().split(':'))
+            h1, m1 = map(int, time_match[0].strip().split(":"))
+            h2, m2 = map(int, time_match[1].strip().split(":"))
             start_min = h1 * 60 + m1
             end_min = h2 * 60 + m2
         except Exception:
             continue
-        date_part = date_part.replace(' ', '')
-        if '-' in date_part:
-            date_range = date_part.split('-')
+        date_part = date_part.replace(" ", "")
+        if "-" in date_part:
+            date_range = date_part.split("-")
             if len(date_range) == 2:
                 try:
                     start_date = _parse_date(date_range[0], current_year)
@@ -108,7 +109,9 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
                 continue
     return None
 
+
 # ================== POI 详细信息 ==================
+
 
 def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, str, str, str, str] | str:
     """
@@ -133,7 +136,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
     def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str, str]:
         """解析高德 POI 字典，提取坐标/营业时间/地址/行政区划/行业分类。"""
         loc = poi["location"]
-        lon, lat = map(float, loc.split(','))
+        lon, lat = map(float, loc.split(","))
         biz_hours = ""
         if "biz_ext" in poi and "opentime2" in poi["biz_ext"]:
             biz_hours = poi["biz_ext"]["opentime2"]
@@ -148,8 +151,14 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
 
     try:
         # 策略1：types=风景名胜 + city_limit，高德分类准确时直接命中
-        params = {"keywords": poi_name, "city": city, "key": AMAP_API_KEY,
-                  "extensions": "all", "city_limit": True, "types": "风景名胜"}
+        params = {
+            "keywords": poi_name,
+            "city": city,
+            "key": AMAP_API_KEY,
+            "extensions": "all",
+            "city_limit": True,
+            "types": "风景名胜",
+        }
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
         data = resp.json()
         if data["status"] == "1" and int(data.get("count", 0)) > 0:
@@ -186,7 +195,9 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         print(f"POI请求失败: {e}")
         return f"'{poi_name}' 查询失败"
 
+
 # ================== 驾车路径规划 ==================
+
 
 def _get_driving_data(origin: tuple[float, float], destination: tuple[float, float], max_retries: int = 3):
     """
@@ -208,7 +219,7 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
         "origin": f"{origin[0]},{origin[1]}",
         "destination": f"{destination[0]},{destination[1]}",
         "key": AMAP_API_KEY,
-        "strategy": "32"
+        "strategy": "32",
     }
     for attempt in range(max_retries):
         try:
@@ -232,13 +243,15 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
                 return None, None, None
         except Exception as e:
             if attempt < max_retries - 1:
-                print(f"驾车路径规划请求失败 (第{attempt+1}次重试): {e}")
+                print(f"驾车路径规划请求失败 (第{attempt + 1}次重试): {e}")
                 time.sleep(1)
             else:
                 print(f"驾车路径规划请求失败（已重试{max_retries}次）: {e}")
                 return None, None, None
 
+
 # ================== 批量构建成本矩阵 ==================
+
 
 def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], delay: float = 0.4):
     """
@@ -272,8 +285,9 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
                 cost[i][j] = cost[j][i]
                 dist[i][j] = dist[j][i]
                 continue
-            d_km, dur, poly = _get_driving_data(coords[i], coords[j])
-            if dur is not None:
+            result = _get_driving_data(coords[i], coords[j])
+            d_km, dur, poly = result if result else (None, None, None)
+            if dur is not None and d_km is not None:
                 cost[i][j] = round(dur / 60.0, 2)
                 dist[i][j] = round(d_km, 2)
                 if poly:

@@ -34,6 +34,7 @@ router = APIRouter()
 
 # ================== 辅助函数 ==================
 
+
 def _build_poi_cache(req: PlanRequest):
     """将 PlanRequest 转换为 run_planning 所需的 poi_cache 格式。
 
@@ -66,7 +67,9 @@ def _build_poi_cache(req: PlanRequest):
     ]
     return {"hotel": hotel, "spots": spots}
 
+
 # ================== 路由端点 ==================
+
 
 @router.post("/api/poi-lookup", response_model=POILookupResponse)
 async def poi_lookup(req: POILookupRequest):
@@ -95,17 +98,25 @@ async def poi_lookup(req: POILookupRequest):
                 parsed = parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else None
                 tw_end = parsed[1] if parsed else None
-                items.append(POILookupItem(
-                    name=actual_name, lon=lon, lat=lat, address=address,
-                    tw_start=tw_start, tw_end=tw_end,
-                ))
+                items.append(
+                    POILookupItem(
+                        name=actual_name,
+                        lon=lon,
+                        lat=lat,
+                        address=address,
+                        tw_start=tw_start,
+                        tw_end=tw_end,
+                    )
+                )
         except Exception:
             traceback.print_exc()
             failed.append(f"未在{req.city}找到{name}，请尝试更换搜索词")
 
     return POILookupResponse(items=items, failed=failed)
 
+
 # ---------- 规划相关 ----------
+
 
 @router.post("/api/suggest")
 async def suggest(req: PlanRequest):
@@ -125,7 +136,9 @@ async def suggest(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache, req.city, req.hotel_name,
+            poi_cache,
+            req.city,
+            req.hotel_name,
             penalty_weight=req.penalty_weight,
             early_wait_weight=req.early_wait_weight,
             late_return_weight=req.late_return_weight,
@@ -163,7 +176,9 @@ async def plan(req: PlanRequest):
     try:
         poi_cache = _build_poi_cache(req)
         result = run_planning(
-            poi_cache, req.city, req.hotel_name,
+            poi_cache,
+            req.city,
+            req.hotel_name,
             penalty_weight=req.penalty_weight,
             early_wait_weight=req.early_wait_weight,
             late_return_weight=req.late_return_weight,
@@ -181,8 +196,8 @@ async def plan(req: PlanRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 # ---------- Agent 对话 ----------
+
 
 @router.post("/api/chat")
 async def chat(req: ChatRequest):
@@ -202,6 +217,7 @@ async def chat(req: ChatRequest):
             from openai import OpenAI
 
             from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+
             client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
             resp = client.chat.completions.create(
                 model=LLM_MODEL,
@@ -215,9 +231,9 @@ async def chat(req: ChatRequest):
             if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
                 messages.append(choice.message)
                 for tc in choice.message.tool_calls:
-                    tool_name = tc.function.name
+                    tool_name = tc.function.name  # type: ignore[union-attr]
                     try:
-                        args = json.loads(tc.function.arguments)
+                        args = json.loads(tc.function.arguments)  # type: ignore[union-attr]
                     except Exception:
                         args = {}
                     tool_fn = TOOL_REGISTRY.get(tool_name)
@@ -225,11 +241,13 @@ async def chat(req: ChatRequest):
                         yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
                         result = tool_fn(**args)
                         yield f"data: {json.dumps({'type': 'tool_result', 'data': result})}\n\n"
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tc.id,
-                            "content": json.dumps(result, ensure_ascii=False),
-                        })
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tc.id,
+                                "content": json.dumps(result, ensure_ascii=False),
+                            }
+                        )
                 # 第二阶段：流式输出 LLM 回复
                 try:
                     async for token in chat_stream(messages):
@@ -282,12 +300,7 @@ async def list_history(
     count_q = select(func.count(HistoryRecord.id))
     total = (await session.execute(count_q)).scalar() or 0
 
-    q = (
-        select(HistoryRecord)
-        .order_by(HistoryRecord.created_at.desc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-    )
+    q = select(HistoryRecord).order_by(HistoryRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(q)).scalars().all()
 
     items = [
@@ -398,5 +411,3 @@ async def delete_history(
     await session.delete(r)
     await session.commit()
     return {"ok": True}
-
-

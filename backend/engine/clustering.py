@@ -1,10 +1,13 @@
 """聚类方法注册表：6 种分组策略（K-means / 启发式 / 混合优化）。"""
 
+from collections.abc import Callable
+
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 # ================== 聚类方法 ==================
+
 
 def cluster_by_distance_kmeans(spots: dict, depot: int, n_clusters: int):
     """
@@ -62,8 +65,7 @@ def cluster_by_time_window(spots: dict, depot: int, n_clusters: int):
     return groups
 
 
-def cluster_by_spatiotemporal(spots: dict, depot: int, n_clusters: int,
-                                sp_w: float = 0.5, tp_w: float = 0.5):
+def cluster_by_spatiotemporal(spots: dict, depot: int, n_clusters: int, sp_w: float = 0.5, tp_w: float = 0.5):
     """
     时空联合聚类（距离 + 时间窗）。
 
@@ -114,10 +116,10 @@ def cluster_by_time_overlap(spots: dict, depot: int, n_clusters: int):
     cities = []
     for i, spot in spots.items():
         if i != depot:
-            cities.append({'id': i, 'start': spot["tw"][0], 'end': spot["tw"][1]})
+            cities.append({"id": i, "start": spot["tw"][0], "end": spot["tw"][1]})
     if not cities:
         return [[] for _ in range(n_clusters)]
-    cities.sort(key=lambda x: x['start'])
+    cities.sort(key=lambda x: x["start"])
     groups = [[] for _ in range(n_clusters)]
     base = len(cities) // n_clusters
     rem = len(cities) % n_clusters
@@ -125,7 +127,7 @@ def cluster_by_time_overlap(spots: dict, depot: int, n_clusters: int):
     for g in range(n_clusters):
         sz = base + (1 if g < rem else 0)
         for _ in range(sz):
-            groups[g].append(cities[idx]['id'])
+            groups[g].append(cities[idx]["id"])
             idx += 1
     return groups
 
@@ -177,10 +179,10 @@ def cluster_hybrid_optimized(spots: dict, cost_mat: np.ndarray, depot: int, n_cl
     cities = []
     for i, spot in spots.items():
         if i != depot:
-            cities.append({'id': i, 'start': spot["tw"][0], 'end': spot["tw"][1]})
+            cities.append({"id": i, "start": spot["tw"][0], "end": spot["tw"][1]})
     if not cities:
         return [[] for _ in range(n_clusters)]
-    cities.sort(key=lambda x: x['start'])
+    cities.sort(key=lambda x: x["start"])
     groups = [[] for _ in range(n_clusters)]
     base = len(cities) // n_clusters
     rem = len(cities) % n_clusters
@@ -188,7 +190,7 @@ def cluster_hybrid_optimized(spots: dict, cost_mat: np.ndarray, depot: int, n_cl
     for g in range(n_clusters):
         sz = base + (1 if g < rem else 0)
         for _ in range(sz):
-            groups[g].append(cities[idx]['id'])
+            groups[g].append(cities[idx]["id"])
             idx += 1
     # 交换优化：将各组最晚节点与下一组最早节点交换以降低组内距离
     for _ in range(10):
@@ -237,12 +239,15 @@ CLUSTER_METHODS = [
     ("3. 基于时空特征的聚类", cluster_by_spatiotemporal),
     ("4. 基于时间窗重叠的启发式分组", cluster_by_time_overlap),
     ("5. 基于时间窗密度的聚类", cluster_by_time_density),
-    ("6. 混合分组方法", cluster_hybrid_optimized)
+    ("6. 混合分组方法", cluster_hybrid_optimized),
 ]
 
 
 def call_cluster(
-    func: callable, spots: dict, depot: int, k: int,
+    func: Callable,
+    spots: dict,
+    depot: int,
+    k: int,
     cost_mat: np.ndarray | None = None,
 ) -> list[list[int]]:
     """
@@ -260,7 +265,7 @@ def call_cluster(
     Returns:
         list[list[int]]: 每组包含的景点索引列表。
     """
-    if func.__name__ == 'cluster_hybrid_optimized':
+    if func.__name__ == "cluster_hybrid_optimized":
         return func(spots, cost_mat, depot, k)
     return func(spots, depot, k)
 

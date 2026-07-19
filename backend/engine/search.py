@@ -12,6 +12,7 @@ from backend.typedefs import RouteResult, SpotDict
 
 # ================== 分组求解 ==================
 
+
 def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> list:
     """
     强制均衡分组，确保每天的总停留时间接近。
@@ -45,14 +46,21 @@ def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> 
 
     balanced = [[depot] + core + [depot] for core in new_groups]
     final_loads = [sum(spots[n]["stay"] for n in g if n != depot) for g in balanced]
-    print(f"  均衡后每日停留负荷: {final_loads}, 目标均值: {sum(final_loads)/k:.0f} min")
+    print(f"  均衡后每日停留负荷: {final_loads}, 目标均值: {sum(final_loads) / k:.0f} min")
     return balanced
 
 
-def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray, solver_type: str = "CA",
-                 travel_speed: float = 1.0, penalty_weight: float = 100.0,
-                 early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
-                 use_real_time_matrix: bool = False) -> RouteResult:
+def solve_groups(
+    groups: list,
+    spots: dict[int, SpotDict],
+    cost_mat: np.ndarray,
+    solver_type: str = "CA",
+    travel_speed: float = 1.0,
+    penalty_weight: float = 100.0,
+    early_wait_weight: float = 0.1,
+    late_return_weight: float = 50.0,
+    use_real_time_matrix: bool = False,
+) -> RouteResult:
     """
     对已分组的路径逐一求解。
 
@@ -81,7 +89,8 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
             continue
         if solver_type == "VNS":
             solver = VNSSolver(
-                g, spots,
+                g,
+                spots,
                 travel_speed=travel_speed,
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
@@ -90,7 +99,8 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
             )
         else:
             solver = CASolver(
-                g, spots,
+                g,
+                spots,
                 travel_speed=travel_speed,
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
@@ -104,10 +114,14 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
         total_dist += res["best_distance"]
         # 求解器内部以 cost 为主，不直接暴露 wait/late 明细，因此重新调用 analyze_solution 提取详细指标
         _, _, w, late_val, _ = analyze_solution(
-            res["best_solution"], cost_mat, spots, travel_speed,
+            res["best_solution"],
+            cost_mat,
+            spots,
+            travel_speed,
             early_wait_weight=early_wait_weight,
             penalty_weight=penalty_weight,
-            late_return_weight=late_return_weight, depot=0,
+            late_return_weight=late_return_weight,
+            depot=0,
             use_real_time_matrix=use_real_time_matrix,
         )
         total_wait += w
@@ -118,7 +132,7 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
         for c in r:
             if c != 0:
                 visited.add(c)
-    valid = (visited == set(range(1, len(spots))))
+    valid = visited == set(range(1, len(spots)))
     return {
         "routes": routes,
         "histories": histories,
@@ -149,15 +163,23 @@ def _deduplicate(results: list) -> list:
             deduped.append(item)
     return deduped
 
+
 # ================== CA 全参数搜索 ==================
 
-def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
-               min_days: int | None = None,
-               early_stop_gain_threshold: float | None = None,
-               stop_consecutive_worse: int | None = None,
-               travel_speed: float = 1.0, penalty_weight: float = 100.0,
-               early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
-               use_real_time_matrix: bool = False) -> dict:
+
+def ca_suggest(
+    spots: dict[int, SpotDict],
+    depot: int,
+    cost_mat: np.ndarray,
+    min_days: int | None = None,
+    early_stop_gain_threshold: float | None = None,
+    stop_consecutive_worse: int | None = None,
+    travel_speed: float = 1.0,
+    penalty_weight: float = 100.0,
+    early_wait_weight: float = 0.1,
+    late_return_weight: float = 50.0,
+    use_real_time_matrix: bool = False,
+) -> dict:
     """
     全参数搜索，输出全部可行方案建议（去重后）。
 
@@ -200,29 +222,37 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         for n_days in range(min_days, n_spots + 1):
             groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
             res = solve_groups(
-                groups, spots, cost_mat, "CA",
-                travel_speed, penalty_weight,
-                early_wait_weight, late_return_weight,
+                groups,
+                spots,
+                cost_mat,
+                "CA",
+                travel_speed,
+                penalty_weight,
+                early_wait_weight,
+                late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天（组数与 n_days 不匹配），跳过该方案
                 continue
-            raw_results.append({
-                "method": method_name,
-                "n_days": n_days,
-                "cost": res["total_cost"],
-                "total_dist": res["total_dist"],
-                "wait": res["wait"],
-                "late": res["late"],
-                "groups": groups,
-                "routes": res["routes"],
-            })
+            raw_results.append(
+                {
+                    "method": method_name,
+                    "n_days": n_days,
+                    "cost": res["total_cost"],
+                    "total_dist": res["total_dist"],
+                    "wait": res["wait"],
+                    "late": res["late"],
+                    "groups": groups,
+                    "routes": res["routes"],
+                }
+            )
             # 增益阈值早退：改善不明显（< early_stop_gain_threshold%）或连续变差达到上限时停止该聚类方法的搜索
-            if res["total_cost"] < best_cost:
-                improvement = (best_cost - res["total_cost"]) / best_cost * 100
-                best_cost = res["total_cost"]
+            total_cost = res["total_cost"]
+            if total_cost is not None and total_cost < best_cost:
+                improvement = (best_cost - total_cost) / best_cost * 100
+                best_cost = total_cost
                 best_days = n_days
-                if improvement < early_stop_gain_threshold:
+                if early_stop_gain_threshold is not None and improvement < early_stop_gain_threshold:
                     worse_count += 1
                 else:
                     worse_count = 0
@@ -230,7 +260,7 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
                 if n_days > best_days:
                     worse_count += 1
 
-            if worse_count >= stop_consecutive_worse:
+            if stop_consecutive_worse is not None and worse_count >= stop_consecutive_worse:
                 break
 
     # 先按成本排序再去重：不同聚类方法可能产出相同分组，靠后的运行轮次因 CA 随机性成本可能更低，排序确保每组保留最优解
@@ -255,14 +285,23 @@ def ca_suggest(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
         "message": "请指定行程天数以获得最终方案",
     }
 
+
 # ================== 双模式分发 ==================
 
-def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarray,
-                      mode: str = "fast", n_days: int | None = None,
-                      min_days: int | None = None,
-                      travel_speed: float = 1.0, penalty_weight: float = 100.0,
-                      early_wait_weight: float = 0.1, late_return_weight: float = 50.0,
-                      use_real_time_matrix: bool = False) -> dict:
+
+def cluster_and_solve(
+    spots: dict[int, SpotDict],
+    depot: int,
+    cost_mat: np.ndarray,
+    mode: str = "fast",
+    n_days: int | None = None,
+    min_days: int | None = None,
+    travel_speed: float = 1.0,
+    penalty_weight: float = 100.0,
+    early_wait_weight: float = 0.1,
+    late_return_weight: float = 50.0,
+    use_real_time_matrix: bool = False,
+) -> dict:
     """
     双阶段路由入口。
 
@@ -298,9 +337,14 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
         for method_name, method_func in CLUSTER_METHODS:
             groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
             res = solve_groups(
-                groups, spots, cost_mat, solver_type,
-                travel_speed, penalty_weight,
-                early_wait_weight, late_return_weight,
+                groups,
+                spots,
+                cost_mat,
+                solver_type,
+                travel_speed,
+                penalty_weight,
+                early_wait_weight,
+                late_return_weight,
                 use_real_time_matrix=use_real_time_matrix,
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
@@ -322,7 +366,9 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
         raise ValueError("深度模式(VNS)需要指定 n_days，请先通过 ca_suggest() 获取建议")
 
     return ca_suggest(
-        spots, depot, cost_mat,
+        spots,
+        depot,
+        cost_mat,
         min_days=min_days,
         travel_speed=travel_speed,
         penalty_weight=penalty_weight,

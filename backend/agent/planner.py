@@ -7,8 +7,10 @@ from backend.typedefs import SpotDict
 
 
 def adjust_plan_days(
-    spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray,
-    dist_matrix: np.ndarray, new_n_days: int,
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    new_n_days: int,
 ) -> dict:
     """调整方案天数，保持景点不变，用新 n_days 重新规划。
 
@@ -28,7 +30,10 @@ def adjust_plan_days(
     depot = 0
 
     result = cluster_and_solve(
-        spots, depot, cost, mode="fast",
+        spots,
+        depot,
+        cost,
+        mode="fast",
         n_days=new_n_days,
     )
 
@@ -41,16 +46,18 @@ def adjust_plan_days(
         "solution": solution,
         "best_days": new_n_days,
         "best_m": result["best_m"],
-    "daily_schedules": daily_schedules,
-}
+        "daily_schedules": daily_schedules,
+    }
 
 
 # ================== 添加景点 ==================
 
 
 def add_poi_to_plan(
-    spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray,
-    dist_matrix: np.ndarray, routes: list,
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    routes: list,
 ) -> dict:
     """向方案添加新景点并重新求解（矩阵已由调用方展开）。
 
@@ -83,8 +90,11 @@ def add_poi_to_plan(
 
 
 def remove_poi_from_plan(
-    spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray,
-    dist_matrix: np.ndarray, routes: list, poi_name: str,
+    spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+    dist_matrix: np.ndarray,
+    routes: list,
+    poi_name: str,
 ) -> dict:
     """从方案中移除指定景点并重新求解。
 

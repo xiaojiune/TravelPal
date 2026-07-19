@@ -1,6 +1,7 @@
 """Async SQLAlchemy 引擎与会话管理。"""
 
 import os
+from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -23,7 +24,7 @@ class Base(DeclarativeBase):
     """SQLAlchemy ORM 声明式基类，所有数据模型继承此类。"""
 
 
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """获取异步数据库会话，用于 FastAPI Depends 注入。"""
     if SKIP_DB:
         raise HTTPException(status_code=503, detail="数据库未启用（SKIP_DB 模式）")

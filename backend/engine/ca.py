@@ -12,26 +12,36 @@ from numba import njit
 # 初期 compressed_penalty_start 很小 → 对惩罚增加不敏感，允许探索不可行区域
 # 后期逐渐增大到 compressed_penalty_end → 与原始成本一致，强制收敛到可行解
 CA_DEFAULT_PARAMS = {
-    'max_iter': 2000,
-    'initial_temperature': 1000.0,
-    'cooling_rate': 0.95,
-    'min_temperature': 1e-8,
-    'inner_iter': 10,
-    'use_time_window_guided': True,
-    'use_compressed_annealing': True,
-    'compressed_penalty_start': 0.1,
-    'compressed_penalty_end': 1.0,
-    'early_stop_gain_threshold': 1.0,
-    'stop_consecutive_worse': 3,
+    "max_iter": 2000,
+    "initial_temperature": 1000.0,
+    "cooling_rate": 0.95,
+    "min_temperature": 1e-8,
+    "inner_iter": 10,
+    "use_time_window_guided": True,
+    "use_compressed_annealing": True,
+    "compressed_penalty_start": 0.1,
+    "compressed_penalty_end": 1.0,
+    "early_stop_gain_threshold": 1.0,
+    "stop_consecutive_worse": 3,
 }
 
 # ================== Numba 适应度内核 ==================
 
+
 @njit(cache=True)
-def _cal_fitness_numba(line, cost_mat, travel_speed, penalty_weight,
-                       early_wait_weight, late_return_weight, depot_index,
-                       spots_start, spots_end, spots_stay,
-                       use_real_time_matrix=False):
+def _cal_fitness_numba(
+    line,
+    cost_mat,
+    travel_speed,
+    penalty_weight,
+    early_wait_weight,
+    late_return_weight,
+    depot_index,
+    spots_start,
+    spots_end,
+    spots_stay,
+    use_real_time_matrix=False,
+):
     """
     Numba JIT 编译的适应度计算内核（与 VNS 共享相同逻辑）。
 
@@ -102,6 +112,7 @@ def _cal_fitness_numba(line, cost_mat, travel_speed, penalty_weight,
 
 # ================== CASolver 主类 ==================
 
+
 class CASolver:
     """
     压缩退火求解器（Compressed Annealing）。
@@ -115,11 +126,18 @@ class CASolver:
     - 2-opt 精细化：主循环结束后对最优解执行 First Improvement 2-opt 局部搜索
     """
 
-    def __init__(self, city_indices: list[int], spots_dict: dict,
-                 travel_speed: float = 1.0,
-                 penalty_weight: float = 100.0, early_wait_weight: float = 0.1,
-                 late_return_weight: float = 50.0, depot_index: int = 0,
-                 use_real_time_matrix: bool = False, **kwargs):
+    def __init__(
+        self,
+        city_indices: list[int],
+        spots_dict: dict,
+        travel_speed: float = 1.0,
+        penalty_weight: float = 100.0,
+        early_wait_weight: float = 0.1,
+        late_return_weight: float = 50.0,
+        depot_index: int = 0,
+        use_real_time_matrix: bool = False,
+        **kwargs,
+    ):
         """
         初始化压缩退火求解器。
 
@@ -170,12 +188,17 @@ class CASolver:
         line_arr = np.array(line, dtype=np.int32)
         dis_arr = np.asarray(cost_mat, dtype=np.float64)
         return _cal_fitness_numba(
-            line_arr, dis_arr,
-            self.travel_speed, self.penalty_weight,
-            self.early_wait_weight, self.late_return_weight,
+            line_arr,
+            dis_arr,
+            self.travel_speed,
+            self.penalty_weight,
+            self.early_wait_weight,
+            self.late_return_weight,
             self.depot_index,
-            self.spots_start, self.spots_end, self.spots_stay,
-            self.use_real_time_matrix
+            self.spots_start,
+            self.spots_end,
+            self.spots_stay,
+            self.use_real_time_matrix,
         )
 
     # ---------- 初始解 ----------
@@ -211,7 +234,7 @@ class CASolver:
             # 高温段：大范围反转，强化全局探索能力
             i = random.randint(0, len(inner) - 2)
             j = random.randint(i + 1, len(inner) - 1)
-            inner[i:j + 1] = reversed(inner[i:j + 1])
+            inner[i : j + 1] = reversed(inner[i : j + 1])
         elif temp_ratio > 0.3 or random.random() < 0.5:
             # 中温段：交换两点，平衡探索与利用
             i, j = random.sample(range(len(inner)), 2)
@@ -285,7 +308,7 @@ class CASolver:
             List[int]: 新邻居解路径。
         """
         temp_ratio = iteration / max_iter if max_iter > 0 else 0.5
-        if self.params['use_time_window_guided'] and random.random() < 0.5:
+        if self.params["use_time_window_guided"] and random.random() < 0.5:
             return self._time_window_guided_neighbor(solution, cost_mat, temp_ratio)
         return self._standard_neighbor(solution, temp_ratio)
 
@@ -308,7 +331,7 @@ class CASolver:
             for i in range(len(inner) - 1):
                 for j in range(i + 2, len(inner)):
                     new_inner = inner.copy()
-                    new_inner[i:j + 1] = reversed(new_inner[i:j + 1])
+                    new_inner[i : j + 1] = reversed(new_inner[i : j + 1])
                     new_sol = [self.depot_index] + new_inner + [self.depot_index]
                     new_cost, _, _ = self._cal_fitness(new_sol, cost_mat)
                     if new_cost < best_cost:
@@ -343,14 +366,14 @@ class CASolver:
         best_cost, best_dist, best_pen = cur_cost, cur_dist, cur_pen
         conv = [best_cost]
 
-        temp = self.params['initial_temperature']
+        temp = self.params["initial_temperature"]
         iteration = 0
-        max_iter = self.params['max_iter']
-        use_comp = self.params['use_compressed_annealing']
-        start_compress = self.params['compressed_penalty_start']
-        end_compress = self.params['compressed_penalty_end']
+        max_iter = self.params["max_iter"]
+        use_comp = self.params["use_compressed_annealing"]
+        start_compress = self.params["compressed_penalty_start"]
+        end_compress = self.params["compressed_penalty_end"]
 
-        while temp > self.params['min_temperature'] and iteration < max_iter:
+        while temp > self.params["min_temperature"] and iteration < max_iter:
             # 压缩系数（随迭代进度线性增长）
             if use_comp:
                 progress = iteration / max_iter if max_iter > 0 else 0.0
@@ -358,7 +381,7 @@ class CASolver:
             else:
                 compress_factor = 1.0
 
-            for _ in range(self.params['inner_iter']):
+            for _ in range(self.params["inner_iter"]):
                 neighbor = self._get_neighbor(cur, iteration, max_iter, cost_mat)
                 n_cost, n_dist, n_pen = self._cal_fitness(neighbor, cost_mat)
 
@@ -378,7 +401,7 @@ class CASolver:
                         best_cost, best_dist, best_pen = cur_cost, cur_dist, cur_pen
 
             conv.append(best_cost)
-            temp *= self.params['cooling_rate']
+            temp *= self.params["cooling_rate"]
             iteration += 1
 
         # 最终 2-opt 精细化
@@ -389,9 +412,9 @@ class CASolver:
                 best_sol, best_cost, best_dist, best_pen = refined, r_cost, r_dist, r_pen
 
         return {
-            'best_solution': best_sol,
-            'best_cost': best_cost,
-            'best_distance': best_dist,
-            'best_penalty': best_pen,
-            'convergence_history': conv
+            "best_solution": best_sol,
+            "best_cost": best_cost,
+            "best_distance": best_dist,
+            "best_penalty": best_pen,
+            "convergence_history": conv,
         }

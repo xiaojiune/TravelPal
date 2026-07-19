@@ -20,7 +20,7 @@
 
 ## ✨ 核心功能
 
-- **双引擎求解**：CA 秒级出可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
+- **双引擎求解**：CA 快速求解可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
 - **算法验证**：基于 Dumas TSPTW 基准测试集（n20~n200）多规模算例验证，n100 求解时间秒至分钟级
 - **对话式规划**：LLM Agent 理解自然语言需求，支持边聊边调
 - **地图可视化**：真实驾车路径实时渲染，景点标注精确到达/离开时间与状态
@@ -35,7 +35,23 @@
 
 ## 🖼️ 效果预览
 
-> （待补充：规划结果页面截图、对话界面截图）
+从自然语言对话到可执行的地图路线，完整链路一目了然：
+> 💡 当前界面与文档均针对 PC 端设计，建议在桌面浏览器中体验。
+
+| 🏠 首页规划 | 📋 方案建议 |
+|:---:|:---:|
+| <img src="docs/images/screenshots/HomePage.png" width="360"> | <img src="docs/images/screenshots/Suggestions.png" width="360"> |
+| 景点批量导入，一键配置行程参数 | 多方法对比求解，成本/时长灵活选优 |
+
+| 🗺️ 规划结果 | 📜 历史记录 |
+|:---:|:---:|
+| <img src="docs/images/screenshots/Plan-Map.png" width="360"> | <img src="docs/images/screenshots/History.png" width="360"> |
+| 地图路线 + 时间表，成本/耗时多维度展示 | 行程方案云端保存，跨设备加载回顾 |
+
+| 🤖 Function Calling | 📚 RAG 文档问答 |
+|:---:|:---:|
+| <img src="docs/images/screenshots/ChatBot.png" width="360"> | <img src="docs/images/screenshots/RAG.png" width="360"> |
+| 自然语言交互，动态添加景点 | 基于项目文档的智能问答 |
 
 ## 🚀 Docker 快速开始
 
@@ -111,7 +127,7 @@ TravelPal/
 | 求解引擎 | NumPy + Numba JIT | 多日行程规划（CA 快速预览 / VNS 深度优化） |
 | Agent | DeepSeek + BM25 上下文检索 | 对话理解与项目文档问答 |
 | 数据库 | PostgreSQL 16 (pgvector) + SQLAlchemy | 历史记录持久化 |
-| 缓存 | Redis | 路径规划结果缓存 |
+| 缓存 | Redis | 缓存基础设施（预留） |
 | 地图 | 高德 Web 服务 API + JS API 2.0 | POI 数据查询与 2D 路线可视化 |
 | 前端 | Vue 3 + TypeScript + Vite + Pinia | SPA 用户界面 |
 | 容器化 | Docker + Docker Compose + Nginx | 四服务一键编排，开箱即用 |

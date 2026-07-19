@@ -28,7 +28,7 @@ export function usePoiSearch() {
         store.hotelAddress = item.address
         if (item.tw_start != null) store.hotelTwStart = item.tw_start
         if (item.tw_end != null) store.hotelTwEnd = item.tw_end
-        hotelMsg.value = `✅ 已找到：${item.address}`
+        hotelMsg.value = '✅ 已找到'
       } else {
         hotelMsg.value = `⚠️ ${data.failed?.[0] || '未找到该酒店'}`
       }

@@ -296,7 +296,9 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
                 continue
-            if res["total_cost"] < best_cost:
+            current_cost = res["total_cost"]
+            if current_cost < best_cost:
+                best_cost = current_cost
                 best_result = res
                 best_m = method_name
                 best_groups = groups

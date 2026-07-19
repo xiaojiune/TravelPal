@@ -145,7 +145,7 @@ Pydantic 请求/响应模型，按功能分组：
 | `pipeline.py` | `run_planning()` | 流程编排：矩阵构建 → 求解 → 行程生成 → 评语 |
 | `search.py` | `ca_suggest()` / `cluster_and_solve()` | 建议/求解入口 |
 | `ca.py` | `CASolver.solve()` | 快速求解器（压缩退火） |
-| `vns.py` | `VNSSolver.solve()` | VNS+ 增强求解器（压缩退火 + SA 混合接受 + 自适应算子权重 + 精英池后优化） |
+| `vns.py` | `VNSSolver.solve()` | VNS+ 增强求解器（压缩成本 VND + 自适应算子权重 + 动态 Shake + 精英池后优化） |
 | `clustering.py` | `call_cluster()` | 6 种聚类方法注册表 |
 | `fitness.py` | `analyze_solution()` | 成本计算 + 可行性判定 |
 

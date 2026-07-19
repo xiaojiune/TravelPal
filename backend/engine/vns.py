@@ -182,7 +182,7 @@ class VNSSolver:
         self.elite_pool = []
         # 自适应算子权重：让历史上更有效的算子获得更高被选中概率，加速收敛
         self.operator_weights = {'swap': 1.0, 'inversion': 1.0, 'insert': 1.0, '2opt': 1.0}
-        self.last_operator = None
+        self.last_operator: str | None = None
 
     # ---------- 适应度（带缓存） ----------
 

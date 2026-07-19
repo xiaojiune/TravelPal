@@ -11,6 +11,8 @@ node_modules/
 frontend/node_modules/
 frontend/dist/
 .pytest_cache/
-docs/
 docs++/
+docs/_build/
+docs/images/
+docs/_static/
 .opencode/

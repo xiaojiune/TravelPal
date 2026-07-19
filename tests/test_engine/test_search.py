@@ -1,6 +1,6 @@
 import pytest
-from backend.engine.search import cluster_and_solve, ca_suggest
 
+from backend.engine.search import ca_suggest, cluster_and_solve
 
 # ================== CA 全参数搜索 ==================
 

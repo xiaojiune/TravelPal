@@ -241,7 +241,10 @@ CLUSTER_METHODS = [
 ]
 
 
-def call_cluster(func: callable, spots: dict, depot: int, k: int, cost_mat: np.ndarray | None = None) -> list[list[int]]:
+def call_cluster(
+    func: callable, spots: dict, depot: int, k: int,
+    cost_mat: np.ndarray | None = None,
+) -> list[list[int]]:
     """
     统一调用聚类方法。
 

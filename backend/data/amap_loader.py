@@ -1,8 +1,12 @@
 """高德地图 API 封装：POI 搜索、营业时间解析、驾车路径规划与成本矩阵构建。"""
 
-import os, re, time, datetime
+import datetime
+import re
+import time
+
 import numpy as np
 import requests
+
 from backend.config import AMAP_API_KEY
 from backend.utils.deprecated import legacy_only
 
@@ -12,8 +16,8 @@ from backend.utils.deprecated import legacy_only
 _MIDDLE_DOTS = set('·・‧•･∙')
 
 def normalize_text(text: str) -> str:
-    """全角→半角 + 空白压缩 + 中点符号归一化，用于名称匹配。
-    
+    """    全角→半角 + 空白压缩 + 中点符号归一化，用于名称匹配。
+
     用户输入与高德返回的名称常有空格/中点符号的细微差异，
     归一化后做双向子串匹配，提高酒店/景点名称匹配成功率。
     """
@@ -82,7 +86,7 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
             h2, m2 = map(int, time_match[1].strip().split(':'))
             start_min = h1 * 60 + m1
             end_min = h2 * 60 + m2
-        except:
+        except Exception:
             continue
         date_part = date_part.replace(' ', '')
         if '-' in date_part:
@@ -93,14 +97,14 @@ def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
                     end_date = _parse_date(date_range[1], current_year)
                     if start_date and end_date and start_date <= today <= end_date:
                         return (start_min, end_min)
-                except:
+                except Exception:
                     continue
         else:
             try:
                 single_date = _parse_date(date_part, current_year)
                 if single_date and single_date == today:
                     return (start_min, end_min)
-            except:
+            except Exception:
                 continue
     return None
 

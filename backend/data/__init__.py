@@ -1,5 +1,4 @@
-from backend.data.amap_loader import get_poi_details, build_real_data, _parse_opentime_to_tw
-
+from backend.data.amap_loader import build_real_data, get_poi_details
 
 __all__ = [
     'get_poi_details',

@@ -2,9 +2,11 @@
 
 import asyncio
 import json
+
 from openai import OpenAI
-from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+
 from backend.agent.tools.prompts import CHAT_SYSTEM
+from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 
 
 def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
@@ -35,7 +37,10 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
                 f"[{r['source']}#{r['heading']}]\n{r['text']}"
                 for r in results
             )
-            system += f"\n\n以下片段来自项目文档，请优先使用这些信息回答用户关于项目本身的问题。引用时标注来源，如 [来源: 技术栈总览]。\n{ctx}"
+            system += (
+                "\n\n以下片段来自项目文档，请优先使用这些信息回答用户关于项目本身的问题。"
+                f"引用时标注来源，如 [来源: 技术栈总览]。\n{ctx}"
+            )
     except Exception:
         pass
 

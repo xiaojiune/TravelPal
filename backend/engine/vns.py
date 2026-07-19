@@ -1,12 +1,14 @@
 """变邻域搜索求解器（VNS），集成多种邻域算子和自适应权重机制。"""
 
-import random
 import math
-from typing import Tuple, List
+import random
+from typing import Tuple
+
 import numpy as np
-from backend.typedefs import SpotDict
 from numba import njit
+
 from backend.engine.fitness import analyze_solution
+from backend.typedefs import SpotDict
 
 # ================== VNS 默认参数 ==================
 # VNS_DEFAULT_PARAMS 设计说明：
@@ -254,7 +256,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i, j = random.sample(range(len(inner)), 2)
         inner[i], inner[j] = inner[j], inner[i]
         r[1:-1] = inner
@@ -271,7 +274,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i = random.randint(0, len(inner) - 2)
         j = random.randint(i + 1, len(inner) - 1)
         inner[i:j + 1] = reversed(inner[i:j + 1])
@@ -289,7 +293,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 2: return r
+        if len(inner) < 2:
+            return r
         i = random.randint(0, len(inner) - 1)
         j = random.randint(0, len(inner) - 1)
         while i == j:
@@ -310,7 +315,8 @@ class VNSSolver:
         """
         r = route.copy()
         inner = r[1:-1]
-        if len(inner) < 3: return r
+        if len(inner) < 3:
+            return r
         i = random.randint(0, len(inner) - 3)
         j = random.randint(i + 2, len(inner) - 1)
         inner[i:j+1] = reversed(inner[i:j+1])
@@ -366,10 +372,14 @@ class VNSSolver:
             op = random.choices(ops, weights=weights)[0]
             last_op = op
 
-            if op == 'swap': sol = self._swap(sol)
-            elif op == 'inversion': sol = self._inversion(sol)
-            elif op == 'insert': sol = self._insert(sol)
-            elif op == '2opt': sol = self._2opt(sol)
+            if op == 'swap':
+                sol = self._swap(sol)
+            elif op == 'inversion':
+                sol = self._inversion(sol)
+            elif op == 'insert':
+                sol = self._insert(sol)
+            elif op == '2opt':
+                sol = self._2opt(sol)
 
         return sol, last_op
 
@@ -441,7 +451,8 @@ class VNSSolver:
         elif move_type == 'insert':
             for i in range(n):
                 for j in range(n):
-                    if i == j: continue
+                    if i == j:
+                        continue
                     new_inner = inner.copy()
                     val = new_inner.pop(i)
                     new_inner.insert(j, val)

@@ -101,7 +101,10 @@ class PlanRequest(BaseModel):
                       description="求解模式：fast(CA) 或 deep(VNS)")
     day_start: float = Field(default=0, ge=0, le=1440,
                               description="一天启程时间（距午夜分钟数），0=午夜")
-    cost_matrix: list[list[float]] | None = Field(default=None, description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API")
+    cost_matrix: list[list[float]] | None = Field(
+        default=None,
+        description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API",
+    )
     dist_matrix: list[list[float]] | None = Field(default=None, description="距离矩阵（km），与 cost_matrix 一同传入")
     penalty_weight: float = Field(default=100.0, ge=0,
                                   description="迟到惩罚权重（默认 100.0）")

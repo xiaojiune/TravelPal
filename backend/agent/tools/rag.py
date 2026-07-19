@@ -4,10 +4,11 @@
 分词策略：中文用 jieba 分词，英文按空白拆分。
 """
 
-import os
 import math
+import os
 import re
 from collections import Counter, defaultdict
+
 import jieba
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -78,7 +79,7 @@ class RagEngine:
                     continue
                 lines = sec.split("\n")
                 heading = lines[0].strip().lstrip("#").strip()
-                body_lines = [l for l in lines[1:] if not l.startswith("```")]
+                body_lines = [line for line in lines[1:] if not line.startswith("```")]
                 body = "\n".join(body_lines).strip()
                 if not body:
                     continue

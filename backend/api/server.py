@@ -2,11 +2,12 @@
 
 import os
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router
-from backend.data.model.database import init_db, close_db
+from backend.data.model.database import close_db, init_db
 
 
 @asynccontextmanager

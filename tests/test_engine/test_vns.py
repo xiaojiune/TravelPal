@@ -1,7 +1,5 @@
-import pytest
-from backend.engine.vns import VNSSolver
 from backend.engine.ca import CASolver
-
+from backend.engine.vns import VNSSolver
 
 # ================== VNS 求解器 ==================
 
@@ -37,7 +35,7 @@ class TestVNS:
         ca_res = ca.solve(cost_mat)
         vns_res = vns.solve(cost_mat, initial_solution=ca_res["best_solution"])
 
-        improvement = (ca_res["best_cost"] - vns_res["best_cost"]) / ca_res["best_cost"] * 100
+        (ca_res["best_cost"] - vns_res["best_cost"]) / ca_res["best_cost"] * 100
         assert vns_res["best_cost"] <= ca_res["best_cost"] + 1e-6, (
             f"VNS 成本 {vns_res['best_cost']:.1f} 应不高于 CA 成本 {ca_res['best_cost']:.1f}"
         )

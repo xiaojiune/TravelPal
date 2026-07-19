@@ -4,8 +4,7 @@ API 边界用 Pydantic（schemas.py），内部数据传递用 TypedDict。
 TypedDict 零运行时开销，只做类型约束，可平滑升级为 Pydantic Model。
 """
 
-from typing import TypedDict, NotRequired
-import numpy as np
+from typing import NotRequired, TypedDict
 
 
 class SpotDict(TypedDict):

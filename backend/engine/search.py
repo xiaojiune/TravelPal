@@ -1,12 +1,14 @@
 """双模式分发：CA 全参数搜索建议 + 指定天数求解。"""
 
 import time
+
 import numpy as np
-from backend.engine.ca import CASolver, CA_DEFAULT_PARAMS
-from backend.engine.vns import VNSSolver
+
+from backend.engine.ca import CA_DEFAULT_PARAMS, CASolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
-from backend.typedefs import SpotDict, RouteResult
+from backend.engine.vns import VNSSolver
+from backend.typedefs import RouteResult, SpotDict
 
 # ================== 分组求解 ==================
 
@@ -69,7 +71,8 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
         use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
-        dict: 包含 routes（路径列表）、histories（收敛历史）、total_cost、total_dist、wait、late、valid（是否覆盖所有景点）。
+        dict: 包含 routes（路径列表）、histories（收敛历史）、
+            total_cost、total_dist、wait、late、valid（是否覆盖所有景点）。
     """
     total_cost, total_dist, total_wait, total_late = 0, 0, 0, 0
     routes, histories = [], []
@@ -100,7 +103,7 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
         total_cost += res["best_cost"]
         total_dist += res["best_distance"]
         # 求解器内部以 cost 为主，不直接暴露 wait/late 明细，因此重新调用 analyze_solution 提取详细指标
-        _, _, w, l, _ = analyze_solution(
+        _, _, w, late_val, _ = analyze_solution(
             res["best_solution"], cost_mat, spots, travel_speed,
             early_wait_weight=early_wait_weight,
             penalty_weight=penalty_weight,
@@ -108,7 +111,7 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
             use_real_time_matrix=use_real_time_matrix,
         )
         total_wait += w
-        total_late += l
+        total_late += late_val
     # 校验所有非 depot 景点是否都已被覆盖
     visited = set()
     for r in routes:
@@ -284,7 +287,6 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
         best_cost = float("inf")
         best_result = None
         best_m = None
-        best_groups = None
 
         for method_name, method_func in CLUSTER_METHODS:
             groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
@@ -301,7 +303,6 @@ def cluster_and_solve(spots: dict[int, SpotDict], depot: int, cost_mat: np.ndarr
                 best_cost = current_cost
                 best_result = res
                 best_m = method_name
-                best_groups = groups
 
         return {
             "type": "solution",

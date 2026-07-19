@@ -3,23 +3,32 @@
 import json
 import traceback
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Query
-from sqlalchemy import select, func, delete
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.api.schemas import (
-    PlanRequest, POILookupRequest, POILookupResponse, POILookupItem, ChatRequest,
-    HistoryCreate, HistorySummary, HistoryDetail, HistoryListResponse, HistoryDeleteRequest,
-)
-from backend.engine.pipeline import run_planning
-from backend.data.amap_loader import get_poi_details
-from backend.config import AMAP_API_KEY, AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
 from backend.agent.chat import build_chat_messages, chat_stream
-from backend.agent.tools import parse_biz_hours, TOOL_REGISTRY
+from backend.agent.tools import TOOL_REGISTRY, parse_biz_hours
 from backend.agent.tools.prompts import TOOL_DEFINITIONS
+from backend.api.schemas import (
+    ChatRequest,
+    HistoryCreate,
+    HistoryDeleteRequest,
+    HistoryDetail,
+    HistoryListResponse,
+    HistorySummary,
+    PlanRequest,
+    POILookupItem,
+    POILookupRequest,
+    POILookupResponse,
+)
+from backend.config import AMAP_JS_KEY, AMAP_JS_SECURITY_CODE
+from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord
-from fastapi.responses import StreamingResponse
+from backend.engine.pipeline import run_planning
 
 router = APIRouter()
 
@@ -179,6 +188,7 @@ async def chat(req: ChatRequest):
         async def _stream():
             # 第一阶段：非流式调用检测工具意图
             from openai import OpenAI
+
             from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
             client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
             resp = client.chat.completions.create(

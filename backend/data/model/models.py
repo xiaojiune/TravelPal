@@ -1,9 +1,9 @@
 """SQLAlchemy ORM 模型定义。"""
 
 import uuid
-from datetime import datetime, timezone
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from backend.data.model.database import Base

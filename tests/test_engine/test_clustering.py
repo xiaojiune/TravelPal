@@ -1,7 +1,6 @@
 import numpy as np
-import pytest
-from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 
+from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 
 # ================== 聚类方法 ==================
 

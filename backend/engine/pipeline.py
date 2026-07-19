@@ -1,16 +1,19 @@
 """行程规划双阶段编排：数据加载 → 聚类求解 → 每日行程重建。"""
 
-import time, os, warnings
+import os
+import time
+import warnings
+
 import numpy as np
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.data.amap_loader import build_real_data, _get_driving_data
-from backend.engine.search import cluster_and_solve, balance_groups, solve_groups
-from backend.agent.commentator import generate_commentary
-from backend.typedefs import PoiCache, SpotDict, PlanResult, ScheduleItem, RouteResult
+from backend.agent.commentator import generate_commentary  # noqa: E402
+from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
+from backend.engine.search import balance_groups, cluster_and_solve, solve_groups  # noqa: E402
+from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
 
 # ================== 常量 ==================
 
@@ -180,7 +183,10 @@ def run_planning(poi_cache: PoiCache, city: str, hotel_name: str,
 
 # ================== 工具函数 ==================
 
-def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix: np.ndarray) -> list[list[ScheduleItem]]:
+def _rebuild_schedule(
+    routes: list, spots_dict: dict[int, SpotDict],
+    cost_matrix: np.ndarray,
+) -> list[list[ScheduleItem]]:
     """从路径和景点字典重建每日行程表。
 
     Args:
@@ -233,7 +239,10 @@ def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix
                 else:
                     departure_status = "正常离开"
 
-                tw_str = f"{int(original_start // 60):02d}:{int(original_start % 60):02d} - {int(original_end // 60):02d}:{int(original_end % 60):02d}"
+                tw_str = (
+                    f"{int(original_start // 60):02d}:{int(original_start % 60):02d}"
+                    f" - {int(original_end // 60):02d}:{int(original_end % 60):02d}"
+                )
                 stay_str = f"{stay} min" if stay > 0 else "-"
 
                 schedule.append({
@@ -261,7 +270,10 @@ def _rebuild_schedule(routes: list, spots_dict: dict[int, SpotDict], cost_matrix
 
 # ================== 方案调整 ==================
 
-def adjust_plan(spots_dict: dict[int, SpotDict], cost_matrix_list: list, dist_matrix_list: list, routes: list, adjustments: dict) -> PlanResult:
+def adjust_plan(
+    spots_dict: dict[int, SpotDict], cost_matrix_list: list,
+    dist_matrix_list: list, routes: list, adjustments: dict,
+) -> PlanResult:
     """
     对已有方案执行调整（均衡、移除景点、改天数）。
 
@@ -272,7 +284,8 @@ def adjust_plan(spots_dict: dict[int, SpotDict], cost_matrix_list: list, dist_ma
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、{"add_poi": {name, lon, lat, tw_start, tw_end, stay}} 之一。
+        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
+            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}} 之一。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。

@@ -1,5 +1,21 @@
-"""CA vs VNS — suggest 1次 + deep 1次"""
-import sys, json, urllib.request
+"""CA vs VNS — suggest 1次 + deep 1次（n_days=3）
+
+可调参数（改这里即可适配不同场景）：
+─────────────────────────────────────────────
+  城市         广州
+  n_days       3
+  day_start    360 (06:00)
+  景点数        8
+  penalty      100
+  early_wait   0.1
+  late_return  50
+  API BASE     http://localhost:8000/api
+─────────────────────────────────────────────
+"""
+import json
+import sys
+import urllib.request
+
 sys.path.insert(0, '/home/changzi/TravelPal')
 
 BASE = "http://localhost:8000/api"
@@ -22,7 +38,10 @@ spots = [
     {"name":its[i]["name"],"lon":its[i]["lon"],"lat":its[i]["lat"],
      "tw_start":TW[i][0],"tw_end":TW[i][1],"stay":stay,
      "expected_arrival": exp}
-    for i,(stay,exp) in enumerate([(180,480),(120,960),(150,None),(60,None),(300,480),(60,None),(120,None),(120,None)],1)
+    for i,(stay,exp) in enumerate(
+        [(180,480),(120,960),(150,None),(60,None),
+         (300,480),(60,None),(120,None),(120,None)], 1,
+    )
 ]
 
 req = {
@@ -48,9 +67,11 @@ print(f"\n复用 matrix: {len(cm)}x{len(cm[0]) if cm else 0}")
 print("\n=== Plan fast (CA, n_days=3) ===")
 r = api("/plan", {**req, "n_days": 3, "mode": "fast", "cost_matrix": cm, "dist_matrix": dm})
 s = r.get("solution", r)
-print(f"CA:   cost={s['total_cost']:>10.1f}  dist={s['total_dist']:>8.1f}  wait={s['wait']:>6.1f}  late={s['late']:>6.1f}")
+ca_cost, ca_dist, ca_wait, ca_late = s["total_cost"], s["total_dist"], s["wait"], s["late"]
+print(f"CA:   cost={ca_cost:>10.1f}  dist={ca_dist:>8.1f}  wait={ca_wait:>6.1f}  late={ca_late:>6.1f}")
 
 print("\n=== Plan deep (VNS, n_days=3) ===")
 r = api("/plan", {**req, "n_days": 3, "mode": "deep", "cost_matrix": cm, "dist_matrix": dm})
 s = r.get("solution", r)
-print(f"VNS:  cost={s['total_cost']:>10.1f}  dist={s['total_dist']:>8.1f}  wait={s['wait']:>6.1f}  late={s['late']:>6.1f}")
+vns_cost, vns_dist, vns_wait, vns_late = s["total_cost"], s["total_dist"], s["wait"], s["late"]
+print(f"VNS:  cost={vns_cost:>10.1f}  dist={vns_dist:>8.1f}  wait={vns_wait:>6.1f}  late={vns_late:>6.1f}")

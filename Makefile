@@ -1,9 +1,20 @@
-.PHONY: dev serve serve-nodb lint typecheck build test clean \
-        install format gen-api \
-        dc-up dc-up-d dc-down dc-logs dc-ps dc-build dc-restart help
+.PHONY: install build gen-api serve serve-nodb dev lint format typecheck \
+        test \
+        dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
+        clean help
 
-dev: ## 启动前端开发服务器（Vite HMR）
-	cd frontend && npm run dev
+# ======== 安装构建 ========
+
+install: ## 一键安装前后端依赖
+	.venv/bin/poetry install && cd frontend && npm ci
+
+build: ## 前端生产构建
+	cd frontend && npm run build
+
+gen-api: ## 重新生成前端 API 类型（后端 schema 变更后执行）
+	cd frontend && npm run gen:api
+
+# ======== 开发 ========
 
 serve: ## 启动后端服务（需要 PostgreSQL + Redis）
 	.venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
@@ -11,35 +22,32 @@ serve: ## 启动后端服务（需要 PostgreSQL + Redis）
 serve-nodb: ## 启动后端服务（跳过数据库，快速联调）
 	SKIP_DB=true .venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
 
+dev: ## 启动前端开发服务器（Vite HMR）
+	cd frontend && npm run dev
+
+# ======== 代码质量 ========
+
 lint: ## 前端 lint（ESLint）
 	cd frontend && npm run lint
-
-typecheck: ## 前端 TypeScript 类型检查
-	cd frontend && npx vue-tsc --noEmit
-
-build: ## 前端生产构建
-	cd frontend && npm run build
-
-test: ## 运行全部 Python 测试
-	.venv/bin/pytest
-
-install: ## 一键安装前后端依赖
-	.venv/bin/poetry install && cd frontend && npm ci
 
 format: ## 前端代码格式化（Prettier）
 	cd frontend && npx prettier --write src/
 
-gen-api: ## 重新生成前端 API 类型（后端 schema 变更后执行）
-	cd frontend && npm run gen:api
+typecheck: ## 前端 TypeScript 类型检查
+	cd frontend && npx vue-tsc --noEmit
 
-dc-up: ## 启动全部 Docker 服务（前台）
-	docker compose up
+# ======== 测试 ========
 
-dc-up-d: ## 启动全部 Docker 服务（后台）
-	docker compose up -d
+test: ## 运行全部 Python 测试
+	.venv/bin/pytest
 
-dc-down: ## 停止全部 Docker 服务
-	docker compose down
+# ======== Docker ========
+
+dc-up: ## 启动基础设施（PostgreSQL + Redis，前台）
+	docker compose up postgres redis
+
+dc-up-d: ## 启动基础设施（PostgreSQL + Redis，后台）
+	docker compose up -d postgres redis
 
 dc-logs: ## 查看 Docker 日志
 	docker compose logs -f
@@ -47,11 +55,22 @@ dc-logs: ## 查看 Docker 日志
 dc-ps: ## 查看 Docker 服务状态
 	docker compose ps
 
+dc-restart: ## 重启全部 Docker 服务
+	docker compose restart
+
 dc-build: ## 构建全部 Docker 镜像
 	docker compose build
 
-dc-restart: ## 重启全部 Docker 服务
-	docker compose restart
+dc-down: ## 停止全部 Docker 服务
+	docker compose down
+
+deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + 前端 Nginx）
+	docker compose up -d
+
+deploy-down: ## 停止全量部署
+	docker compose down
+
+# ======== 工具 ========
 
 clean: ## 清理构建缓存与临时文件
 	rm -rf frontend/dist .pytest_cache frontend/node_modules/.vite

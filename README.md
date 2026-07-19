@@ -118,8 +118,11 @@ TravelPal/
 
 ## 📖 相关文档
 
-> **快速导航**：想了解系统架构？看 [`backend.md`](docs/structure/backend.md)；想了解 Agent 怎么工作的？看 [`agent.md`](docs/structure/agent.md)；想了解数据结构？看 [`data.md`](docs/structure/data.md)。
-> 项目包含 7 篇架构决策记录（ADR），完整记录技术选型理由与设计权衡过程。
+> **快速导航**：
+> - 想了解系统架构？看 [`backend.md`](docs/structure/backend.md)
+> - 想了解 Agent 怎么工作的？看 [`agent.md`](docs/structure/agent.md)
+> - 想了解数据结构？看 [`data.md`](docs/structure/data.md)
+> - 项目包含 7 篇架构决策记录（ADR），完整记录技术选型理由与设计权衡过程
 
 | 文档 | 说明 |
 |------|------|

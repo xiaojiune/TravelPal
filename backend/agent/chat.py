@@ -2,11 +2,27 @@
 
 import asyncio
 import json
+import os
 
 from openai import OpenAI
 
 from backend.agent.tools.prompts import CHAT_SYSTEM
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
+def _readme_core() -> str:
+    """读取 README.md 标题 + 核心功能 + 技术栈，作为项目介绍兜底。"""
+    path = os.path.join(_PROJECT_ROOT, "README.md")
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.readlines()
+        # 取标题 + 核心功能 + 技术栈（约前 130 行）
+        core = "".join(lines[:130])
+        return f"\n\n## 项目自述（来自 README.md）\n{core[:2000]}"
+    except Exception:
+        return ""
 
 
 def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
@@ -29,11 +45,12 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
         }
         system += f"\n\n当前规划概要（供参考）：\n{json.dumps(summary, ensure_ascii=False)}"
 
+    system += _readme_core()
     try:
         from backend.agent.tools.rag import search_rag
 
-        results = search_rag(message, k=5)
-        if results:
+        results = search_rag(message, k=3)
+        if results and results[0]["score"] > 5.0:
             ctx = "\n\n".join(f"[{r['source']}#{r['heading']}]\n{r['text']}" for r in results)
             system += (
                 "\n\n以下片段来自项目文档，请优先使用这些信息回答用户关于项目本身的问题。"

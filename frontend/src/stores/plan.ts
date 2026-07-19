@@ -29,6 +29,7 @@ export const usePlanStore = defineStore('plan', () => {
       hotelTwStart.value = poi.twStart ?? 0
       hotelTwEnd.value = poi.twEnd ?? 1440
     } else {
+      if (spots.value.some(s => s.name === poi.name)) return
       spots.value.push({
         name: poi.name,
         lon: poi.lon,

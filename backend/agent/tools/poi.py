@@ -11,6 +11,10 @@ from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 def _classify_poi(poi_type: str, name: str) -> str:
     """根据高德行业分类和名称判定 POI 类型。
 
+    Args:
+        poi_type: 高德行业分类字符串（如 "住宿服务;宾馆酒店"）。
+        name: POI 名称，辅助判定。
+
     Returns:
         "hotel" | "spot" | "unknown"
     """

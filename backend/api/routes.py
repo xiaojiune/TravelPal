@@ -39,6 +39,12 @@ def _build_poi_cache(req: PlanRequest):
 
     前端传来的坐标数据可直接映射，无需额外转换。
     时间窗以 (start, end) 元组形式传递。
+
+    Args:
+        req: 前端传入的规划请求，含酒店/景点坐标及时间窗。
+
+    Returns:
+        dict: {"hotel": {...酒店信息...}, "spots": [...景点列表...]}。
     """
     hotel = {
         "name": req.hotel_name,
@@ -69,6 +75,12 @@ async def poi_lookup(req: POILookupRequest):
     前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
     返回每个名称的坐标和地址。未找到的名称列入 failed 列表，
     若跨城市则附带建议地址。
+
+    Args:
+        req: POI 查询请求，含城市名和名称列表。
+
+    Returns:
+        POILookupResponse: 查询结果，items 为成功项，failed 为失败列表。
     """
     items: list[POILookupItem] = []
     failed: list[str] = []

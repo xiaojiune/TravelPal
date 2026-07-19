@@ -1,17 +1,4 @@
-"""CA vs VNS — suggest 1次 + deep 1次（n_days=3）
-
-可调参数（改这里即可适配不同场景）：
-─────────────────────────────────────────────
-  城市         广州
-  n_days       3
-  day_start    360 (06:00)
-  景点数        8
-  penalty      100
-  early_wait   0.1
-  late_return  50
-  API BASE     http://localhost:8000/api
-─────────────────────────────────────────────
-"""
+"""CA vs VNS — suggest 1次 + deep 1次（n_days=3）"""
 import json
 import sys
 import urllib.request

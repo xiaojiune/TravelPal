@@ -76,7 +76,14 @@ def _rebuild(source: str, names: list[str]) -> str:
 
 
 def sync_file(path: str) -> bool:
-    """对单个 __init__.py 执行同步：解析 import 行 → 生成 __all__ → 写回文件。"""
+    """对单个 __init__.py 执行同步：解析 import 行 → 生成 __all__ → 写回文件。
+
+    Args:
+        path: __init__.py 的绝对路径。
+
+    Returns:
+        bool: True 表示文件已被修改，False 表示无需变更。
+    """
     with open(path, encoding="utf-8", newline="") as f:
         source = f.read()
 

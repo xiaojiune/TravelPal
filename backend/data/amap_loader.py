@@ -131,6 +131,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         return q in r or r in q
 
     def _extract_poi(poi: dict) -> tuple[float, float, str, str, str, str, str, str]:
+        """解析高德 POI 字典，提取坐标/营业时间/地址/行政区划/行业分类。"""
         loc = poi["location"]
         lon, lat = map(float, loc.split(','))
         biz_hours = ""

@@ -1,3 +1,4 @@
+"""LLM Agent 层：对话（chat）、评语生成（commentator）、方案调整（planner）、工具包（tools）。"""
 from backend.agent.chat import build_chat_messages, chat_stream
 from backend.agent.commentator import generate_commentary
 from backend.agent.planner import add_poi_to_plan, adjust_plan_days, remove_poi_from_plan

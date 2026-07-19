@@ -181,7 +181,11 @@ class CASolver:
     # ---------- 初始解 ----------
 
     def _initial_solution(self) -> list[int]:
-        """按时间窗起始时间排序生成初始解（启发式效果优于随机）"""
+        """按时间窗起始时间排序生成初始解（启发式效果优于随机）
+
+        Returns:
+            list[int]: 闭合路径 [depot, ...景点..., depot]。
+        """
         if self.num_cities > 0:
             cities_with_time = [(c, self.spots_dict[c]["tw"][0]) for c in self.city_indices]
             cities_with_time.sort(key=lambda x: x[1])

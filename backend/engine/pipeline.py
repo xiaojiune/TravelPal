@@ -29,6 +29,11 @@ def _supplement_polylines(
 
     build_real_data 中 cost/dist 对称复用但 polyline 不复制，
     此处对 route 需要但 polylines 中缺失的方向单独补调。
+
+    Args:
+        routes_list: 所有方案的 route 列表，每项为 [[0, ...], [0, ...]] 格式。
+        coords: 坐标列表，与索引一一对应。
+        polylines: 已有 polyline 字典，函数会原地追加缺失项。
     """
     needed: set[tuple[int, int]] = set()
     for routes in routes_list:

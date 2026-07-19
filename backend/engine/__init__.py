@@ -1,3 +1,4 @@
+"""路径规划引擎层：双求解器（CA / VNS）、聚类方法、适应度评估、搜索调度。"""
 from backend.engine.ca import CA_DEFAULT_PARAMS, CASolver
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster, find_method_func
 from backend.engine.fitness import analyze_solution

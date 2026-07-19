@@ -48,6 +48,7 @@ class RagEngine:
         self._initialized = False
 
     def init(self) -> None:
+        """惰性初始化：扫描文档 → 切块 → 建立 BM25 索引。幂等，多次调用仅执行一次。"""
         if self._initialized:
             return
         self._load_docs()
@@ -55,6 +56,7 @@ class RagEngine:
         self._initialized = True
 
     def _load_docs(self) -> None:
+        """扫描 docs/*.md + README.md，按 ## 标题切块后存入 self._docs。"""
         md_files = []
         if os.path.isdir(_DOC_DIR):
             for root, _, files in os.walk(_DOC_DIR):
@@ -94,6 +96,7 @@ class RagEngine:
                 })
 
     def _build_index(self) -> None:
+        """计算文档平均长度 + 每个词的 IDF，供 BM25 打分使用。"""
         n = len(self._docs)
         if n == 0:
             return
@@ -106,6 +109,7 @@ class RagEngine:
             self._idf[term] = math.log((n - count + 0.5) / (count + 0.5) + 1.0)
 
     def _bm25_score(self, q_tokens: list[str]) -> list[tuple[float, dict]]:
+        """计算 BM25 分数（k1=1.5, b=0.75），返回 (分数, 文档) 列表，按分数降序排列。"""
         k1, b = 1.5, 0.75
         results = []
         for d in self._docs:
@@ -153,5 +157,13 @@ _engine = RagEngine()
 
 
 def search_rag(query: str, k: int = 3) -> list[dict]:
-    """全局接口：检索 RAG 文档库，惰性初始化。"""
+    """全局接口：检索 RAG 文档库，惰性初始化。
+
+    Args:
+        query: 用户查询文本。
+        k: 返回 top-k 条结果，默认 3。
+
+    Returns:
+        list[dict]: 每项含 score/source/heading/text，按 BM25 分数降序。
+    """
     return _engine.search(query, k)

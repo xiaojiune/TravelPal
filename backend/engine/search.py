@@ -131,7 +131,14 @@ def solve_groups(groups: list, spots: dict[int, SpotDict], cost_mat: np.ndarray,
 
 
 def _deduplicate(results: list) -> list:
-    """用 frozenset 对 results 按分组结构去重，保留顺序中首次出现的唯一解。"""
+    """用 frozenset 对 results 按分组结构去重，保留顺序中首次出现的唯一解。
+
+    Args:
+        results: 含 groups 字段的方案列表。
+
+    Returns:
+        list: 去重后的方案列表，保留首次出现的顺序。
+    """
     seen = set()
     deduped = []
     for item in results:

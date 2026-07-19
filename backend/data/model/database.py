@@ -20,7 +20,7 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 
 class Base(DeclarativeBase):
-    pass
+    """SQLAlchemy ORM 声明式基类，所有数据模型继承此类。"""
 
 
 async def get_session() -> AsyncSession:

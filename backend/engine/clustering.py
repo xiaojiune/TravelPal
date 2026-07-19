@@ -249,6 +249,16 @@ def call_cluster(
     统一调用聚类方法。
 
     cluster_hybrid_optimized 需要 cost_mat 参数，其余仅需 spots/depot/k。
+
+    Args:
+        func: 聚类函数。
+        spots: 景点字典，每项含 x/y/tw 等。
+        depot: depot 索引。
+        k: 分组数。
+        cost_mat: 距离矩阵，仅 cluster_hybrid_optimized 需要。
+
+    Returns:
+        list[list[int]]: 每组包含的景点索引列表。
     """
     if func.__name__ == 'cluster_hybrid_optimized':
         return func(spots, cost_mat, depot, k)

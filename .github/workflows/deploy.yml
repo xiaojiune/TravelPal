@@ -11,9 +11,11 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup SSH key
+        env:
+          SSH_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
 
@@ -29,19 +31,21 @@ jobs:
       # frontend/dist       — 前端构建产物，服务器重新构建
       # .git                — Git 历史，服务器不需要
       - name: Rsync to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_DEPLOY_KEY }}
-          source: "."
-          target: "~/TravelPal/"
+        run: |
+          rsync -avz --delete \
+            --exclude='.venv' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.pytest_cache' \
+            --exclude='.ruff_cache' \
+            --exclude='frontend/dist' \
+            --exclude='.git' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/TravelPal/
 
       - name: Build & restart
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_DEPLOY_KEY }}
-          script: |
-            cd ~/TravelPal && docker compose build && docker compose up -d
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd ~/TravelPal && docker compose build && docker compose up -d"

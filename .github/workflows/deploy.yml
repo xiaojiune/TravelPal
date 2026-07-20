@@ -10,6 +10,24 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
+
+      - name: Verify deploy key
+        run: ssh-keygen -l -f ~/.ssh/deploy_key
+
+      # rsync 排除项说明：
+      # .venv / node_modules — 开发依赖，服务器用 Docker 构建
+      # .env                — 服务器已有独立配置，不覆盖
+      # __pycache__ / *.pyc — 编译产物，无需同步
+      # .pytest_cache       — 测试缓存
+      # .ruff_cache         — lint 缓存
+      # frontend/dist       — 前端构建产物，服务器重新构建
+      # .git                — Git 历史，服务器不需要
       - name: Rsync to server
         uses: appleboy/scp-action@v0.1.7
         with:

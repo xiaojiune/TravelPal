@@ -15,7 +15,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SERVER_DEPLOY_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
 
       - name: Verify deploy key
         run: ssh-keygen -l -f ~/.ssh/deploy_key

@@ -10,17 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup SSH key
-        env:
-          SSH_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          eval "$(ssh-agent -s)"
-          echo "$SSH_KEY" | ssh-add -
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
+      - uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SERVER_DEPLOY_KEY }}
+          known_hosts: ${{ secrets.SERVER_HOST }}
 
       - name: Verify deploy key
-        run: ssh-add -l
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo 'SSH OK'"
 
       # rsync 排除项说明：
       # .venv / node_modules — 开发依赖，服务器用 Docker 构建

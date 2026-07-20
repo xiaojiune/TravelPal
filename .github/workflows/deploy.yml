@@ -11,11 +11,11 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Setup SSH key
+        env:
+          SSH_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          cat > ~/.ssh/deploy_key << 'EOF'
-${{ secrets.SERVER_DEPLOY_KEY }}
-EOF
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
 

@@ -16,6 +16,8 @@ RUN poetry export --without-hashes -o requirements.txt \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ backend/
+COPY docs/ docs/
+COPY README.md ./
 
 EXPOSE 8000
 

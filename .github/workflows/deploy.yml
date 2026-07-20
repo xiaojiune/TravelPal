@@ -10,20 +10,40 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Verify deploy key
+        run: ssh-keygen -l -f ~/.ssh/deploy_key
+
+      # rsync 排除项说明：
+      # .venv / node_modules — 开发依赖，服务器用 Docker 构建
+      # .env                — 服务器已有独立配置，不覆盖
+      # __pycache__ / *.pyc — 编译产物，无需同步
+      # .pytest_cache       — 测试缓存
+      # .ruff_cache         — lint 缓存
+      # frontend/dist       — 前端构建产物，服务器重新构建
+      # .git                — Git 历史，服务器不需要
       - name: Rsync to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_DEPLOY_KEY }}
-          source: "."
-          target: "~/TravelPal/"
+        run: |
+          rsync -avz --delete \
+            --exclude='.venv' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.pytest_cache' \
+            --exclude='.ruff_cache' \
+            --exclude='frontend/dist' \
+            --exclude='.git' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/TravelPal/
 
       - name: Build & restart
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_DEPLOY_KEY }}
-          script: |
-            cd ~/TravelPal && docker compose build && docker compose up -d
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd ~/TravelPal && docker compose build && docker compose up -d"

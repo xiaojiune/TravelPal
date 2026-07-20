@@ -15,12 +15,12 @@ jobs:
           SSH_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          eval "$(ssh-agent -s)"
+          echo "$SSH_KEY" | ssh-add -
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} 2>/dev/null >> ~/.ssh/known_hosts
 
       - name: Verify deploy key
-        run: ssh-keygen -l -f ~/.ssh/deploy_key
+        run: ssh-add -l
 
       # rsync 排除项说明：
       # .venv / node_modules — 开发依赖，服务器用 Docker 构建
@@ -42,10 +42,9 @@ jobs:
             --exclude='.ruff_cache' \
             --exclude='frontend/dist' \
             --exclude='.git' \
-            -e "ssh -i ~/.ssh/deploy_key" \
             ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/TravelPal/
 
       - name: Build & restart
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "cd ~/TravelPal && docker compose build && docker compose up -d"

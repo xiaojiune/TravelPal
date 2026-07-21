@@ -143,6 +143,7 @@ def run_planning(
 
     depot = 0
 
+    solve_start = time.time()
     result: PlanResult | dict = cluster_and_solve(
         spots,
         depot,
@@ -154,6 +155,9 @@ def run_planning(
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
     )
+    if result["type"] != "suggestion":
+        algo_name = "VNS" if mode == "deep" else "CA"
+        print(f"  {algo_name} 算法求解耗时: {time.time() - solve_start:.2f}s")
 
     # 后处理（按结果类型分两路，polyline 补调 + 序列化 + 行程重建分属各自分支）
     if result["type"] == "suggestion":

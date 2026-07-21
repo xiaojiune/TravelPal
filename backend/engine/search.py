@@ -273,6 +273,57 @@ def ca_suggest(
 # ================== 双模式分发 ==================
 
 
+def _solve_best(
+    spots: dict[int, SpotDict],
+    depot: int,
+    cost_mat: np.ndarray,
+    solver_type: str,
+    n_days: int,
+    penalty_weight: float = 100.0,
+    early_wait_weight: float = 0.1,
+    late_return_weight: float = 50.0,
+) -> dict:
+    """遍历 6 种聚类方法，选成本最低的方案。
+
+    Args:
+        spots: 景点字典。
+        depot: depot 索引。
+        cost_mat: 旅行时间矩阵（分钟）。
+        solver_type: "CA" 或 "VNS"。
+        n_days: 行程天数。
+        penalty_weight: 违规惩罚权重。
+        early_wait_weight: 早到等待惩罚权重。
+        late_return_weight: 晚归惩罚权重。
+
+    Returns:
+        dict: type="solution"，含 solution、best_days、best_m。
+    """
+    best_cost = float("inf")
+    best_result = None
+    best_m = None
+
+    for method_name, method_func in CLUSTER_METHODS:
+        groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
+        res = solve_groups(
+            groups, spots, cost_mat, solver_type,
+            penalty_weight, early_wait_weight, late_return_weight,
+        )
+        if len(res["routes"]) != n_days:
+            continue
+        current_cost = res["total_cost"]
+        if current_cost < best_cost:
+            best_cost = current_cost
+            best_result = res
+            best_m = method_name
+
+    return {
+        "type": "solution",
+        "solution": best_result,
+        "best_days": n_days,
+        "best_m": best_m,
+    }
+
+
 def cluster_and_solve(
     spots: dict[int, SpotDict],
     depot: int,
@@ -285,9 +336,9 @@ def cluster_and_solve(
     late_return_weight: float = 50.0,
 ) -> dict:
     """
-    双阶段路由入口。
+    双模式路由分发入口。
 
-    - 指定 n_days：遍历 6 种聚类方法，对每组调用对应求解器（CA/VNS）求最优解。
+    - 指定 n_days：交由 _solve_best() 用对应求解器遍历 6 种聚类方法选最优解。
     - 未指定 n_days + mode="fast"：回退到 ca_suggest() 输出建议。
     - 未指定 n_days + mode="deep"：报错（VNS 无自动分群能力）。
 
@@ -310,45 +361,13 @@ def cluster_and_solve(
     """
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
-        best_cost = float("inf")
-        best_result = None
-        best_m = None
-
-        for method_name, method_func in CLUSTER_METHODS:
-            groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
-            res = solve_groups(
-                groups,
-                spots,
-                cost_mat,
-                solver_type,
-                penalty_weight,
-                early_wait_weight,
-                late_return_weight,
-            )
-            if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
-                continue
-            current_cost = res["total_cost"]
-            if current_cost < best_cost:
-                best_cost = current_cost
-                best_result = res
-                best_m = method_name
-
-        return {
-            "type": "solution",
-            "solution": best_result,
-            "best_days": n_days,
-            "best_m": best_m,
-        }
+        return _solve_best(spots, depot, cost_mat, solver_type, n_days,
+                           penalty_weight, early_wait_weight, late_return_weight)
 
     if mode == "deep":
         raise ValueError("深度模式(VNS)需要指定 n_days，请先通过 ca_suggest() 获取建议")
 
-    return ca_suggest(
-        spots,
-        depot,
-        cost_mat,
-        min_days=min_days,
-        penalty_weight=penalty_weight,
-        early_wait_weight=early_wait_weight,
-        late_return_weight=late_return_weight,
-    )
+    return ca_suggest(spots, depot, cost_mat, min_days=min_days,
+                      penalty_weight=penalty_weight,
+                      early_wait_weight=early_wait_weight,
+                      late_return_weight=late_return_weight)

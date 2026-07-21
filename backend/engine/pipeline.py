@@ -154,32 +154,25 @@ def run_planning(
         late_return_weight=late_return_weight,
     )
 
-    # 补调 route 涉及但 polylines 中缺失的方向（cost/dist 对称复用，polyline 不复制）
+    # 后处理（按结果类型分两路，polyline 补调 + 序列化 + 行程重建分属各自分支）
     if result["type"] == "suggestion":
         _supplement_polylines(
             [s["routes"] for s in result["suggestions"]],
-            coords,
-            polylines,
+            coords, polylines,
         )
-    else:
-        _supplement_polylines(
-            [result["solution"]["routes"]],
-            coords,
-            polylines,
-        )
-
-    polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}  # tuple 键转 "fromIdx_toIdx" 字符串键
-
-    if result["type"] == "suggestion":
-        result["algo_time"] = round(time.time() - total_start, 2)  # 含 API 拉取 + 引擎求解的总耗时
+        polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
+        result["algo_time"] = round(time.time() - total_start, 2)
         print(f"  suggest 阶段总耗时: {result['algo_time']:.2f}s")
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)
-        result["cost_matrix"] = cost_matrix.tolist()  # 返回前端缓存，deep 模式复用跳过驾车 API
+        result["cost_matrix"] = cost_matrix.tolist()
         result["dist_matrix"] = dist_matrix.tolist()
-        result["polylines"] = polylines_serial  # 真实路径坐标，供前端绘制驾车轨迹
+        result["polylines"] = polylines_serial
         return result
+
+    _supplement_polylines([result["solution"]["routes"]], coords, polylines)
+    polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
 
     solution = result["solution"]
     print(f"最优总成本 ({mode} 模式): {solution['total_cost']:.1f}\n")

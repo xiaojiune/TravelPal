@@ -5,9 +5,8 @@ import random
 from typing import Tuple
 
 import numpy as np
-from numba import njit
 
-from backend.engine.fitness import analyze_solution
+from backend.engine.fitness import _cal_fitness_numba, analyze_solution
 from backend.typedefs import SpotDict
 
 # ================== VNS 默认参数 ==================
@@ -40,93 +39,6 @@ EARLY_EXPLORE_RATIO = 0.3
 VIOLATOR_TARGET_PROB = 0.6
 DYNAMIC_STRENGTHEN_AFTER = 10
 WEIGHT_REWARD_FACTOR = 1.02
-
-# ================== Numba 适应度内核 ==================
-
-
-@njit(cache=True)
-def _cal_fitness_numba(
-    line: np.ndarray,
-    cost_mat: np.ndarray,
-    travel_speed: float,
-    penalty_weight: float,
-    early_wait_weight: float,
-    late_return_weight: float,
-    depot_index: int,
-    spots_start: np.ndarray,
-    spots_end: np.ndarray,
-    spots_stay: np.ndarray,
-    use_real_time_matrix: bool = False,
-) -> Tuple[float, float, float]:
-    """
-    Numba JIT 编译的适应度计算内核。
-
-    沿路径逐段模拟行程，累计总成本与时间惩罚。
-    路径必须从 depot 出发并回到 depot，长度不足 3 时返回极大惩罚值。
-
-    两种矩阵模式：
-    - use_real_time_matrix=False（默认，标准数据集）：矩阵元素为距离，travel_time = d / travel_speed
-    - use_real_time_matrix=True（高德真实数据）：矩阵元素为旅行时间（小时），travel_time = d
-
-    Args:
-        line: 路径数组（含起终点的完整路径）。
-        cost_mat: 距离/旅行时间矩阵。
-        travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时该参数无效。
-        penalty_weight: 迟到惩罚权重。
-        early_wait_weight: 早到等待惩罚权重。
-        late_return_weight: 晚归惩罚权重。
-        depot_index: 起终点索引。
-        spots_start: 各景点时间窗开始时间数组。
-        spots_end: 各景点时间窗结束时间数组。
-        spots_stay: 各景点停留时长数组。
-        use_real_time_matrix: 矩阵是否为旅行时间（避免 d / travel_speed 重复计算）。
-
-    Returns:
-        Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
-            旅行累积值：标准模式下为总距离，真实模式下为总旅行时间。
-    """
-    if len(line) < 3:
-        return 999999.0, 999999.0, 999999.0
-
-    travel_sum = 0.0
-    time_penalty = 0.0
-    depot_start = spots_start[depot_index]
-    depot_end = spots_end[depot_index]
-    current_time = depot_start
-
-    for i in range(len(line) - 1):
-        fr = line[i]
-        to = line[i + 1]
-        d = cost_mat[fr][to]
-        travel_sum += d
-        travel_time = d if use_real_time_matrix else d / travel_speed
-        arrival = current_time + travel_time
-
-        if to != depot_index:
-            start_t = spots_start[to]
-            end_t = spots_end[to]
-            stay = spots_stay[to]
-
-            if arrival < start_t:
-                # 早到 → 等待，按等待时长计惩罚
-                wait = start_t - arrival
-                time_penalty += wait * early_wait_weight
-                current_time = start_t + stay
-            elif arrival > end_t:
-                # 迟到 → 超时惩罚（权重高）
-                late = arrival - end_t
-                time_penalty += late * penalty_weight
-                current_time = arrival + stay
-            else:
-                current_time = arrival + stay
-        else:
-            if arrival > depot_end:
-                time_penalty += (arrival - depot_end) * late_return_weight
-            current_time = arrival
-
-    total = travel_sum + time_penalty
-    return round(total, 1), round(travel_sum, 1), round(time_penalty, 1)  # pyright: ignore[reportCallIssue, reportArgumentType]
-
 
 # ================== VNSSolver 主类 ==================
 
@@ -365,8 +277,7 @@ class VNSSolver:
         sol = solution.copy()
         ops = ["swap", "inversion", "insert", "2opt"]
 
-        # 收集违规节点
-        # 注意：analyze_solution（Python 版）与 _cal_fitness_numba（Numba 版）逻辑需同步
+        # 收集违规节点（_cal_fitness_numba 与 analyze_solution 均在 fitness.py 中维护）
         violators = []
         if iter_ratio < EARLY_EXPLORE_RATIO and cost_mat is not None:
             _, _, _, _, violations = analyze_solution(

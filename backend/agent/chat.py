@@ -8,6 +8,7 @@ from openai import OpenAI
 
 from backend.agent.tools.prompts import CHAT_SYSTEM
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from backend.utils.decorators import placeholder
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -65,6 +66,9 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
     ]
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：模拟 SSE 回复，MOCK_MODE=True 时使用，无需 LLM API Key
+@placeholder
 async def mock_stream_chat(messages: list[dict]):
     """调试用：MOCK_MODE=True 时模拟 SSE 流式回复，无需 LLM API Key。
 

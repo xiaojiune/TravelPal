@@ -203,6 +203,7 @@ def cluster_hybrid_optimized(spots: dict, cost_mat: np.ndarray, depot: int, n_cl
                 j_earliest = min(groups[j], key=lambda x: spots[x]["tw"][0])
 
                 def avg_dist(g):
+                    """计算组内平均距离，评估分组紧凑度。"""
                     s = 0
                     cnt = 0
                     for a in g:
@@ -272,6 +273,9 @@ def call_cluster(
 
 def pure_name(full_name: str) -> str:
     """从带编号的全称中提取纯方法名，如 '1. xxx' → 'xxx'
+
+    Args:
+        full_name: 方法全称，如 "1. 基于距离的K-means聚类"。
 
     Returns:
         str: 纯方法名（去掉前缀编号）。

@@ -443,7 +443,11 @@ class VNSSolver:
                 self.elite_pool[worst_idx] = (solution.copy(), cost)
 
     def get_elite_pool(self):
-        """返回精英池（(解, 成本) 列表）"""
+        """返回精英池（(解, 成本) 列表）
+
+        Returns:
+            list[tuple[list[int], float]]: 精英池中的 (路径, 成本) 列表。
+        """
         return self.elite_pool
 
     # ---------- 主求解入口 ----------

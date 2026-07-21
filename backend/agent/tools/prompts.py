@@ -12,7 +12,11 @@ except ImportError:
 
 
 def build_date_context() -> str:
-    """返回当前日期上下文：日期、星期、是否中国法定节假日。"""
+    """返回当前日期上下文：日期、星期、是否中国法定节假日。
+
+    Returns:
+        str: 形如 "当前日期：2026-07-21（周二）；当日为周末" 的中文描述。
+    """
     now = datetime.now()
     weekday_names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
     weekday = weekday_names[now.weekday()]

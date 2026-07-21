@@ -101,13 +101,20 @@ class RagEngine:
     """零依赖 BM25 检索引擎，惰性初始化。"""
 
     def __init__(self):
-        self._docs: list[dict] = []
+        """初始化空引擎，文档加载和索引构建由 init() 惰性执行。"""
         self._avgdl = 0.0
         self._idf: dict[str, float] = {}
         self._initialized = False
 
     def init(self) -> None:
-        """惰性初始化：扫描文档 → 切块 → 建立 BM25 索引。幂等，多次调用仅执行一次。"""
+        """惰性初始化：扫描文档 → 切块 → 建立 BM25 索引。幂等，多次调用仅执行一次。
+
+        Args:
+            无（使用实例属性 _docs 和类常量 _DOC_DIR）。
+
+        Returns:
+            None: 索引数据写入 self._docs / self._idf / self._avgdl。
+        """
         if self._initialized:
             return
         self._load_docs()
@@ -191,7 +198,15 @@ class RagEngine:
         return results
 
     def search(self, query: str, k: int = 3) -> list[dict]:
-        """BM25 检索，返回 top-k 条结果。低分时自动提取关键词重试。"""
+        """BM25 检索，返回 top-k 条结果。低分时自动提取关键词重试。
+
+        Args:
+            query: 用户查询文本。
+            k: 返回 top-k 条结果，默认 3。
+
+        Returns:
+            list[dict]: 每项含 score/source/heading/text，按 BM25 分数降序。
+        """
         if not self._initialized:
             self.init()
         if not self._docs:

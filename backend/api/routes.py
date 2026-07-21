@@ -206,6 +206,12 @@ async def chat(req: ChatRequest):
     Mock 模式返回死 token，方便前端联调。
     正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
 
+    Args:
+        req: 聊天请求，含 message 和可选的 plan_result 上下文。
+
+    Returns:
+        StreamingResponse: SSE 流式响应，逐 token 推送内容。
+
     Raises:
         HTTPException 500: LLM 调用异常或数据格式错误。
     """
@@ -213,7 +219,7 @@ async def chat(req: ChatRequest):
         messages = build_chat_messages(req.message, req.plan_result)
 
         async def _stream():
-            # 第一阶段：非流式调用检测工具意图
+            """SSE 生成器：检测 tool_call → 执行工具 → 流式回复。"""
             from openai import OpenAI
 
             from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL

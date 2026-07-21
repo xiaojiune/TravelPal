@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+/** 规划结果页：展示成本指标、地图(AmapMap) + 行程(SchedulePanel) 左右联动、分享到分享站。 */
 // ====== 状态定义 ======
 import { ref, computed, watch } from 'vue'
 import { usePlanStore } from '@/stores/plan'

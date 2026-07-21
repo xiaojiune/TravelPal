@@ -4,6 +4,7 @@
 
 | 日期 | 变更 |
 |------|------|
+| 2026-07-21 | deprecated.py → decorators.py；调度拆出 `_solve_best`；引擎链路补 VNS 报错分支；工具表同步 `@placeholder` |
 | 2026-07-18 | 从 back.md 重写为 backend.md：全量结构重写 + 引擎链路/POI流程/数据流图修正，清理 ca.py 废弃参数 |
 
 ## 一、架构总览
@@ -62,7 +63,7 @@ backend/
 │   └── chroma_db/         向量数据库（待填充）
 │
 └── utils/                 通用工具
-    ├── deprecated.py       @legacy_only 装饰器（标记遗留函数）
+    ├── decorators.py       @legacy_only / @placeholder 装饰器（标记遗留/占位函数）
     ├── gen_openapi.py     导出 OpenAPI 规范 JSON
     └── sync_all.py        自动同步 __init__.py 的 __all__
 ```
@@ -132,7 +133,7 @@ Pydantic 请求/响应模型，按功能分组：
 | 对话流 | `chat.py` | SSE 流式聊天入口 |
 | 工具系统 | `tools/` | Function Calling 工具注册与执行 |
 | 评语生成 | `commentator.py` | 规划结果解说 |
-| 规划调整 | `planner.py` | 加/删景点、调天数（函数已就绪，未接入 Function Calling） |
+| 规划调整 | `planner.py` | 加/删景点、调天数（`@placeholder`，未接入任何端点） |
 
 ## 六、求解引擎层 (engine/)
 
@@ -143,11 +144,11 @@ Pydantic 请求/响应模型，按功能分组：
 | 模块 | 关键函数 | 定位 |
 |------|---------|------|
 | `pipeline.py` | `run_planning()` | 流程编排：矩阵构建 → 求解 → 行程生成 → 评语 |
-| `search.py` | `ca_suggest()` / `cluster_and_solve()` | 建议/求解入口 |
+| `search.py` | `ca_suggest()` / `cluster_and_solve()` / `_solve_best()` | 建议/求解入口 + 调度阀门 |
 | `ca.py` | `CASolver.solve()` | 快速求解器（压缩退火） |
 | `vns.py` | `VNSSolver.solve()` | VNS+ 增强求解器（压缩成本 VND + 自适应算子权重 + 动态 Shake + 精英池后优化） |
 | `clustering.py` | `call_cluster()` | 6 种聚类方法注册表 |
-| `fitness.py` | `analyze_solution()` | 成本计算 + 可行性判定 |
+| `fitness.py` | `_cal_fitness_numba()` / `analyze_solution()` | Numba 共享内核 + 成本分析 |
 
 ### 聚类方法注册表
 
@@ -164,25 +165,28 @@ Pydantic 请求/响应模型，按功能分组：
 
 ### 引擎内部调用链路
 
-`cluster_and_solve` 是 `run_planning` 中的核心调度入口，根据外部参数分支：
+`cluster_and_solve` 是 `run_planning` 中的核心调度入口，根据 `n_days` 和 `mode` 参数路由：
 
 ```
 cluster_and_solve(spots, cost_mat, mode, n_days)
 │
-├─ n_days=None (Suggest 阶段) ────────────────
-│   └─ ca_suggest()
-│       ├─ 外层：遍历 6 种聚类方法
-│       ├─ 内层：天数递增（min_days → n_spots）
-│       ├─ solve_groups(solver_type="CA") 求解各组
-│       ├─ 增益阈值早退（<1.0% × 3 次 → stop）
-│       ├─ 去重 + 按成本排序
-│       └─ 返回 type="suggestion"（多条方案，每条含完整 routes/daily_schedules/cost）
+├─ n_days 已指定 ────────────────────────────
+│   ├─ solver_type = "VNS"（deep）或 "CA"（fast）
+│   └─ _solve_best() → 遍历 6 种聚类方法，固定天数
+│       └─ solve_groups(solver_type) 求解各组
+│       └─ 返回 type="solution"（单条最优方案 + best_days / best_m）
 │
-└─ n_days 已指定 (Plan 阶段) ─────────────────
-    ├─ solver_type = "VNS"（固定，仅 deep 模式）
-    ├─ 遍历 6 种聚类方法，固定天数分组
-    ├─ solve_groups(solver_type="VNS")
-    └─ 返回 type="solution"（单条最优方案）
+├─ n_days=None + mode="fast" ────────────────
+│   └─ ca_suggest()
+│       ├── 外层：遍历 6 种聚类方法
+│       ├── 内层：天数递增（min_days → n_spots）
+│       ├── solve_groups(solver_type="CA") 求解各组
+│       ├── 增益阈值早退（<1.0% × 3 次 → stop）
+│       ├── 按成本排序 + frozenset 去重
+│       └── 返回 type="suggestion"（多条方案，含 routes/daily_schedules/cost）
+│
+└─ n_days=None + mode="deep" ────────────────
+    └─ raise ValueError（VNS 无自动分群能力）
 ```
 
 > `run_planning` 设计要点：
@@ -213,7 +217,7 @@ cluster_and_solve(spots, cost_mat, mode, n_days)
 
 | 脚本 | 用途 |
 |------|------|
-| `deprecated.py` | `@legacy_only` 装饰器，标记仅作遗留参考的函数 |
+| `decorators.py` | `@legacy_only` / `@placeholder` 装饰器，标记遗留参考/占位函数 |
 | `gen_openapi.py` | 导出 `openapi.json`（供 openapi-typescript 生成前端类型） |
 | `sync_all.py` | 扫描 `__init__.py` 的 import 语句，自动同步 `__all__` |
 

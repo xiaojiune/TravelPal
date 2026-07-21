@@ -27,8 +27,7 @@ class TestClustering:
                     all_assigned.add(node)
 
             assert all_assigned == spot_ids, (
-                f"{full_name}: 遗漏节点 {spot_ids - all_assigned}, "
-                f"多余节点 {all_assigned - spot_ids}"
+                f"{full_name}: 遗漏节点 {spot_ids - all_assigned}, 多余节点 {all_assigned - spot_ids}"
             )
 
     def test_cluster_count_matches_k(self, any_dataset):
@@ -39,9 +38,7 @@ class TestClustering:
         for k in range(2, min(6, len(spots))):
             for full_name, method_func in CLUSTER_METHODS:
                 groups = call_cluster(method_func, spots, depot, k, cost_mat)
-                assert len(groups) == k, (
-                    f"{full_name}: k={k}, 实际组数={len(groups)}"
-                )
+                assert len(groups) == k, f"{full_name}: k={k}, 实际组数={len(groups)}"
 
     # ---------- 分组质量 ----------
     def test_each_group_nonempty(self, n20_dataset):

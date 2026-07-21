@@ -14,10 +14,9 @@ from backend.agent.commentator import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.engine.search import balance_groups, cluster_and_solve, solve_groups  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
+from backend.utils.decorators import placeholder  # noqa: E402
 
 # ================== 常量 ==================
-
-TRAVEL_SPEED = 1.0
 
 
 def _supplement_polylines(
@@ -144,6 +143,7 @@ def run_planning(
 
     depot = 0
 
+    solve_start = time.time()
     result: PlanResult | dict = cluster_and_solve(
         spots,
         depot,
@@ -151,37 +151,33 @@ def run_planning(
         mode=mode,
         n_days=n_days,
         min_days=min_days,
-        travel_speed=TRAVEL_SPEED,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
     )
+    if result["type"] != "suggestion":
+        algo_name = "VNS" if mode == "deep" else "CA"
+        print(f"  {algo_name} 算法求解耗时: {time.time() - solve_start:.2f}s")
 
-    # 补调 route 涉及但 polylines 中缺失的方向（cost/dist 对称复用，polyline 不复制）
+    # 后处理（按结果类型分两路，polyline 补调 + 序列化 + 行程重建分属各自分支）
     if result["type"] == "suggestion":
         _supplement_polylines(
             [s["routes"] for s in result["suggestions"]],
-            coords,
-            polylines,
+            coords, polylines,
         )
-    else:
-        _supplement_polylines(
-            [result["solution"]["routes"]],
-            coords,
-            polylines,
-        )
-
-    polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}  # tuple 键转 "fromIdx_toIdx" 字符串键
-
-    if result["type"] == "suggestion":
-        result["algo_time"] = round(time.time() - total_start, 2)  # 含 API 拉取 + 引擎求解的总耗时
+        polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
+        result["algo_time"] = round(time.time() - total_start, 2)
+        print(f"  suggest 阶段总耗时: {result['algo_time']:.2f}s")
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)
-        result["cost_matrix"] = cost_matrix.tolist()  # 返回前端缓存，deep 模式复用跳过驾车 API
+        result["cost_matrix"] = cost_matrix.tolist()
         result["dist_matrix"] = dist_matrix.tolist()
-        result["polylines"] = polylines_serial  # 真实路径坐标，供前端绘制驾车轨迹
+        result["polylines"] = polylines_serial
         return result
+
+    _supplement_polylines([result["solution"]["routes"]], coords, polylines)
+    polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
 
     solution = result["solution"]
     print(f"最优总成本 ({mode} 模式): {solution['total_cost']:.1f}\n")
@@ -191,6 +187,7 @@ def run_planning(
     daily_schedules = _rebuild_schedule(solution["routes"], spots, cost_matrix)
 
     algo_time = time.time() - total_start
+    print(f"  plan 阶段总耗时 ({mode}): {algo_time:.2f}s")
     print("所有任务完成。\n")
 
     commentary = generate_commentary(solution, spots, dist_matrix)
@@ -310,6 +307,9 @@ def _rebuild_schedule(
 # ================== 方案调整 ==================
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：方案调整编排（改天数/移除/添加景点），未接入任何端点
+@placeholder
 def adjust_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix_list: list,
@@ -420,7 +420,6 @@ def adjust_plan(
             spots_dict,
             cost_matrix,
             solver_type="CA",
-            travel_speed=TRAVEL_SPEED,
         )
         print(f"调整后总成本: {result['total_cost']:.1f}\n")
         daily_schedules = _rebuild_schedule(result["routes"], spots_dict, cost_matrix)

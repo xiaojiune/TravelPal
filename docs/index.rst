@@ -16,16 +16,8 @@
    ADR/007
 
 .. toctree::
-   :maxdepth: 1
-   :caption: 规范与路线图
-
-   coding
-   git
-   产品路线图
-
-.. toctree::
    :maxdepth: 2
-   :caption: 项目结构与部署
+   :caption: 项目结构
 
    structure/project
    structure/backend
@@ -33,6 +25,14 @@
    structure/agent
    structure/data
    structure/docs
+
+.. toctree::
+   :maxdepth: 1
+   :caption: 规范与路线图
+
+   coding
+   git
+   产品路线图
    deploy
 
 .. toctree::

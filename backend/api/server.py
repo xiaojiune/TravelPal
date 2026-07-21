@@ -12,7 +12,14 @@ from backend.data.model.database import close_db, init_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期：启动时创建数据库表，关闭时释放连接池。"""
+    """应用生命周期：启动时创建数据库表，关闭时释放连接池。
+
+    Args:
+        app: FastAPI 应用实例。
+
+    Yields:
+        None: 应用运行期间 yield，退出后执行关闭逻辑。
+    """
     skip_db = os.getenv("SKIP_DB", "").lower() in ("1", "true")
     if not skip_db:
         await init_db()

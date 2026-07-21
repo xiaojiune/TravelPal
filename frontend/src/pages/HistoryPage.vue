@@ -38,6 +38,7 @@
 </template>
 
 <script setup lang="ts">
+/** 历史记录页：方案分享站，支持分页列表、查看详情、删除（device_id 鉴权）。 */
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'

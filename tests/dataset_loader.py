@@ -22,10 +22,7 @@ def load_tsptw_dataset(filepath: str) -> tuple[dict, np.ndarray, int]:
         lines = f.readlines()
 
     n = int(lines[0].strip())
-    cost_mat = np.array([
-        list(map(int, lines[i + 1].strip().split()))
-        for i in range(n)
-    ], dtype=np.float64)
+    cost_mat = np.array([list(map(int, lines[i + 1].strip().split())) for i in range(n)], dtype=np.float64)
 
     time_windows = []
     for i in range(n + 1, 2 * n + 1):

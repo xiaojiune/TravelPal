@@ -1,4 +1,5 @@
 """POI 类型判定 _classify_poi() 单元测试。"""
+
 from backend.agent.tools.poi import _classify_poi
 
 

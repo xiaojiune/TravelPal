@@ -7,15 +7,15 @@ from backend.engine.search import ca_suggest, cluster_and_solve, solve_groups
 from backend.engine.vns import VNS_DEFAULT_PARAMS, VNSSolver
 
 __all__ = [
-    "VNSSolver",
-    "VNS_DEFAULT_PARAMS",
-    "CASolver",
-    "CA_DEFAULT_PARAMS",
-    "analyze_solution",
-    "CLUSTER_METHODS",
-    "call_cluster",
-    "find_method_func",
-    "cluster_and_solve",
-    "solve_groups",
-    "ca_suggest",
+    'CA_DEFAULT_PARAMS',
+    'CASolver',
+    'CLUSTER_METHODS',
+    'call_cluster',
+    'find_method_func',
+    'analyze_solution',
+    'ca_suggest',
+    'cluster_and_solve',
+    'solve_groups',
+    'VNS_DEFAULT_PARAMS',
+    'VNSSolver',
 ]

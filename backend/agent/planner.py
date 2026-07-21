@@ -4,8 +4,12 @@ import numpy as np
 
 from backend.engine.search import cluster_and_solve, solve_groups
 from backend.typedefs import SpotDict
+from backend.utils.decorators import placeholder
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：保持景点不变，改天数后重新规划
+@placeholder
 def adjust_plan_days(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -53,6 +57,9 @@ def adjust_plan_days(
 # ================== 添加景点 ==================
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：添加新景点到方案并重新求解
+@placeholder
 def add_poi_to_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -89,6 +96,9 @@ def add_poi_to_plan(
 # ================== 移除景点 ==================
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：从方案中移除指定景点并重新求解
+@placeholder
 def remove_poi_from_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,

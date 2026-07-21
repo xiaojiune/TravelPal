@@ -5,41 +5,9 @@
 | 日期 | 变更 |
 |------|------|
 | 2026-07-18 | 重写为交叉引用总览模式，补全 ADR 索引 |
+| 2026-07-22 | 降级为纯引用文档，去除与 README 重复的技术栈/目录 |
 
-## 技术栈总览
-
-| 层 | 技术 | 说明 |
-|----|------|------|
-| 后端框架 | Python 3.12 + FastAPI | 异步 HTTP + SSE 流式 |
-| 求解引擎 | CA（模拟退火）+ VNS+（变邻域搜索 + SA 混合 + 自适应算子） | 核心算法 |
-| 前端框架 | Vue 3 + Vite + TypeScript | SPA 单页应用 |
-| 地图 SDK | 高德 AMap JS API v2.0 | 2D 路线可视化 |
-| 数据库 | PostgreSQL 16（pgvector） | 历史记录持久化 |
-| 缓存 | Redis | 预留 |
-| LLM | DeepSeek API（兼容 OpenAI SDK） | 营业时间解析 + Agent 对话 |
-| 容器化 | Docker Compose（Nginx + uvicorn + Postgres + Redis） | 一键部署 |
-
-## 顶层目录
-
-```
-TravelPal/
-├── backend/        后端 FastAPI        → 详见 backend.md
-├── frontend/       前端 Vue 3 + Vite   → 详见 frontend.md
-├── docs/           项目文档体系        → 本目录（结构文档 + ADR + 编码规范）
-├── data/           数据集
-│   ├── DataSets/    TSPTW 测试集（n100w20, n60w60...）
-│   └── spots/       景点 MD 仓库（待填充）
-├── tests/          测试目录
-├── docker-compose.yml    四服务编排（postgres/redis/backend/nginx）
-├── docker/
-│   ├── Dockerfile.backend    后端容器镜像（Poetry export + pip）
-│   ├── Dockerfile.frontend   前端容器镜像（双阶段：Node build → Nginx serve）
-│   └── nginx.conf            Nginx 反向代理配置（API proxy + 前端静态 + SSE）
-├── deploy.sh             一键部署脚本
-├── .env.example          环境变量模板
-├── Makefile              开发命令（dev/serve/lint/build/test/docker）
-└── pyproject.toml        Poetry 项目配置 + 依赖管理
-```
+> 技术栈和目录结构见 [README.md](../../README.md#项目结构)。本页聚焦调用链路与文档索引。
 
 ## 系统级调用链路
 

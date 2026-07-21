@@ -12,9 +12,7 @@ class TestVNS:
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = VNSSolver(city_indices, spots, travel_speed=1.0,
-                           penalty_weight=100.0, early_wait_weight=0.1,
-                           late_return_weight=50.0)
+        solver = VNSSolver(city_indices, spots, penalty_weight=100.0, early_wait_weight=0.1, late_return_weight=50.0)
         res = solver.solve(cost_mat)
 
         sol = res["best_solution"]

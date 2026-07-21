@@ -13,9 +13,7 @@ class TestSA:
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = CASolver(city_indices, spots, travel_speed=1.0,
-                          penalty_weight=100.0, early_wait_weight=0.1,
-                          late_return_weight=50.0)
+        solver = CASolver(city_indices, spots, penalty_weight=100.0, early_wait_weight=0.1, late_return_weight=50.0)
         res = solver.solve(cost_mat)
 
         sol = res["best_solution"]
@@ -30,9 +28,7 @@ class TestSA:
         spots, cost_mat, _ = n20_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = CASolver(city_indices, spots, travel_speed=1.0,
-                          penalty_weight=100.0, early_wait_weight=0.1,
-                          late_return_weight=50.0)
+        solver = CASolver(city_indices, spots, penalty_weight=100.0, early_wait_weight=0.1, late_return_weight=50.0)
         res = solver.solve(cost_mat)
 
         assert res["best_cost"] > 0, "成本应大于 0"
@@ -49,9 +45,7 @@ class TestSA:
         conv = res["convergence_history"]
         assert len(conv) >= 2, "应有至少 2 个收敛点"
         for i in range(1, len(conv)):
-            assert conv[i] <= conv[i - 1] + 1e-6, (
-                f"收敛历史不应上升: {conv[i - 1]} -> {conv[i]}"
-            )
+            assert conv[i] <= conv[i - 1] + 1e-6, f"收敛历史不应上升: {conv[i - 1]} -> {conv[i]}"
 
     # ---------- 退火模式 ----------
     def test_sa_compressed_vs_standard(self, n20_dataset):
@@ -94,9 +88,7 @@ class TestSA:
             results.append(res["best_cost"])
 
         unique = len(set(round(c, 1) for c in results))
-        assert unique >= 2 or all(c == results[0] for c in results), (
-            "不同随机种子应产生不同或相同的最优解"
-        )
+        assert unique >= 2 or all(c == results[0] for c in results), "不同随机种子应产生不同或相同的最优解"
 
     # ---------- 扩展性 ----------
     def test_sa_on_larger_dataset(self, n60_dataset):
@@ -104,9 +96,7 @@ class TestSA:
         spots, cost_mat, _ = n60_dataset
         city_indices = list(range(1, len(spots)))
 
-        solver = CASolver(city_indices, spots,
-                          penalty_weight=100.0, early_wait_weight=0.1,
-                          late_return_weight=50.0)
+        solver = CASolver(city_indices, spots, penalty_weight=100.0, early_wait_weight=0.1, late_return_weight=50.0)
         res = solver.solve(cost_mat)
 
         visited = set(res["best_solution"][1:-1])

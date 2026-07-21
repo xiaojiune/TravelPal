@@ -1,7 +1,7 @@
 """从 __init__.py 的 from X import Y 语句自动生成 __all__。
 
 用法:
-    python -m backend.tools.sync_all
+    python -m backend.utils.sync_all
 
 设计原则:
     - import 行是公开接口的唯一真实来源

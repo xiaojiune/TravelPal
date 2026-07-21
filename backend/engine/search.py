@@ -186,7 +186,7 @@ def ca_suggest(
         late_return_weight: 晚归惩罚权重。
 
     Returns:
-        dict: type="suggestion"；顶层含 algo_time（引擎求解耗时秒数）、
+        dict: type="suggestion"；
         suggestions 为全部可行方案的列表（含 n_days、method、cost、routes 等）。
     """
     n_spots = len(spots) - 1
@@ -251,9 +251,9 @@ def ca_suggest(
     raw_results.sort(key=lambda x: x["cost"])
     deduped = _deduplicate(raw_results)
 
+    print(f"  CA suggest 引擎求解耗时: {time.time() - algo_start:.2f}s")
     return {
         "type": "suggestion",
-        "algo_time": round(time.time() - algo_start, 2),
         "suggestions": [
             {
                 "n_days": item["n_days"],

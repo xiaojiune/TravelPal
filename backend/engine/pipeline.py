@@ -172,6 +172,7 @@ def run_planning(
 
     if result["type"] == "suggestion":
         result["algo_time"] = round(time.time() - total_start, 2)  # 含 API 拉取 + 引擎求解的总耗时
+        print(f"  suggest 阶段总耗时: {result['algo_time']:.2f}s")
         result["spots"] = spots
         for s in result["suggestions"]:
             s["daily_schedules"] = _rebuild_schedule(s["routes"], spots, cost_matrix)
@@ -188,6 +189,7 @@ def run_planning(
     daily_schedules = _rebuild_schedule(solution["routes"], spots, cost_matrix)
 
     algo_time = time.time() - total_start
+    print(f"  plan 阶段总耗时 ({mode}): {algo_time:.2f}s")
     print("所有任务完成。\n")
 
     commentary = generate_commentary(solution, spots, dist_matrix)

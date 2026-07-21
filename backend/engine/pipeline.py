@@ -17,8 +17,6 @@ from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noq
 
 # ================== 常量 ==================
 
-TRAVEL_SPEED = 1.0
-
 
 def _supplement_polylines(
     routes_list: list[list[list[int]]],
@@ -151,7 +149,6 @@ def run_planning(
         mode=mode,
         n_days=n_days,
         min_days=min_days,
-        travel_speed=TRAVEL_SPEED,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
@@ -420,7 +417,6 @@ def adjust_plan(
             spots_dict,
             cost_matrix,
             solver_type="CA",
-            travel_speed=TRAVEL_SPEED,
         )
         print(f"调整后总成本: {result['total_cost']:.1f}\n")
         daily_schedules = _rebuild_schedule(result["routes"], spots_dict, cost_matrix)

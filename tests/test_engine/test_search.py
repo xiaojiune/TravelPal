@@ -8,14 +8,17 @@ from backend.engine.search import ca_suggest, cluster_and_solve
 class TestCASuggest:
     """ca_suggest 全参数搜索的早退、去重与排序逻辑验证"""
 
-# ---------- 基础用例 ----------
+    # ---------- 基础用例 ----------
     def test_returns_suggestions(self, n20_dataset):
         spots, cost_mat, _ = n20_dataset
         depot = 0
 
         result = ca_suggest(
-            spots, depot, cost_mat,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            spots,
+            depot,
+            cost_mat,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -34,9 +37,12 @@ class TestCASuggest:
         depot = 0
 
         result = ca_suggest(
-            spots, depot, cost_mat,
+            spots,
+            depot,
+            cost_mat,
             min_days=2,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -48,9 +54,12 @@ class TestCASuggest:
         depot = 0
 
         result = ca_suggest(
-            spots, depot, cost_mat,
+            spots,
+            depot,
+            cost_mat,
             min_days=1,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -64,11 +73,14 @@ class TestCASuggest:
         depot = 0
 
         result = ca_suggest(
-            spots, depot, cost_mat,
+            spots,
+            depot,
+            cost_mat,
             min_days=2,
             early_stop_gain_threshold=50.0,
             stop_consecutive_worse=1,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -91,8 +103,13 @@ class TestClusterAndSolve:
         depot = 0
 
         result = cluster_and_solve(
-            spots, depot, cost_mat, mode="fast", n_days=3,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            spots,
+            depot,
+            cost_mat,
+            mode="fast",
+            n_days=3,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -107,8 +124,13 @@ class TestClusterAndSolve:
         depot = 0
 
         result = cluster_and_solve(
-            spots, depot, cost_mat, mode="deep", n_days=3,
-            penalty_weight=100.0, early_wait_weight=0.1,
+            spots,
+            depot,
+            cost_mat,
+            mode="deep",
+            n_days=3,
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -122,8 +144,12 @@ class TestClusterAndSolve:
 
         with pytest.raises(ValueError, match="指定 n_days"):
             cluster_and_solve(
-                spots, depot, cost_mat, mode="deep",
-                penalty_weight=100.0, early_wait_weight=0.1,
+                spots,
+                depot,
+                cost_mat,
+                mode="deep",
+                penalty_weight=100.0,
+                early_wait_weight=0.1,
                 late_return_weight=50.0,
             )
 
@@ -133,8 +159,12 @@ class TestClusterAndSolve:
         depot = 0
 
         result = cluster_and_solve(
-            spots, depot, cost_mat, mode="fast",
-            penalty_weight=100.0, early_wait_weight=0.1,
+            spots,
+            depot,
+            cost_mat,
+            mode="fast",
+            penalty_weight=100.0,
+            early_wait_weight=0.1,
             late_return_weight=50.0,
         )
 
@@ -151,8 +181,13 @@ class TestClusterAndSolve:
 
         for mode in ("fast", "deep"):
             result = cluster_and_solve(
-                spots, depot, cost_mat, mode=mode, n_days=3,
-                penalty_weight=100.0, early_wait_weight=0.1,
+                spots,
+                depot,
+                cost_mat,
+                mode=mode,
+                n_days=3,
+                penalty_weight=100.0,
+                early_wait_weight=0.1,
                 late_return_weight=50.0,
             )
 
@@ -169,8 +204,13 @@ class TestClusterAndSolve:
 
         for mode in ("fast", "deep"):
             result = cluster_and_solve(
-                spots, depot, cost_mat, mode=mode, n_days=3,
-                penalty_weight=100.0, early_wait_weight=0.1,
+                spots,
+                depot,
+                cost_mat,
+                mode=mode,
+                n_days=3,
+                penalty_weight=100.0,
+                early_wait_weight=0.1,
                 late_return_weight=50.0,
             )
 
@@ -188,8 +228,13 @@ class TestClusterAndSolve:
 
         for mode in ("fast", "deep"):
             result = cluster_and_solve(
-                spots, depot, cost_mat, mode=mode, n_days=3,
-                penalty_weight=100.0, early_wait_weight=0.1,
+                spots,
+                depot,
+                cost_mat,
+                mode=mode,
+                n_days=3,
+                penalty_weight=100.0,
+                early_wait_weight=0.1,
                 late_return_weight=50.0,
             )
             assert result["solution"]["total_cost"] > 0

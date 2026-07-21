@@ -39,12 +39,15 @@ def _load(subdir: str, instance: int) -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset(subdir, instance))
 
 
-@pytest.fixture(params=[
-    ("n20w20", 1),
-    ("n60w60", 3),
-    ("n100w20", 1),
-    ("n200w40", 5),
-], ids=DATASET_IDS)
+@pytest.fixture(
+    params=[
+        ("n20w20", 1),
+        ("n60w60", 3),
+        ("n100w20", 1),
+        ("n200w40", 5),
+    ],
+    ids=DATASET_IDS,
+)
 
 # ================== 内部函数 ==================
 def any_dataset(request: pytest.FixtureRequest) -> tuple[dict, np.ndarray, int]:

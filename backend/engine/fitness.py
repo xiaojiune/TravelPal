@@ -12,7 +12,6 @@ from numba import njit
 def _cal_fitness_numba(
     line: np.ndarray,
     cost_mat: np.ndarray,
-    travel_speed: float,
     penalty_weight: float,
     early_wait_weight: float,
     late_return_weight: float,
@@ -20,22 +19,17 @@ def _cal_fitness_numba(
     spots_start: np.ndarray,
     spots_end: np.ndarray,
     spots_stay: np.ndarray,
-    use_real_time_matrix: bool = False,
 ) -> Tuple[float, float, float]:
     """
     Numba JIT 编译的适应度计算内核。
 
     沿路径逐段模拟行程，累计总成本与时间惩罚。
     路径必须从 depot 出发并回到 depot，长度不足 3 时返回极大惩罚值。
-
-    两种矩阵模式：
-    - use_real_time_matrix=False（默认，标准数据集）：矩阵元素为距离，travel_time = d / travel_speed
-    - use_real_time_matrix=True（高德真实数据）：矩阵元素为旅行时间（小时），travel_time = d
+    成本矩阵元素为旅行时间（分钟），d 直接作为 travel_time 使用。
 
     Args:
         line: 路径数组（含起终点的完整路径）。
-        cost_mat: 距离/旅行时间矩阵。
-        travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时该参数无效。
+        cost_mat: 旅行时间矩阵（分钟）。
         penalty_weight: 迟到惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
@@ -43,11 +37,9 @@ def _cal_fitness_numba(
         spots_start: 各景点时间窗开始时间数组。
         spots_end: 各景点时间窗结束时间数组。
         spots_stay: 各景点停留时长数组。
-        use_real_time_matrix: 矩阵是否为旅行时间（避免 d / travel_speed 重复计算）。
 
     Returns:
         Tuple[float, float, float]: (总成本, 旅行累积值, 时间惩罚).
-            旅行累积值：标准模式下为总距离，真实模式下为总旅行时间。
     """
     if len(line) < 3:
         return 999999.0, 999999.0, 999999.0
@@ -63,7 +55,7 @@ def _cal_fitness_numba(
         to = line[i + 1]
         d = cost_mat[fr][to]
         travel_sum += d
-        travel_time = d if use_real_time_matrix else d / travel_speed
+        travel_time = d
         arrival = current_time + travel_time
 
         if to != depot_index:
@@ -94,32 +86,28 @@ def analyze_solution(
     line: list,
     cost_mat: np.ndarray,
     spots_dict: dict,
-    travel_speed: float,
     early_wait_weight=0.1,
     penalty_weight=100.0,
     late_return_weight=50.0,
     depot=0,
-    use_real_time_matrix=False,
 ):
     """
     解析指定路径的详细成本与违规信息。
 
     逐段模拟路径执行过程，累计旅行成本、早到等待惩罚、迟到惩罚和晚归惩罚。
+    成本矩阵元素为旅行时间（分钟），d 直接作为 travel_time 使用。
 
     Args:
         line: 路径列表（含起终点）。
-        cost_mat: 距离/旅行时间矩阵。
+        cost_mat: 旅行时间矩阵（分钟）。
         spots_dict: 景点字典，每项含 {"tw": (start, end), "stay": float}。
-        travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时无效。
         early_wait_weight: 早到等待惩罚权重。
         penalty_weight: 迟到惩罚权重。
         late_return_weight: 晚归惩罚权重。
         depot: 起终点索引。
-        use_real_time_matrix: 矩阵是否为旅行时间（避免 d / travel_speed 重复计算）。
 
     Returns:
         Tuple[float, float, float, float, List]: (总成本, 旅行累积值, 等待惩罚, 迟到惩罚, 违规详情列表).
-            旅行累积值：标准模式 = 总距离，真实模式 = 总旅行时间。
             违规详情项为 (节点索引, 违规类型, 时长)，违规类型为 'wait' 或 'late'。
     """
     travel_sum = 0
@@ -134,7 +122,7 @@ def analyze_solution(
         fr, to = line[i], line[i + 1]
         d = cost_mat[fr][to]
         travel_sum += d
-        travel_time = d if use_real_time_matrix else d / travel_speed
+        travel_time = d
         arrival = current_time + travel_time
 
         if to != depot:

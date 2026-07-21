@@ -47,12 +47,10 @@ class CASolver:
         self,
         city_indices: list[int],
         spots_dict: dict,
-        travel_speed: float = 1.0,
         penalty_weight: float = 100.0,
         early_wait_weight: float = 0.1,
         late_return_weight: float = 50.0,
         depot_index: int = 0,
-        use_real_time_matrix: bool = False,
         **kwargs,
     ):
         """
@@ -61,23 +59,19 @@ class CASolver:
         Args:
             city_indices: 需要规划路径的城市索引列表。
             spots_dict: 景点字典，每项含 {"tw": (start, end), "stay": float}。
-            travel_speed: 旅行速度（距离/时间单位）。use_real_time_matrix=True 时无效。
             penalty_weight: 迟到惩罚权重。
             early_wait_weight: 早到等待惩罚权重。
             late_return_weight: 晚归惩罚权重。
             depot_index: 起终点索引（默认为 0）。
-            use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
             **kwargs: 覆盖 CA_DEFAULT_PARAMS 的额外参数。
         """
         self.city_indices = list(city_indices)
         self.num_cities = len(city_indices)
         self.spots_dict = spots_dict
-        self.travel_speed = travel_speed
         self.penalty_weight = penalty_weight
         self.early_wait_weight = early_wait_weight
         self.late_return_weight = late_return_weight
         self.depot_index = depot_index
-        self.use_real_time_matrix = use_real_time_matrix
 
         self.params = CA_DEFAULT_PARAMS.copy()
         self.params.update(kwargs)
@@ -107,7 +101,6 @@ class CASolver:
         return _cal_fitness_numba(
             line_arr,
             dis_arr,
-            self.travel_speed,
             self.penalty_weight,
             self.early_wait_weight,
             self.late_return_weight,
@@ -115,7 +108,6 @@ class CASolver:
             self.spots_start,
             self.spots_end,
             self.spots_stay,
-            self.use_real_time_matrix,
         )
 
     # ---------- 初始解 ----------
@@ -183,8 +175,7 @@ class CASolver:
         current_time = depot_start
         for i in range(len(solution) - 1):
             fr, to = solution[i], solution[i + 1]
-            dis = cost_mat[fr][to]
-            arrival = current_time + dis / self.travel_speed
+            arrival = current_time + cost_mat[fr][to]
             if to != self.depot_index:
                 spot = self.spots_dict[to]
                 if arrival < spot["tw"][0]:
@@ -272,8 +263,8 @@ class CASolver:
         Returns:
             dict: 包含以下键：
                 - best_solution (List[int]): 最优路径（含起终点）。
-                - best_cost (float): 最优总成本（旅行累积值 + 时间惩罚，单位由输入矩阵决定）。
-                - best_distance (float): 旅行累积值。标准模式 = 总距离；真实模式 = 总旅行时间。
+                - best_cost (float): 最优总成本（旅行累积值 + 时间惩罚）。
+                - best_distance (float): 旅行累积值。
                 - best_penalty (float): 最优路径总时间惩罚。
                 - convergence_history (List[float]): 收敛曲线，每轮迭代后的最优成本。
         """

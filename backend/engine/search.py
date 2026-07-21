@@ -55,11 +55,9 @@ def solve_groups(
     spots: dict[int, SpotDict],
     cost_mat: np.ndarray,
     solver_type: str = "CA",
-    travel_speed: float = 1.0,
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
-    use_real_time_matrix: bool = False,
 ) -> RouteResult:
     """
     对已分组的路径逐一求解。
@@ -70,13 +68,11 @@ def solve_groups(
     Args:
         groups: 分组列表，每组为景点索引列表。
         spots: 景点字典，键为索引，值为景点属性。
-        cost_mat: 距离/成本矩阵。
+        cost_mat: 旅行时间矩阵（分钟）。
         solver_type: "CA" 或 "VNS"。
-        travel_speed: 行驶速度（标准数据集），默认 1.0。
         penalty_weight: 违规惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
-        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
         dict: 包含 routes（路径列表）、histories（收敛历史）、
@@ -91,21 +87,17 @@ def solve_groups(
             solver = VNSSolver(
                 g,
                 spots,
-                travel_speed=travel_speed,
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
                 late_return_weight=late_return_weight,
-                use_real_time_matrix=use_real_time_matrix,
             )
         else:
             solver = CASolver(
                 g,
                 spots,
-                travel_speed=travel_speed,
                 penalty_weight=penalty_weight,
                 early_wait_weight=early_wait_weight,
                 late_return_weight=late_return_weight,
-                use_real_time_matrix=use_real_time_matrix,
             )
         res = solver.solve(cost_mat)
         routes.append(res["best_solution"])
@@ -117,12 +109,10 @@ def solve_groups(
             res["best_solution"],
             cost_mat,
             spots,
-            travel_speed,
             early_wait_weight=early_wait_weight,
             penalty_weight=penalty_weight,
             late_return_weight=late_return_weight,
             depot=0,
-            use_real_time_matrix=use_real_time_matrix,
         )
         total_wait += w
         total_late += late_val
@@ -174,11 +164,9 @@ def ca_suggest(
     min_days: int | None = None,
     early_stop_gain_threshold: float | None = None,
     stop_consecutive_worse: int | None = None,
-    travel_speed: float = 1.0,
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
-    use_real_time_matrix: bool = False,
 ) -> dict:
     """
     全参数搜索，输出全部可行方案建议（去重后）。
@@ -189,15 +177,13 @@ def ca_suggest(
     Args:
         spots: 景点字典。
         depot: depot 索引。
-        cost_mat: 距离/成本矩阵。
+        cost_mat: 旅行时间矩阵（分钟）。
         min_days: 最小天数（默认 n_spots//8+1）。
         early_stop_gain_threshold: 增益阈值百分比（默认 1.0%），低于此视为无效改善。
         stop_consecutive_worse: 连续无效改善次数上限（默认 3）。
-        travel_speed: 行驶速度。
         penalty_weight: 违规惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
-        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
         dict: type="suggestion"；顶层含 algo_time（引擎求解耗时秒数）、
@@ -226,11 +212,9 @@ def ca_suggest(
                 spots,
                 cost_mat,
                 "CA",
-                travel_speed,
                 penalty_weight,
                 early_wait_weight,
                 late_return_weight,
-                use_real_time_matrix=use_real_time_matrix,
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天（组数与 n_days 不匹配），跳过该方案
                 continue
@@ -296,11 +280,9 @@ def cluster_and_solve(
     mode: str = "fast",
     n_days: int | None = None,
     min_days: int | None = None,
-    travel_speed: float = 1.0,
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
-    use_real_time_matrix: bool = False,
 ) -> dict:
     """
     双阶段路由入口。
@@ -312,15 +294,13 @@ def cluster_and_solve(
     Args:
         spots: 景点字典。
         depot: depot 索引。
-        cost_mat: 距离/成本矩阵。
-        mode: "fast"（CA，秒级）或 "deep"（VNS，分钟级）。
+        cost_mat: 旅行时间矩阵（分钟）。
+        mode: "fast"或 "deep"。
         n_days: 行程天数。deep 模式必填。
         min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
-        travel_speed: 行驶速度。
         penalty_weight: 违规惩罚权重。
         early_wait_weight: 早到等待惩罚权重。
         late_return_weight: 晚归惩罚权重。
-        use_real_time_matrix: 是否使用高德真实旅行时间矩阵。
 
     Returns:
         dict: type="suggestion"（未指定天数时）或 type="solution"（已指定天数时）。
@@ -341,11 +321,9 @@ def cluster_and_solve(
                 spots,
                 cost_mat,
                 solver_type,
-                travel_speed,
                 penalty_weight,
                 early_wait_weight,
                 late_return_weight,
-                use_real_time_matrix=use_real_time_matrix,
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天，跳过不匹配方案
                 continue
@@ -370,9 +348,7 @@ def cluster_and_solve(
         depot,
         cost_mat,
         min_days=min_days,
-        travel_speed=travel_speed,
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
-        use_real_time_matrix=use_real_time_matrix,
     )

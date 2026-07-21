@@ -28,7 +28,7 @@ def search_poi(keywords: str, city: str):
     ]
 
     for label, params in configs:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"{label}")
         print(f"keywords={keywords!r}, city={city!r}")
         resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)

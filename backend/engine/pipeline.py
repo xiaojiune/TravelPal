@@ -1,10 +1,17 @@
 """行程规划双阶段编排：数据加载 → 聚类求解 → 每日行程重建。"""
 
+import json
 import os
 import time
 import warnings
 
+from coverage import python
+from streamlit import markdown
+
+from backend import utils
+from backend.utils import decorators
 import numpy as np
+from keyring import backend
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -303,6 +310,8 @@ def _rebuild_schedule(
 # ================== 方案调整 ==================
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：方案调整编排（改天数/移除/添加景点），未接入任何端点
 @placeholder
 def adjust_plan(
     spots_dict: dict[int, SpotDict],

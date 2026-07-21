@@ -45,13 +45,8 @@ def _parse_date(date_str: str, year: int) -> datetime.date | None:
     return None
 
 
-# ================== 营业时间解析（兜底方案） ==================
-# 当前生产环境使用 LLM 解析（tools.poi.py parse_biz_hours），
-# 此函数保留用途：
-# 1. LLM 解析失败时的 emergency fallback
-# 2. 规则解析的参考实现
-# 3. 单元测试的对照组（用于对比 LLM 解析的质量）
-# 注意：不再维护新格式，仅保持可用状态。
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：LLM 解析失败时的规则兜底，不再维护新格式
 @legacy_only
 def _parse_opentime_to_tw(opentime_str: str) -> tuple[int, int] | None:
     """

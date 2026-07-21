@@ -14,6 +14,8 @@ from backend.utils.decorators import placeholder
 # ================== 分组求解 ==================
 
 
+# 装饰器定义见 backend/utils/decorators.py
+# 说明：令每天停留时间均衡，当前仅被 adjust_plan 调用（未接入）
 @placeholder
 def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> list:
     """

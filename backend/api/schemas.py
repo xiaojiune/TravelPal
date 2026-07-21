@@ -134,10 +134,9 @@ class ChatRequest(BaseModel):
 
 
 class PlanAdjustRequest(BaseModel):
-    """方案调整请求。
+    """[占位] 方案调整请求。
 
-    前端在查看方案后希望调整（如均衡天、改天数、移除/添加景点）时调用。
-    支持 balance / adjust_days / remove_poi / add_poi。
+    TODO：当前未接入任何端点，预留供后续扩展。
     """
 
     spots: dict

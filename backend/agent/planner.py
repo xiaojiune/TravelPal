@@ -4,8 +4,10 @@ import numpy as np
 
 from backend.engine.search import cluster_and_solve, solve_groups
 from backend.typedefs import SpotDict
+from backend.utils.decorators import placeholder
 
 
+@placeholder
 def adjust_plan_days(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -53,6 +55,7 @@ def adjust_plan_days(
 # ================== 添加景点 ==================
 
 
+@placeholder
 def add_poi_to_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -89,6 +92,7 @@ def add_poi_to_plan(
 # ================== 移除景点 ==================
 
 
+@placeholder
 def remove_poi_from_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,

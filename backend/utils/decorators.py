@@ -26,3 +26,27 @@ def legacy_only(func):
         return func(*args, **kwargs)
 
     return wrapper
+
+
+def placeholder(func):
+    """标记占位函数，表示功能已实现但尚未接入调用方，预留供后续扩展。
+
+    与 legacy_only 不同，placeholder 表示"待接入的未来功能"，
+    而非"已废弃的旧代码"。
+
+    用法:
+        @placeholder
+        def future_feature():
+            ...
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            f"{func.__name__} 是占位函数，尚未接入实际调用",
+            UserWarning,
+            stacklevel=2,
+        )
+        return func(*args, **kwargs)
+
+    return wrapper

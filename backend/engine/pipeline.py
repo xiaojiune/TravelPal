@@ -14,6 +14,7 @@ from backend.agent.commentator import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.engine.search import balance_groups, cluster_and_solve, solve_groups  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
+from backend.utils.decorators import placeholder  # noqa: E402
 
 # ================== 常量 ==================
 
@@ -302,6 +303,7 @@ def _rebuild_schedule(
 # ================== 方案调整 ==================
 
 
+@placeholder
 def adjust_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix_list: list,

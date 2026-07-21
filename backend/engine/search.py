@@ -9,10 +9,12 @@ from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
 from backend.engine.vns import VNSSolver
 from backend.typedefs import RouteResult, SpotDict
+from backend.utils.decorators import placeholder
 
 # ================== 分组求解 ==================
 
 
+@placeholder
 def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> list:
     """
     强制均衡分组，确保每天的总停留时间接近。

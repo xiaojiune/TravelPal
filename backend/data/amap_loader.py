@@ -8,7 +8,7 @@ import numpy as np
 import requests
 
 from backend.config import AMAP_API_KEY
-from backend.utils.deprecated import legacy_only
+from backend.utils.decorators import legacy_only
 
 # ---------- 工具函数 ----------
 

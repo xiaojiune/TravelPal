@@ -17,16 +17,35 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ================== AST 解析 ==================
 
+_COLLECT_EXCLUDE = frozenset({"Callable"})
+
+BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 def _collect_names(source: str) -> list[str]:
-    """解析源码中所有 from X import Y 语句，收集公开名称。"""
+    """解析源码中所有 from X import Y 语句和顶层 __all__ 兼容变量，收集公开名称。"""
     tree = ast.parse(source)
     names = []
+
+    # 从 import 语句收集
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
             for alias in node.names:
-                if not alias.name.startswith("_"):
-                    names.append(alias.asname or alias.name)
+                name = alias.asname or alias.name
+                if not name.startswith("_") and name not in _COLLECT_EXCLUDE:
+                    names.append(name)
+
+    # 从 __all__ 列表中收集（保留原手动添加的非 import 名称）
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "__all__":
+                    if isinstance(node.value, ast.List):
+                        for elt in node.value.elts:
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                                val = elt.value
+                                if val not in names and not val.startswith("_") and val not in _COLLECT_EXCLUDE:
+                                    names.append(val)
     return names
 
 
@@ -34,11 +53,7 @@ def _collect_names(source: str) -> list[str]:
 
 
 def _rebuild(source: str, names: list[str]) -> str:
-    """扫描 AST 找到最后一个 import 行，截断后追加 __all__ 列表。
-
-    策略：丢弃 import 行之后的所有内容（已有 __all__ 或其他代码），
-    从最后一个 import 行截断，在末尾生成新的 __all__ 块。
-    自动检测原始换行符风格（LF / CRLF）并保持一致。
+    """替换已有 __all__ 块，若不存在则在末尾追加（不破坏其他代码）。
 
     Args:
         source: __init__.py 的原始源码。
@@ -48,29 +63,29 @@ def _rebuild(source: str, names: list[str]) -> str:
         str: 替换 __all__ 后的完整源码。
     """
     tree = ast.parse(source)
-
-    import_linenos = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            import_linenos.add(node.lineno)
-
-    if not import_linenos:
-        return source
-
-    last = max(import_linenos)
     source_lines = source.splitlines(keepends=True)
     eol = "\r\n" if source_lines and source_lines[0].endswith("\r\n") else "\n"
 
-    result = source_lines[:last]
-    while result and result[-1].strip() == "":
-        result.pop()
-
     indent = "    "
     all_items = f"{eol}".join(f"{indent}{name!r}," for name in names)
-    all_block = f"{eol}{eol}__all__ = [{eol}{all_items}{eol}]{eol}"
+    all_block = f"__all__ = [{eol}{all_items}{eol}]{eol}"
 
-    result.append(all_block)
-    return "".join(result)
+    # 查找已有的 __all__ 赋值节点
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "__all__":
+                    start = node.lineno - 1
+                    end = node.end_lineno if node.end_lineno is not None else node.lineno
+                    result = source_lines[:start] + [all_block] + source_lines[end:]
+                    return "".join(result)
+
+    # 不存在 __all__：在文件末尾追加
+    while source_lines and source_lines[-1].strip() == "":
+        source_lines.pop()
+    source_lines.append(eol)
+    source_lines.append(all_block)
+    return "".join(source_lines)
 
 
 # ================== 文件写入 ==================

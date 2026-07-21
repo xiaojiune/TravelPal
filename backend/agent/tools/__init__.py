@@ -9,7 +9,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
 }
 
 __all__ = [
-    "parse_biz_hours",
-    "poi_lookup",
-    "TOOL_REGISTRY",
+    'parse_biz_hours',
+    'poi_lookup',
+    'TOOL_REGISTRY',
 ]

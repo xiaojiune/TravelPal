@@ -18,6 +18,11 @@
         </keep-alive>
       </router-view>
     </main>
+    <footer class="footer">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+        ICP备案/许可证号：桂ICP备2026015614号-1
+      </a>
+    </footer>
   </div>
 </template>
 

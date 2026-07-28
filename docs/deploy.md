@@ -97,16 +97,37 @@ docker compose up -d --build
 
 ## 五、可选：域名 + HTTPS
 
-1. 购买域名（腾讯云/阿里云）
-2. 域名备案（国内服务器必须）
-3. DNS 解析指向服务器 IP
-4. 配置 Nginx HTTPS + Let's Encrypt：
+### 域名备案
+
+国内服务器必须完成 ICP 备案，备案通过后获取备案号，在 `frontend/src/App.vue` 底部添加。
+
+### 申请证书 + 配置 Nginx
+
+本项目的 Nginx 容器通过 bind mount 读取宿主机 `/etc/letsencrypt/` 证书文件。
 
 ```bash
-# 安装 certbot
-sudo apt install certbot python3-certbot-nginx
-# 申请证书（自动修改 Nginx 配置）
-sudo certbot --nginx -d 你的域名.com
+# 1. 停 nginx 容器（释放 80 端口给 certbot）
+docker compose stop nginx
+
+# 2. 申请证书（standalone 模式，不自动修改 Nginx 配置）
+sudo certbot certonly --standalone -d trippal.site -d www.trippal.site
+
+# 3. 容器化配置
+#    - docker/nginx.conf 已预置 SSL server block
+#    - docker-compose.yml 已暴露 443 端口并挂载 /etc/letsencrypt:ro
+#    确认后重新构建并启动：
+docker compose build nginx && docker compose up -d
 ```
 
-> 申请域名后，同步更新 `.env` 中的高德 API 白名单域名配置。
+### 证书自动续期
+
+certbot 证书有效期 90 天，需配置定时任务自动续期并刷新 Nginx 容器：
+
+```bash
+# 编辑 crontab
+sudo crontab -e
+# 添加以下行（每天凌晨 3 点检查续期，成功后重启 nginx 容器）
+0 3 * * * certbot renew --quiet && cd /path/to/TravelPal && docker compose restart nginx
+```
+
+> 续期后 `/etc/letsencrypt/live/` 下的证书文件会更新，但运行中的 Nginx 容器不会自动感知文件变化。必须执行 `docker compose restart nginx` 让容器重新加载证书。

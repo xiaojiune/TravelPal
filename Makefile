@@ -1,7 +1,7 @@
 .PHONY: install build gen-api gen-all serve serve-nodb dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
-        dc-migration \
+        dc-migration migrate \
         clean help
 
 # ======== 安装构建 ========
@@ -93,8 +93,11 @@ deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + 前端 Nginx）
 deploy-down: ## 停止全量部署
 	docker compose down
 
-dc-migration: ## [Alembic 占位] 生成数据库迁移（需 docker compose up -d）
-	@echo "待接入 Alembic，当前 models.py 改动后需手动 DROP/CREATE"
+dc-migration: ## 生成数据库迁移脚本（对比 models.py，需 docker compose up -d）
+	.venv/bin/alembic revision --autogenerate -m "$(filter-out $@,$(MAKECMDGOALS))"
+
+migrate: ## 应用数据库迁移到最新版本（需 docker compose up -d）
+	.venv/bin/alembic upgrade head
 
 # ======== 工具 ========
 

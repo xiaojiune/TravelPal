@@ -102,6 +102,7 @@ class RagEngine:
 
     def __init__(self):
         """初始化空引擎，文档加载和索引构建由 init() 惰性执行。"""
+        self._docs: list[dict] = []
         self._avgdl = 0.0
         self._idf: dict[str, float] = {}
         self._initialized = False

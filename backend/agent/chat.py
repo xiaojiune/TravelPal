@@ -4,10 +4,9 @@ import asyncio
 import json
 import os
 
-from openai import OpenAI
-
 from backend.agent.tools.prompts import CHAT_SYSTEM
-from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from backend.domain.llm_service import LLMResult, LLMService
+from backend.infrastructure.llm.factory import get_llm_service
 from backend.utils.decorators import placeholder
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -84,28 +83,41 @@ async def mock_stream_chat(messages: list[dict]):
         await asyncio.sleep(0.05)
 
 
-async def stream_chat(messages: list[dict]):
-    """真实 DeepSeek SSE 流式聊天。
+async def stream_chat(messages: list[dict], service: LLMService | None = None):
+    """流式聊天，通过 LLMService 接口调用具体实现。
 
     Args:
         messages: OpenAI-compatible messages 列表。
+        service: LLM 服务实现；None 时由工厂按配置获取。
 
     Yields:
-        str: DeepSeek 流式响应的逐 token 内容。
+        str: 流式响应的逐 token 内容。
     """
-    client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-    resp = client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
-        model=LLM_MODEL,
-        messages=messages,  # pyright: ignore[reportArgumentType]
-        stream=True,
+    llm = service or get_llm_service()
+    async for token in llm.stream(messages):
+        yield token
+
+
+async def chat_complete(messages: list[dict], service: LLMService | None = None) -> LLMResult:
+    """非流式补全，用于 tool_call 检测。
+
+    Args:
+        messages: OpenAI-compatible messages 列表。
+        service: LLM 服务实现；None 时由工厂按配置获取。
+
+    Returns:
+        LLMResult: 完整 assistant 消息 + 工具调用列表。
+    """
+    from backend.agent.tools.prompts import TOOL_DEFINITIONS
+
+    llm = service or get_llm_service()
+    return await llm.complete(
+        messages,
+        tools=TOOL_DEFINITIONS,
+        tool_choice="auto",
         temperature=0.7,
         max_tokens=1024,
     )
-    for chunk in resp:
-        delta = chunk.choices[0].delta if chunk.choices else None
-        if delta and delta.content:
-            yield delta.content
-            await asyncio.sleep(0)
 
 
 MOCK_MODE = False

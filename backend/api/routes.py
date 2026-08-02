@@ -9,9 +9,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.agent.chat import build_chat_messages, chat_stream
+from backend.agent.chat import build_chat_messages, chat_complete, chat_stream
 from backend.agent.tools import TOOL_REGISTRY, parse_biz_hours
-from backend.agent.tools.prompts import TOOL_DEFINITIONS
 from backend.api.schemas import (
     ChatRequest,
     HistoryCreate,
@@ -220,38 +219,21 @@ async def chat(req: ChatRequest):
 
         async def _stream():
             """SSE 生成器：检测 tool_call → 执行工具 → 流式回复。"""
-            from openai import OpenAI
-
-            from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
-
-            client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
-            resp = client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
-                model=LLM_MODEL,
-                messages=messages,  # pyright: ignore[reportArgumentType]
-                tools=TOOL_DEFINITIONS,  # pyright: ignore[reportArgumentType]
-                tool_choice="auto",
-                temperature=0.7,
-                max_tokens=1024,
-            )
-            choice = resp.choices[0]
-            if choice.finish_reason == "tool_calls" and choice.message.tool_calls:
-                messages.append(choice.message)  # pyright: ignore[reportArgumentType]
-                for tc in choice.message.tool_calls:
-                    tool_name = tc.function.name  # type: ignore[union-attr]
-                    try:
-                        args = json.loads(tc.function.arguments)  # type: ignore[union-attr]
-                    except Exception:
-                        args = {}
+            result = await chat_complete(messages)
+            if result.tool_calls:
+                messages.append(result.message)  # pyright: ignore[reportArgumentType]
+                for tc in result.tool_calls:
+                    tool_name = tc.name
                     tool_fn = TOOL_REGISTRY.get(tool_name)
                     if tool_fn:
                         yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
-                        result = tool_fn(**args)
-                        yield f"data: {json.dumps({'type': 'tool_result', 'data': result})}\n\n"
+                        tool_result = tool_fn(**tc.arguments)
+                        yield f"data: {json.dumps({'type': 'tool_result', 'data': tool_result})}\n\n"
                         messages.append(
                             {
                                 "role": "tool",
                                 "tool_call_id": tc.id,
-                                "content": json.dumps(result, ensure_ascii=False),
+                                "content": json.dumps(tool_result, ensure_ascii=False),
                             }
                         )
                 # 第二阶段：流式输出 LLM 回复

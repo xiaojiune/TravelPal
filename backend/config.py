@@ -26,3 +26,5 @@ EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 # Embedding API 基础地址（预留，当前未使用）
 EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "")
+# 天气服务传输方式：http（基线）或 mcp（按需启用），配置级降级由 factory 读取
+WEATHER_TRANSPORT = os.getenv("WEATHER_TRANSPORT", "http")

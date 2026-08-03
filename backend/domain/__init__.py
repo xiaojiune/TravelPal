@@ -5,9 +5,12 @@
 """
 
 from backend.domain.llm_service import LLMResult, LLMService, ToolCallResult
+from backend.domain.weather_service import WeatherInfo, WeatherService
 
 __all__ = [
     "LLMService",
     "LLMResult",
     "ToolCallResult",
+    "WeatherService",
+    "WeatherInfo",
 ]

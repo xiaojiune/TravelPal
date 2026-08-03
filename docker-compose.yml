@@ -34,6 +34,7 @@ services:
     container_name: travelpal-backend
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
+      CELERY_BROKER_URL: redis://redis:6379/0
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -42,6 +43,30 @@ services:
       LLM_MODEL: ${LLM_MODEL}
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
+    container_name: travelpal-worker
+    command: [".venv/bin/celery", "-A", "backend.celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
+      CELERY_BROKER_URL: redis://redis:6379/0
+      AMAP_API_KEY: ${AMAP_API_KEY}
+      AMAP_JS_KEY: ${AMAP_JS_KEY}
+      AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_MODEL: ${LLM_MODEL}
     depends_on:
       postgres:
         condition: service_healthy

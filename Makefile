@@ -1,4 +1,4 @@
-.PHONY: install build gen-api gen-all sync-check serve serve-nodb mcp-serve dev lint format typecheck \
+.PHONY: install build gen-api gen-all sync-check serve serve-nodb mcp-serve celery dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
         dc-migration migrate \
@@ -31,6 +31,9 @@ serve-nodb: ## 启动后端服务（跳过数据库，快速联调）
 
 mcp-serve: ## 启动 MCP Server（stdio 传输，供外部 AI 助手通过 MCP 调用工具）
 	.venv/bin/python -m backend.mcp.server
+
+celery: ## 启动 Celery worker（消费异步规划任务，需 dc-up + serve）
+	.venv/bin/celery -A backend.celery_app worker --loglevel=info --concurrency=1
 
 dev: ## 启动前端开发服务器（Vite HMR）
 	cd frontend && npm run dev

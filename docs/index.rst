@@ -16,6 +16,7 @@
    ADR/007
    ADR/008
    ADR/009
+   ADR/010
 
 .. toctree::
    :maxdepth: 2

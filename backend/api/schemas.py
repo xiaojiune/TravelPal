@@ -209,3 +209,27 @@ class HistoryDeleteRequest(BaseModel):
     """删除历史记录的请求体，需与创建时的 device_id 一致。"""
 
     device_id: str
+
+
+# ================== 异步规划任务 ==================
+
+
+class TaskSubmitResponse(BaseModel):
+    """提交异步规划任务后返回的响应，前端据此轮询任务状态。"""
+
+    task_id: str
+
+
+class TaskDetail(BaseModel):
+    """异步规划任务的状态详情，供前端轮询。
+
+    status 为 pending/running/done/failed 四态。
+    result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
+    error 仅 failed 时存在。
+    """
+
+    task_id: str
+    task_type: str
+    status: str
+    result: dict | None = None
+    error: str | None = None

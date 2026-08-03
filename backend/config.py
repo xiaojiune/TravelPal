@@ -20,6 +20,8 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.deepseek.com/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 # PostgreSQL 数据库连接地址
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal")
+# Celery 消息代理地址（redis），异步任务队列
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 # Embedding API Key（预留，当前未使用）
 EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
 # Embedding 模型名（预留，当前未使用）

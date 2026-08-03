@@ -163,7 +163,8 @@ def run_planning(
     if result["type"] == "suggestion":
         _supplement_polylines(
             [s["routes"] for s in result["suggestions"]],
-            coords, polylines,
+            coords,
+            polylines,
         )
         polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
         result["algo_time"] = round(time.time() - total_start, 2)

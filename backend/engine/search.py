@@ -309,8 +309,13 @@ def _solve_best(
     for method_name, method_func in CLUSTER_METHODS:
         groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
         res = solve_groups(
-            groups, spots, cost_mat, solver_type,
-            penalty_weight, early_wait_weight, late_return_weight,
+            groups,
+            spots,
+            cost_mat,
+            solver_type,
+            penalty_weight,
+            early_wait_weight,
+            late_return_weight,
         )
         if len(res["routes"]) != n_days:
             continue
@@ -365,13 +370,19 @@ def cluster_and_solve(
     """
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
-        return _solve_best(spots, depot, cost_mat, solver_type, n_days,
-                           penalty_weight, early_wait_weight, late_return_weight)
+        return _solve_best(
+            spots, depot, cost_mat, solver_type, n_days, penalty_weight, early_wait_weight, late_return_weight
+        )
 
     if mode == "deep":
         raise ValueError("深度模式(VNS)需要指定 n_days，请先通过 ca_suggest() 获取建议")
 
-    return ca_suggest(spots, depot, cost_mat, min_days=min_days,
-                      penalty_weight=penalty_weight,
-                      early_wait_weight=early_wait_weight,
-                      late_return_weight=late_return_weight)
+    return ca_suggest(
+        spots,
+        depot,
+        cost_mat,
+        min_days=min_days,
+        penalty_weight=penalty_weight,
+        early_wait_weight=early_wait_weight,
+        late_return_weight=late_return_weight,
+    )

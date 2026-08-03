@@ -21,6 +21,10 @@ jobs:
           poetry config virtualenvs.create false
           poetry install --no-interaction
           pip install pytest-cov
+      - name: Check __all__ synced
+        run: |
+          python -m backend.utils.sync_all
+          git diff --exit-code
       - name: Run tests with coverage
         run: pytest --cov --cov-report=xml
       - uses: codecov/codecov-action@v5

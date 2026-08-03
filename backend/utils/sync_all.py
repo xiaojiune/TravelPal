@@ -67,7 +67,7 @@ def _rebuild(source: str, names: list[str]) -> str:
     eol = "\r\n" if source_lines and source_lines[0].endswith("\r\n") else "\n"
 
     indent = "    "
-    all_items = f"{eol}".join(f"{indent}{name!r}," for name in names)
+    all_items = f"{eol}".join(f'{indent}"{name}",' for name in names)
     all_block = f"__all__ = [{eol}{all_items}{eol}]{eol}"
 
     # 查找已有的 __all__ 赋值节点

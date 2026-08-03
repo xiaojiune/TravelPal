@@ -1,4 +1,4 @@
-.PHONY: install build gen-api gen-all serve serve-nodb mcp-serve dev lint format typecheck \
+.PHONY: install build gen-api gen-all sync-check serve serve-nodb mcp-serve dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
         dc-migration migrate \
@@ -17,6 +17,9 @@ gen-api: ## 重新生成前端 API 类型（后端 schema 变更后执行）
 
 gen-all: ## 自动同步所有 __init__.py 的 __all__（增删 import 后执行）
 	.venv/bin/python -m backend.utils.sync_all
+
+sync-check: ## 校验 __all__ 与 import 是否一致（同步后应无差异）
+	.venv/bin/python -m backend.utils.sync_all && git diff --exit-code
 
 # ======== 开发 ========
 

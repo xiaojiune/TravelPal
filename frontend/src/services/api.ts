@@ -1,6 +1,6 @@
 /** API 客户端：封装 axios 实例，提供类型化的后端接口调用。 */
 import axios from 'axios'
-import type { POILookupResponse, PlanRequestPayload, PlanResult, SuggestionItem, SpotDictItem } from '@/types'
+import type { POILookupResponse, PlanRequestPayload, SuggestionItem, SpotDictItem } from '@/types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -9,14 +9,39 @@ export function postPoiLookup(city: string, names: string[]): Promise<POILookupR
   return http.post('/poi-lookup', { city, names }).then(r => r.data)
 }
 
-/** 获取方案建议：返回多组候选方案、高德 API key、真实路径坐标(polylines)及成本矩阵(cost_matrix)，供深度规划复用。 */
-export function postSuggest(data: PlanRequestPayload): Promise<{ suggestions: SuggestionItem[]; algo_time?: number; amap_api_key?: string; amap_security_code?: string; spots?: Record<string, SpotDictItem>; cost_matrix?: number[][]; dist_matrix?: number[][]; polylines?: Record<string, string>; message?: string }> {
-  return http.post('/suggest', data).then(r => r.data)
+// ================== 异步规划任务 ==================
+
+
+/** suggest 任务完成时的完整响应（原 POST /api/suggest 同步返回体）。 */
+export interface SuggestResult {
+  suggestions: SuggestionItem[]
+  algo_time?: number
+  amap_api_key?: string
+  amap_security_code?: string
+  spots?: Record<string, SpotDictItem>
+  cost_matrix?: number[][]
+  dist_matrix?: number[][]
+  polylines?: Record<string, string>
+  message?: string
 }
 
-/** 执行规划：按指定天数生成完整方案（包含 routes / schedules / 地图数据）。 */
-export function postPlan(data: PlanRequestPayload): Promise<PlanResult> {
-  return http.post('/plan', data).then(r => r.data)
+/** 异步规划任务状态详情（status: pending/running/done/failed，result 仅 done 时存在）。 */
+export interface TaskDetail {
+  task_id: string
+  task_type: string
+  status: string
+  result?: Record<string, unknown> | null
+  error?: string | null
+}
+
+/** 提交异步规划任务。suggest/plan 立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。 */
+export function submitTask(type: 'suggest' | 'plan', data: PlanRequestPayload): Promise<{ task_id: string }> {
+  return http.post(`/${type}`, data).then(r => r.data)
+}
+
+/** 查询异步规划任务状态。 */
+export function getTask(taskId: string): Promise<TaskDetail> {
+  return http.get(`/tasks/${taskId}`).then(r => r.data)
 }
 
 /** Agent 对话：使用 EventSource 或 POST 方式与 LLM 交互（mock 模式下返回固定回复）。 */

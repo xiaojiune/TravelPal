@@ -90,11 +90,14 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
-import { postPlan } from '@/services/api'
+import { submitTask } from '@/services/api'
+import { useTaskPolling } from '@/composables/useTaskPolling'
 import type { SuggestionItem, PlanResult } from '@/types'
 
 const store = usePlanStore()
 const router = useRouter()
+
+const { startPolling } = useTaskPolling()
 
 const mode = ref<'fast' | 'deep'>('fast')
 const deepNDays = ref<number | null>(null)
@@ -159,6 +162,7 @@ function onCardClick(s: SuggestionItem) {
 /**
  * 深度规划：复用 suggest 阶段缓存的成本/距离矩阵，
  * 使后端 run_planning 跳过驾车 AMap API 调用。
+ * 提交异步 plan 任务后轮询，完成后追加到深度结果卡片。
  */
 async function runDeep() {
   if (!deepNDays.value) return
@@ -170,7 +174,8 @@ async function runDeep() {
       dist_matrix: store.suggestDistMatrix.length ? store.suggestDistMatrix : undefined,
     })
     req.mode = 'deep'
-    const data = await postPlan(req)
+    const { task_id } = await submitTask('plan', req)
+    const data = (await startPolling(task_id)) as unknown as PlanResult
     // 深度模式复用 suggest 阶段缓存的真实路径坐标（后端因跳过驾车 API 返回空 polylines）
     if (Object.keys(store.suggestPolylines).length) data.polylines = store.suggestPolylines
     store.deepResults.push(data)

@@ -76,7 +76,7 @@
     </section>
 
     <div class="form-actions">
-      <button class="btn btn-primary btn-lg" :disabled="!canSuggest" @click="fetchSuggest">
+      <button class="btn btn-primary btn-lg" :disabled="!canSuggest || store.loading" @click="fetchSuggest">
         {{ store.loading ? '计算中...' : '🚀 获取方案建议' }}
       </button>
     </div>
@@ -94,12 +94,16 @@ defineOptions({ name: 'HomePage' })
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '@/stores/plan'
-import { postSuggest } from '@/services/api'
+import { submitTask } from '@/services/api'
+import type { SuggestResult } from '@/services/api'
 import { usePoiSearch } from '@/composables/usePoiSearch'
 import { useEditTable } from '@/composables/useEditTable'
+import { useTaskPolling } from '@/composables/useTaskPolling'
 
 const store = usePlanStore()
 const router = useRouter()
+
+const { startPolling } = useTaskPolling()
 
 const {
   spotText, hotelMsg, spotMsg, loading,
@@ -117,7 +121,7 @@ const dayStartMsg = ref('')
 const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable()
 
 /**
- * 获取方案建议：调 /api/suggest 后跳转 SuggestPage。
+ * 获取方案建议：提交异步 suggest 任务后轮询，完成后跳转 SuggestPage。
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
  * 将响应中的 cost_matrix/dist_matrix 存入 store，
  * 供深度规划（SuggestPage）复用以跳过驾车 API。
@@ -145,7 +149,8 @@ async function fetchSuggest() {
   store.planResult = null
   store.loading = true
   try {
-    const data = await postSuggest(store.buildRequest(null))
+    const { task_id } = await submitTask('suggest', store.buildRequest(null))
+    const data = (await startPolling(task_id)) as unknown as SuggestResult
     store.suggestions = data.suggestions || []
     if (data.spots) store.suggestSpots = data.spots
     if (data.cost_matrix) store.suggestCostMatrix = data.cost_matrix  // 缓存成本矩阵，deep 模式复用跳过驾车 API

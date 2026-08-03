@@ -5,6 +5,7 @@
 | 日期 | 变更 |
 |------|------|
 | 2026-08-03 | 初稿 |
+| 2026-08-04 | 新增 travelpal_get_driving；修正 travelpal_poi_lookup 参数为批量 names |
 
 ## 概述
 
@@ -17,15 +18,15 @@
 
 ## travelpal_poi_lookup
 
-- **描述**：通过高德 API 查询 POI 的坐标、地址和营业时间。自动识别 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
+- **描述**：通过高德 API 批量查询 POI 的坐标、地址和营业时间。自动识别每个 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
 - **参数**：
   | 参数 | 类型 | 必填 | 说明 |
   |------|------|------|------|
   | city | string | 是 | 所在城市 |
-  | name | string | 是 | POI 名称 |
-- **返回**：`{ name, lon, lat, address, tw_start, tw_end, poi_type }`
+  | names | array[string] | 是 | POI 名称列表（酒店/景点） |
+- **返回**：`list[dict]`，每项 `{ name, lon, lat, address, tw_start, tw_end, poi_type }`
   - `poi_type`: `"hotel"` | `"spot"` | `"unknown"`
-  - 查询失败时返回 `{ error: str }`
+  - 单个查询失败时该项为 `{ name, error: str }`
 
 ## travelpal_search_rag
 
@@ -36,6 +37,19 @@
   | query | string | 是 | 用户查询文本 |
   | k | integer | 否 | 返回 top-k 条结果，默认 3 |
 - **返回**：`list[dict]`，每项含 `score` / `source` / `heading` / `text`，按 BM25 分数降序。
+
+## travelpal_get_driving
+
+- **描述**：查询两点间驾车距离与耗时，供 AI 问答"A到B耗时多久"。
+- **参数**：
+  | 参数 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | origin | object | 是 | 起点，`{ name: string, lon: number, lat: number }` |
+  | destination | object | 是 | 终点，`{ name: string, lon: number, lat: number }` |
+- **返回**：`{ distance_km: number, duration_min: number }`
+  - 失败时返回 `{ error: str }`
+  - 折线数据暂不返回，待以后扩展
+- **架构预留**：当前仅支持驾车；后期融合步行/骑车/公交时新增对应包装函数（见 `backend/agent/tools/driving.py` docstring）。
 
 ## 如何新增工具
 

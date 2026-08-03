@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 
+from backend.agent.tools.driving import get_driving
 from backend.agent.tools.plan import get_plan, get_plan_result
 from backend.agent.tools.poi import parse_biz_hours, poi_lookup
 from backend.agent.tools.rag import search_rag
@@ -11,9 +12,11 @@ TOOL_REGISTRY: dict[str, Callable] = {
     "search_rag": search_rag,
     "get_plan": get_plan,
     "get_plan_result": get_plan_result,
+    "get_driving": get_driving,
 }
 
 __all__ = [
+    "get_driving",
     "get_plan",
     "get_plan_result",
     "parse_biz_hours",

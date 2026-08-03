@@ -1,4 +1,4 @@
-.PHONY: install build gen-api gen-all serve serve-nodb dev lint format typecheck \
+.PHONY: install build gen-api gen-all serve serve-nodb mcp-serve dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
         dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
         dc-migration migrate \
@@ -25,6 +25,9 @@ serve: ## 启动后端服务（需要 PostgreSQL + Redis）
 
 serve-nodb: ## 启动后端服务（跳过数据库，快速联调）
 	SKIP_DB=true .venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
+
+mcp-serve: ## 启动 MCP Server（stdio 传输，供外部 AI 助手通过 MCP 调用工具）
+	.venv/bin/python -m backend.mcp.server
 
 dev: ## 启动前端开发服务器（Vite HMR）
 	cd frontend && npm run dev

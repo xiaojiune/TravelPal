@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "experimental": {
+    "mcp_lazy_load": true
+  },
+  "mcp": {
+    "travelpal": {
+      "type": "local",
+      "command": ["python", "-m", "backend.mcp.server"],
+      "enabled": true
+    }
+  }
+}

@@ -27,46 +27,52 @@ def _classify_poi(poi_type: str, name: str) -> str:
     return "spot"
 
 
-def poi_lookup(city: str, name: str) -> dict:
-    """通过高德 API 查询 POI 的坐标、地址和营业时间。
+def poi_lookup(city: str, names: list[str]) -> list[dict]:
+    """批量通过高德 API 查询 POI 的坐标、地址和营业时间。
 
-    自动识别 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
+    自动识别每个 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
 
     Args:
         city: 所在城市。
-        name: POI 名称。
+        names: POI 名称列表（酒店/景点）。
 
     Returns:
-        dict: { name, lon, lat, address, tw_start, tw_end, poi_type }
+        list[dict]: 每项 { name, lon, lat, address, tw_start, tw_end, poi_type }
         poi_type 为 "hotel" | "spot" | "unknown"。
-        查询失败时返回 { error: str }。
+        单个查询失败时该项为 { name, error: str }。
     """
     from backend.data.amap_loader import get_poi_details
 
-    try:
-        result = get_poi_details(name, city)
-        if isinstance(result, str):
-            return {"error": result}
-        lon, lat, biz_hours, address, _, _, actual_name, poi_type_str = result
-        poi_type = _classify_poi(poi_type_str, actual_name)
-        parsed = parse_biz_hours(biz_hours) if biz_hours else None
-        if poi_type == "hotel":
-            tw_start = 0
-            tw_end = 1440
-        else:
-            tw_start = parsed[0] if parsed else 480
-            tw_end = parsed[1] if parsed else 1020
-        return {
-            "name": actual_name,
-            "lon": lon,
-            "lat": lat,
-            "address": address,
-            "tw_start": tw_start,
-            "tw_end": tw_end,
-            "poi_type": poi_type,
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    results: list[dict] = []
+    for name in names:
+        try:
+            result = get_poi_details(name, city)
+            if isinstance(result, str):
+                results.append({"name": name, "error": result})
+                continue
+            lon, lat, biz_hours, address, _, _, actual_name, poi_type_str = result
+            poi_type = _classify_poi(poi_type_str, actual_name)
+            parsed = parse_biz_hours(biz_hours) if biz_hours else None
+            if poi_type == "hotel":
+                tw_start = 0
+                tw_end = 1440
+            else:
+                tw_start = parsed[0] if parsed else 480
+                tw_end = parsed[1] if parsed else 1020
+            results.append(
+                {
+                    "name": actual_name,
+                    "lon": lon,
+                    "lat": lat,
+                    "address": address,
+                    "tw_start": tw_start,
+                    "tw_end": tw_end,
+                    "poi_type": poi_type,
+                }
+            )
+        except Exception as e:
+            results.append({"name": name, "error": str(e)})
+    return results
 
 
 def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:

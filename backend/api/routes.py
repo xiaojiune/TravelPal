@@ -1,5 +1,6 @@
 """FastAPI 路由定义：POI 查询、行程规划、Agent 对话、历史记录、异步任务。"""
 
+import inspect
 import json
 import traceback
 from uuid import UUID
@@ -25,7 +26,7 @@ from backend.api.schemas import (
     TaskDetail,
     TaskSubmitResponse,
 )
-from backend.celery_app import run_plan_task
+from backend.celery_app import submit_task
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord, PlanTask
@@ -83,7 +84,7 @@ async def poi_lookup(req: POILookupRequest):
 
 
 @router.post("/api/suggest", response_model=TaskSubmitResponse)
-async def suggest(req: PlanRequest, session: AsyncSession = Depends(get_session)):
+async def suggest(req: PlanRequest):
     """提交方案建议任务（异步执行）。
 
     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
@@ -92,7 +93,6 @@ async def suggest(req: PlanRequest, session: AsyncSession = Depends(get_session)
 
     Args:
         req: 规划请求，n_days 不指定，mode 固定走建议模式。
-        session: 数据库会话，用于持久化任务记录。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -101,18 +101,15 @@ async def suggest(req: PlanRequest, session: AsyncSession = Depends(get_session)
         HTTPException 500: 任务创建失败。
     """
     try:
-        task = PlanTask(task_type="suggest", status="pending", request_params=req.model_dump())
-        session.add(task)
-        await session.commit()
-        run_plan_task.delay(str(task.id))  # type: ignore[attr-defined]
-        return TaskSubmitResponse(task_id=str(task.id))
+        task_id = await submit_task("suggest", req.model_dump())
+        return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/api/plan", response_model=TaskSubmitResponse)
-async def plan(req: PlanRequest, session: AsyncSession = Depends(get_session)):
+async def plan(req: PlanRequest):
     """提交完整规划任务（异步执行）。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
@@ -122,7 +119,6 @@ async def plan(req: PlanRequest, session: AsyncSession = Depends(get_session)):
 
     Args:
         req: 规划请求，含 n_days 与求解模式。
-        session: 数据库会话，用于持久化任务记录。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -134,11 +130,8 @@ async def plan(req: PlanRequest, session: AsyncSession = Depends(get_session)):
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
     try:
-        task = PlanTask(task_type="plan", status="pending", request_params=req.model_dump())
-        session.add(task)
-        await session.commit()
-        run_plan_task.delay(str(task.id))  # type: ignore[attr-defined]
-        return TaskSubmitResponse(task_id=str(task.id))
+        task_id = await submit_task("plan", req.model_dump())
+        return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -176,7 +169,10 @@ async def chat(req: ChatRequest):
                     tool_fn = TOOL_REGISTRY.get(tool_name)
                     if tool_fn:
                         yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
-                        tool_result = tool_fn(**tc.arguments)
+                        if inspect.iscoroutinefunction(tool_fn):
+                            tool_result = await tool_fn(**tc.arguments)
+                        else:
+                            tool_result = tool_fn(**tc.arguments)
                         yield f"data: {json.dumps({'type': 'tool_result', 'data': tool_result})}\n\n"
                         messages.append(
                             {

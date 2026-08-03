@@ -77,14 +77,18 @@ POI_TOOL_DEF = {
     "type": "function",
     "function": {
         "name": "poi_lookup",
-        "description": "查询景点/POI 的详细地址、坐标和营业时间",
+        "description": "批量查询景点/POI 的详细地址、坐标和营业时间",
         "parameters": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "POI 名称"},
+                "names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "POI 名称列表（酒店/景点）",
+                },
                 "city": {"type": "string", "description": "所在城市"},
             },
-            "required": ["name", "city"],
+            "required": ["names", "city"],
         },
     },
 }

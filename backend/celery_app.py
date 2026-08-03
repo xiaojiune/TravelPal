@@ -20,7 +20,6 @@ from celery import Celery
 from backend.config import AMAP_JS_KEY, AMAP_JS_SECURITY_CODE, CELERY_BROKER_URL
 from backend.data.model.database import async_session, engine
 from backend.data.model.models import PlanTask
-from backend.engine.pipeline import run_planning
 
 celery_app = Celery("travelpal", broker=CELERY_BROKER_URL)
 
@@ -67,6 +66,30 @@ def _build_poi_cache(params: dict):
             }
         )
     return {"hotel": hotel, "spots": spots}
+
+
+async def submit_task(task_type: str, params: dict) -> str:
+    """创建异步任务记录并投递到 Celery 队列。
+
+    被 HTTP 端点（/api/suggest、/api/plan）与 MCP 工具（get_plan）共同复用，
+    是提交任务的唯一入口。任务记录写入 plan_tasks 表，worker 消费队列后执行。
+
+    Args:
+        task_type: 任务类型，固定 "suggest" 或 "plan"。
+        params: 完整请求参数字典（PlanRequest 结构，含 hotel_*/spots/penalty 等）。
+
+    Returns:
+        str: 新创建任务的 UUID 字符串（供调用方返回 task_id）。
+
+    Raises:
+        Exception: 数据库写入失败时向上抛出，由调用方转为 HTTP 500 或工具 error。
+    """
+    async with async_session() as session:
+        task = PlanTask(task_type=task_type, status="pending", request_params=params)
+        session.add(task)
+        await session.commit()
+        run_plan_task.delay(str(task.id))  # type: ignore[attr-defined]
+        return str(task.id)
 
 
 @celery_app.task(name="travelpal.run_plan_task")
@@ -118,6 +141,8 @@ async def _execute_task(task_id: str) -> None:
         await session.commit()
 
         try:
+            from backend.engine.pipeline import run_planning
+
             params: dict = task.request_params  # type: ignore[assignment]
             # suggest 固定走 CA 建议模式；plan 沿用请求中的 mode/n_days
             is_suggest: bool = task.task_type == "suggest"  # type: ignore[operator]

@@ -26,6 +26,7 @@
    structure/frontend
    structure/agent
    structure/data
+   structure/tools
    structure/docs
 
 .. toctree::

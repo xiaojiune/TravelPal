@@ -13,8 +13,8 @@
 [![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
 
 📌 **版本状态**
-- 🟠 橙色徽章 = 新功能预发布，[🌐点击前往dev分支](https://github.com/xiaojiune/TravelPal/tree/dev)
-- 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验: https://trippal.site](https://trippal.site)
+- 🟠 橙色徽章 = 新功能预发布，[🌐点击前往dev](https://github.com/xiaojiune/TravelPal/tree/dev)
+- 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验](https://trippal.site)
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 

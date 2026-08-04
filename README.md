@@ -10,10 +10,14 @@
 - 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验: https://trippal.site](https://trippal.site)
 
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
-[![GitHub License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
+[![License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
+[![Commits](https://img.shields.io/github/commit-activity/m/xiaojiune/TravelPal)](https://github.com/xiaojiune/TravelPal/commits/dev)
+[![trippal.site](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
+[![CI](https://img.shields.io/github/actions/workflow/status/xiaojiune/TravelPal/ci.yml?branch=main)](https://github.com/xiaojiune/TravelPal/actions)
+[![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
+[![MCP](https://img.shields.io/badge/MCP%20Server-integrated-4D77FF)](backend/mcp/)
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
 [![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
-[![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 

@@ -1,6 +1,6 @@
-.PHONY: install build gen-api gen-all sync-check serve serve-nodb mcp-serve celery dev lint format typecheck \
+.PHONY: install build gen-api gen-all sync-check serve mcp-serve celery dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
-        dc-up dc-up-d dc-logs dc-ps dc-restart dc-build dc-down deploy-up deploy-down \
+        dc-up dc-up-d dc-logs dc-ps dc-restart dc-build deploy-up deploy-down \
         dc-migration migrate \
         clean help
 
@@ -25,9 +25,6 @@ sync-check: ## 校验 __all__ 与 import 是否一致（同步后应无差异）
 
 serve: ## 启动后端服务（需要 PostgreSQL + Redis）
 	.venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
-
-serve-nodb: ## 启动后端服务（跳过数据库，快速联调）
-	SKIP_DB=true .venv/bin/uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload
 
 mcp-serve: ## 启动 MCP Server（stdio 传输，供外部 AI 助手通过 MCP 调用工具）
 	.venv/bin/python -m backend.mcp.server
@@ -93,10 +90,7 @@ dc-restart: ## 重启全部 Docker 服务
 dc-build: ## 构建全部 Docker 镜像
 	docker compose build
 
-dc-down: ## 停止全部 Docker 服务
-	docker compose down
-
-deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + 前端 Nginx）
+deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + Celery worker + 前端 Nginx）
 	docker compose up -d
 
 deploy-down: ## 停止全量部署

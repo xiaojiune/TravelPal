@@ -1,25 +1,24 @@
 # TravelPal · 旅行伴侣
 
-**不是生成文字攻略，是生成可执行的行程方案。**
-结合元启发式算法（CA/VNS）与 LLM Agent，严格保证时间窗约束与路径最优的智能旅行规划系统。
+**Agent 陪你聊，算法陪你走，从一句话到每一程。**
 
-🏷️ `运筹优化 · LLM Agent · 地图可视化 · 全栈工程化`
+[![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
+[![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
+[![Commits](https://img.shields.io/github/commit-activity/m/xiaojiune/TravelPal)](https://github.com/xiaojiune/TravelPal/commits/dev)
+[![License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
+[![trippal.site](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
+[![CI](https://img.shields.io/github/actions/workflow/status/xiaojiune/TravelPal/ci.yml?branch=main)](https://github.com/xiaojiune/TravelPal/actions)
+[![MCP](https://img.shields.io/badge/MCP%20Server-integrated-4D77FF)](backend/mcp/)
+[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
+[![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
 
 📌 **版本状态**
 - 🟠 橙色徽章 = 新功能预发布，[🌐点击前往dev分支](https://github.com/xiaojiune/TravelPal/tree/dev)
 - 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验: https://trippal.site](https://trippal.site)
 
-[![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
-[![License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
-[![Commits](https://img.shields.io/github/commit-activity/m/xiaojiune/TravelPal)](https://github.com/xiaojiune/TravelPal/commits/dev)
-[![trippal.site](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
-[![CI](https://img.shields.io/github/actions/workflow/status/xiaojiune/TravelPal/ci.yml?branch=main)](https://github.com/xiaojiune/TravelPal/actions)
-[![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
-[![MCP](https://img.shields.io/badge/MCP%20Server-integrated-4D77FF)](backend/mcp/)
-[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
-[![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
-
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
+
+🏷️ `AI 行程决策引擎 · 对话式共创 · 全栈工程化`
 
 ---
 

@@ -6,8 +6,8 @@
 🏷️ `运筹优化 · LLM Agent · 地图可视化 · 全栈工程化`
 
 📌 **版本状态**
-- 🟠 橙色徽章 = 最新改动在 dev 分支，[点击切换查看](https://github.com/xiaojiune/TravelPal/tree/dev)
-- 🔵 蓝色徽章 = 最新稳定版已发布
+- 🟠 橙色徽章 = 新功能预发布，[🌐点击前往dev分支](https://github.com/xiaojiune/TravelPal/tree/dev)
+- 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验: https://trippal.site](https://trippal.site)
 
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
 [![GitHub License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
@@ -16,8 +16,6 @@
 [![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
 
 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
-
-🌐 在线演示：<https://trippal.site>
 
 ---
 

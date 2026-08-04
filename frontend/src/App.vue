@@ -35,15 +35,5 @@
 <script setup lang="ts">
 /** 根组件：全局导航栏 + <router-view> 页面出口。导航链接覆盖全部 5 个页面，样式内联于 <style> 中无外部依赖。 */
 import { zhCN, dateZhCN } from 'naive-ui'
-import type { GlobalThemeOverrides } from 'naive-ui'
-
-// 品牌色覆盖：对齐全站既有 #1a73e8（Google 蓝），覆盖 Naive UI 默认绿色（ADR-009 §4）
-const themeOverrides: GlobalThemeOverrides = {
-  common: {
-    primaryColor: '#1a73e8',
-    primaryColorHover: '#4285f4',
-    primaryColorPressed: '#1666cd',
-    primaryColorSuppl: '#1a73e8',
-  },
-}
+import { themeOverrides } from '@/theme'
 </script>

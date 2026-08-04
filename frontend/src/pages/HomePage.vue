@@ -172,25 +172,25 @@ async function fetchSuggest() {
 
 <style scoped>
 .page-home { max-width: 860px; margin: 0 auto; }
-.subtitle { color: #666; margin-bottom: 24px; }
-.form-section { background: #fff; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid #e0e0e0; }
+.subtitle { color: var(--tp-text-2); margin-bottom: 24px; }
+.form-section { background: var(--tp-surface); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid var(--tp-border); }
 .form-section h3 { margin-bottom: 12px; font-size: 15px; }
 .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.form-row label { min-width: 80px; font-size: 13px; color: #555; }
+.form-row label { min-width: 80px; font-size: 13px; color: var(--tp-text-2); }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .form-grid-3 > div { min-width: 0; }
-.form-grid-3 label { display: block; font-size: 13px; color: #555; margin-bottom: 4px; }
-.form-grid-3 .unit-info { display: block; font-size: 10px; color: #999; margin-top: 2px; }
+.form-grid-3 label { display: block; font-size: 13px; color: var(--tp-text-2); margin-bottom: 4px; }
+.form-grid-3 .unit-info { display: block; font-size: 10px; color: var(--tp-text-3); margin-top: 2px; }
 .btn-self-start { align-self: flex-start; }
-.addr { color: #888; font-size: 12px; }
+.addr { color: var(--tp-text-3); font-size: 12px; }
 .result-row { font-size: 13px; margin-top: 4px; display: flex; gap: 16px; align-items: center; }
-.hint { font-size: 13px; color: #e67e22; margin-bottom: 12px; }
-.hint.error { color: #e74c3c; }
+.hint { font-size: 13px; color: var(--tp-warning); margin-bottom: 12px; }
+.hint.error { color: var(--tp-error); }
 .form-actions { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
 .table-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
 .edit-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 6px; }
-.edit-table th { text-align: left; padding: 4px 6px; border-bottom: 2px solid #e0e0e0; font-weight: 600; color: #555; font-size: 12px; }
-.edit-table td { padding: 3px 4px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-.row-hotel { background: #f8f9ff; }
-.biz-hours { font-size: 11px; color: #666; white-space: nowrap; }
+.edit-table th { text-align: left; padding: 4px 6px; border-bottom: 2px solid var(--tp-border); font-weight: 600; color: var(--tp-text-2); font-size: 12px; }
+.edit-table td { padding: 3px 4px; border-bottom: 1px solid var(--tp-border-light); vertical-align: middle; }
+.row-hotel { background: var(--tp-primary-soft); }
+.biz-hours { font-size: 11px; color: var(--tp-text-2); white-space: nowrap; }
 </style>

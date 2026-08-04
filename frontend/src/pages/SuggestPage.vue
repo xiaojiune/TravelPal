@@ -198,50 +198,50 @@ function viewDeepResult(r: PlanResult) {
 
 <style scoped>
 .page-suggest { max-width: 700px; margin: 0 auto; }
-.empty-state { text-align: center; padding: 60px 0; color: #999; }
+.empty-state { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
 .empty-state .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
 .suggest-section { margin-bottom: 24px; }
 .day-group { margin-bottom: 24px; }
-.day-group h3 { font-size: 16px; margin-bottom: 10px; color: #333; border-left: 3px solid #1a73e8; padding-left: 10px; }
+.day-group h3 { font-size: 16px; margin-bottom: 10px; color: var(--tp-text); border-left: 3px solid var(--tp-primary); padding-left: 10px; }
 .card-list { display: flex; flex-direction: column; gap: 8px; }
 .suggest-card {
   display: flex; align-items: center; justify-content: space-between;
-  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+  background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px;
   padding: 10px 16px; cursor: pointer; transition: box-shadow 0.15s;
 }
 .suggest-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 .suggest-card.disabled { opacity: 0.5; cursor: default; }
 .suggest-card.disabled:hover { box-shadow: none; }
-.result-card { border-color: #1a73e8; background: #f8fbff; }
+.result-card { border-color: var(--tp-primary); background: var(--tp-primary-soft); }
 .card-body { display: flex; align-items: center; gap: 14px; }
 .card-method {
-  background: #e8f0fe; color: #1a73e8;
+  background: var(--tp-primary-soft); color: var(--tp-primary);
   padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
 }
-.card-cost { font-size: 14px; color: #555; }
-.card-meta { font-size: 12px; color: #888; }
+.card-cost { font-size: 14px; color: var(--tp-text-2); }
+.card-meta { font-size: 12px; color: var(--tp-text-3); }
 
 /* ====== 操作栏 ====== */
-.action-bar { margin: 20px 0; padding: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; }
+.action-bar { margin: 20px 0; padding: 16px; background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px; }
 .mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
 .btn-mode {
-  flex: 1; padding: 8px; border: 1px solid #d0d0d0; border-radius: 6px;
-  background: #f5f5f5; color: #555; font-size: 13px; font-weight: 600;
+  flex: 1; padding: 8px; border: 1px solid var(--tp-border); border-radius: 6px;
+  background: var(--tp-bg); color: var(--tp-text-2); font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.15s;
 }
-.btn-mode.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.btn-mode.active { background: var(--tp-primary); color: #fff; border-color: var(--tp-primary); }
 .deep-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.deep-form label { font-size: 13px; color: #555; }
-.deep-form input { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: center; }
-.deep-form .hint { font-size: 12px; color: #999; }
-.mode-hint { font-size: 13px; color: #888; text-align: center; padding: 4px 0; }
-.algo-time { font-size: 12px; color: #999; text-align: center; padding: 2px 0; }
+.deep-form label { font-size: 13px; color: var(--tp-text-2); }
+.deep-form input { width: 72px; padding: 6px 8px; border: 1px solid var(--tp-border); border-radius: 4px; font-size: 13px; text-align: center; }
+.deep-form .hint { font-size: 12px; color: var(--tp-text-3); }
+.mode-hint { font-size: 13px; color: var(--tp-text-3); text-align: center; padding: 4px 0; }
+.algo-time { font-size: 12px; color: var(--tp-text-3); text-align: center; padding: 2px 0; }
 
 /* ====== 深度结果区 ====== */
 .deep-section { margin-top: 20px; }
-.deep-section h3 { font-size: 15px; margin-bottom: 10px; color: #1a73e8; }
+.deep-section h3 { font-size: 15px; margin-bottom: 10px; color: var(--tp-primary); }
 
 .btn { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: #1a73e8; color: #fff; }
+.btn-primary { background: var(--tp-primary); color: #fff; }
 </style>

@@ -207,28 +207,28 @@ function scrollToBottom() {
 .pending-panel {
   width: 260px;
   min-width: 260px;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid var(--tp-border);
   padding: 16px;
   overflow-y: auto;
-  background: #fafafa;
+  background: var(--tp-bg);
 }
 .panel-title {
   font-size: 14px;
   margin: 0 0 12px 0;
-  color: #333;
+  color: var(--tp-text);
 }
 .pending-empty {
   font-size: 13px;
-  color: #999;
+  color: var(--tp-text-3);
   text-align: center;
   margin-top: 40px;
 }
 .pending-card {
   padding: 10px;
   margin-bottom: 8px;
-  border: 1px solid #e8e8e8;
+  border: 1px solid var(--tp-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tp-surface);
 }
 .pending-header {
   font-weight: 600;
@@ -245,11 +245,11 @@ function scrollToBottom() {
   padding: 1px 6px;
   border-radius: 3px;
 }
-.poi-badge.hotel { background: #e8f5e9; color: #2e7d32; }
-.poi-badge.spot  { background: #e3f2fd; color: #1565c0; }
+.poi-badge.hotel { background: var(--tp-success-soft); color: var(--tp-success); }
+.poi-badge.spot  { background: var(--tp-primary-soft); color: var(--tp-primary); }
 .pending-detail {
   font-size: 12px;
-  color: #666;
+  color: var(--tp-text-2);
   margin-bottom: 2px;
 }
 .pending-actions {
@@ -262,17 +262,17 @@ function scrollToBottom() {
   padding: 4px 10px;
   border: none;
   border-radius: 4px;
-  background: #007aff;
+  background: var(--tp-primary);
   color: #fff;
   font-size: 12px;
   cursor: pointer;
 }
 .btn-cancel {
   padding: 4px 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--tp-border);
   border-radius: 4px;
-  background: #fff;
-  color: #666;
+  background: var(--tp-surface);
+  color: var(--tp-text-2);
   font-size: 12px;
   cursor: pointer;
 }
@@ -292,7 +292,7 @@ function scrollToBottom() {
 .welcome {
   text-align: center;
   margin-top: 60px;
-  color: #666;
+  color: var(--tp-text-2);
 }
 .welcome h2 {
   margin-bottom: 8px;
@@ -301,13 +301,13 @@ function scrollToBottom() {
   display: flex;
   gap: 8px;
   padding: 12px 20px;
-  border-top: 1px solid #e0e0e0;
-  background: #fff;
+  border-top: 1px solid var(--tp-border);
+  background: var(--tp-surface);
 }
 .input-bar input {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--tp-border);
   border-radius: 8px;
   font-size: 14px;
 }
@@ -315,7 +315,7 @@ function scrollToBottom() {
   padding: 10px 20px;
   border: none;
   border-radius: 8px;
-  background: #007aff;
+  background: var(--tp-primary);
   color: #fff;
   font-size: 14px;
   cursor: pointer;

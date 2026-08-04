@@ -111,39 +111,39 @@ watch(() => route.path, (path) => {
 
 <style scoped>
 .page-history { max-width: 800px; margin: 0 auto; }
-.subtitle { font-size: 13px; color: #888; margin-top: -8px; margin-bottom: 20px; }
-.loading { text-align: center; padding: 60px 0; color: #999; }
-.empty { text-align: center; padding: 60px 0; color: #999; }
+.subtitle { font-size: 13px; color: var(--tp-text-3); margin-top: -8px; margin-bottom: 20px; }
+.loading { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
+.empty { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
 .empty .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
 .history-list { display: flex; flex-direction: column; gap: 8px; }
 .history-card {
   position: relative;
-  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
+  background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px;
   padding: 14px 18px; cursor: pointer; transition: box-shadow .15s;
 }
 .history-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 .h-main { display: flex; gap: 16px; align-items: center; }
-.h-city { font-size: 16px; font-weight: 700; color: #1a73e8; }
-.h-days { background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-.h-cost { font-size: 14px; color: #333; }
-.h-spots { font-size: 12px; color: #888; }
-.h-meta { margin-top: 4px; font-size: 11px; color: #aaa; display: flex; gap: 12px; flex-wrap: wrap; }
-.h-note { font-style: italic; color: #888; }
+.h-city { font-size: 16px; font-weight: 700; color: var(--tp-primary); }
+.h-days { background: var(--tp-primary-soft); color: var(--tp-primary); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.h-cost { font-size: 14px; color: var(--tp-text); }
+.h-spots { font-size: 12px; color: var(--tp-text-3); }
+.h-meta { margin-top: 4px; font-size: 11px; color: var(--tp-text-3); display: flex; gap: 12px; flex-wrap: wrap; }
+.h-note { font-style: italic; color: var(--tp-text-3); }
 .btn-delete {
   position: absolute; top: 8px; right: 10px;
-  background: none; border: none; font-size: 18px; color: #ccc; cursor: pointer;
+  background: none; border: none; font-size: 18px; color: var(--tp-text-3); cursor: pointer;
   line-height: 1; padding: 0 4px;
 }
-.btn-delete:hover { color: #e74c3c; }
+.btn-delete:hover { color: var(--tp-error); }
 .pagination {
   display: flex; justify-content: center; align-items: center; gap: 16px;
-  margin-top: 20px; font-size: 13px; color: #666;
+  margin-top: 20px; font-size: 13px; color: var(--tp-text-2);
 }
 .pagination button {
-  padding: 6px 14px; border: 1px solid #d0d0d0; border-radius: 4px;
-  background: #fff; cursor: pointer; font-size: 13px;
+  padding: 6px 14px; border: 1px solid var(--tp-border); border-radius: 4px;
+  background: var(--tp-surface); cursor: pointer; font-size: 13px;
 }
 .pagination button:disabled { opacity: 0.4; cursor: default; }
 .btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
-.btn-primary { background: #1a73e8; color: #fff; }
+.btn-primary { background: var(--tp-primary); color: #fff; }
 </style>

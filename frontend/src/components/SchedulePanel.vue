@@ -105,30 +105,30 @@ function statusColor(s: string | null | undefined) {
 </script>
 
 <style scoped>
-.schedule-panel { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; max-height: 600px; overflow-y: auto; }
+.schedule-panel { background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px; padding: 16px; max-height: 600px; overflow-y: auto; }
 .schedule-panel h3 { margin-bottom: 12px; font-size: 15px; }
-.empty { color: #999; font-size: 13px; padding: 20px 0; text-align: center; }
+.empty { color: var(--tp-text-3); font-size: 13px; padding: 20px 0; text-align: center; }
 .day-section { margin-bottom: 16px; }
-.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e8f0fe; }
-.day-title { font-size: 14px; color: #999; font-weight: 400; }
-.day-title.day-active { color: #1a73e8; font-weight: 700; }
-.btn-highlight { background: none; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 11px; color: #bbb; cursor: pointer; padding: 2px 8px; transition: all .15s; }
-.btn-highlight:hover { border-color: #1a73e8; color: #1a73e8; }
-.btn-highlight.active { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; font-weight: 600; }
+.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--tp-primary-soft); }
+.day-title { font-size: 14px; color: var(--tp-text-3); font-weight: 400; }
+.day-title.day-active { color: var(--tp-primary); font-weight: 700; }
+.btn-highlight { background: none; border: 1px solid var(--tp-border); border-radius: 4px; font-size: 11px; color: var(--tp-text-3); cursor: pointer; padding: 2px 8px; transition: all .15s; }
+.btn-highlight:hover { border-color: var(--tp-primary); color: var(--tp-primary); }
+.btn-highlight.active { background: var(--tp-primary-soft); border-color: var(--tp-primary); color: var(--tp-primary); font-weight: 600; }
 .schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #e0e0e0; color: #888; font-weight: 600; }
-.schedule-table td { padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }
-.depot-row td { color: #999; font-style: italic; }
-.schedule-table tbody tr:not(.depot-row):hover { background: #f0f7ff; }
-.schedule-table tbody tr:not(.depot-row).row-highlight { background: #e8f0fe; }
-.status-normal { color: #27ae60; }
-.status-early { color: #e67e22; }
-.status-late { color: #e74c3c; font-weight: 600; }
+.schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text-3); font-weight: 600; }
+.schedule-table td { padding: 4px 6px; border-bottom: 1px solid var(--tp-bg); }
+.depot-row td { color: var(--tp-text-3); font-style: italic; }
+.schedule-table tbody tr:not(.depot-row):hover { background: var(--tp-primary-soft); }
+.schedule-table tbody tr:not(.depot-row).row-highlight { background: var(--tp-primary-soft); }
+.status-normal { color: var(--tp-success); }
+.status-early { color: var(--tp-warning); }
+.status-late { color: var(--tp-error); font-weight: 600; }
 .btn-remove {
-  background: none; border: 1px solid #e0e0e0; border-radius: 4px;
-  cursor: pointer; color: #d32f2f; font-size: 12px; width: 22px; height: 22px;
+  background: none; border: 1px solid var(--tp-border); border-radius: 4px;
+  cursor: pointer; color: var(--tp-error); font-size: 12px; width: 22px; height: 22px;
   display: inline-flex; align-items: center; justify-content: center;
   line-height: 1; padding: 0;
 }
-.btn-remove:hover { background: #ffebee; border-color: #d32f2f; }
+.btn-remove:hover { background: var(--tp-error-soft); border-color: var(--tp-error); }
 </style>

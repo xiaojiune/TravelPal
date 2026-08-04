@@ -6,8 +6,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  background: var(--tp-bg);
+  color: var(--tp-text);
 }
 
 #travelpal-app {
@@ -21,15 +21,15 @@ body {
   align-items: center;
   gap: 24px;
   padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  background: var(--tp-surface);
+  border-bottom: 1px solid var(--tp-border);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .nav-brand {
   font-size: 20px;
   font-weight: 700;
-  color: #1a73e8;
+  color: var(--tp-primary);
   text-decoration: none;
 }
 
@@ -39,7 +39,7 @@ body {
 }
 
 .nav-links a {
-  color: #555;
+  color: var(--tp-text-2);
   text-decoration: none;
   font-size: 14px;
   padding: 4px 8px;
@@ -48,8 +48,8 @@ body {
 }
 
 .nav-links a:hover {
-  background: #e8f0fe;
-  color: #1a73e8;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
 }
 
 .main-content {

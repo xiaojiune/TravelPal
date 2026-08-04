@@ -37,7 +37,7 @@ defineProps<Props>()
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #eee;
+  background: var(--tp-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,7 +45,7 @@ defineProps<Props>()
   flex-shrink: 0;
 }
 .bubble {
-  background: #f0f0f0;
+  background: var(--tp-border-light);
   padding: 10px 14px;
   border-radius: 12px;
   line-height: 1.5;
@@ -53,7 +53,7 @@ defineProps<Props>()
   word-break: break-word;
 }
 .chat-message.user .bubble {
-  background: #007aff;
+  background: var(--tp-primary);
   color: #fff;
 }
 </style>

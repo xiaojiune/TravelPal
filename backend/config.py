@@ -30,3 +30,5 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "")
 # 天气服务传输方式：http（基线）或 mcp（按需启用），配置级降级由 factory 读取
 WEATHER_TRANSPORT = os.getenv("WEATHER_TRANSPORT", "http")
+# Prometheus 多进程指标共享目录（backend 与 celery worker 必须指向同一目录才能聚合）
+PROMETHEUS_MULTIPROC_DIR = os.getenv("PROMETHEUS_MULTIPROC_DIR", "/tmp/travelpal_metrics")

@@ -8,6 +8,7 @@ import numpy as np
 import requests
 
 from backend.config import AMAP_API_KEY
+from backend.observability import driving_calls, driving_duration, matrix_build_duration
 from backend.utils.decorators import legacy_only
 
 # ---------- 工具函数 ----------
@@ -216,6 +217,7 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
         "key": AMAP_API_KEY,
         "strategy": "32",
     }
+    start = time.monotonic()
     for attempt in range(max_retries):
         try:
             resp = requests.get(url, params=params, timeout=10)
@@ -232,9 +234,13 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
                         if step_poly:
                             all_points.append(step_poly)
                     polyline = ";".join(all_points)
+                driving_calls.labels(result="success").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return distance_km, duration, polyline
             else:
                 print(f"驾车API错误: {data.get('info', '未知错误')}, 状态码: {data.get('infocode', '无')}")
+                driving_calls.labels(result="fail").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return None, None, None
         except Exception as e:
             if attempt < max_retries - 1:
@@ -242,6 +248,8 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
                 time.sleep(1)
             else:
                 print(f"驾车路径规划请求失败（已重试{max_retries}次）: {e}")
+                driving_calls.labels(result="fail").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return None, None, None
 
 
@@ -270,6 +278,7 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
     cost = np.zeros((n, n))
     dist = np.zeros((n, n))
     polylines = {}
+    build_start = time.monotonic()
     print(f"正在调用驾车API计算 {n}x{n} 矩阵...")
     for i in range(n):
         for j in range(n):
@@ -294,4 +303,5 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
                 dist[i][j] = -1
             # 每次 API 调用后等待 delay 秒，控制 QPS 避免被高德限流
             time.sleep(delay)
+    matrix_build_duration.observe(time.monotonic() - build_start)
     return cost, dist, polylines

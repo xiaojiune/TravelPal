@@ -41,8 +41,11 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_MODEL: ${LLM_MODEL}
+      PROMETHEUS_MULTIPROC_DIR: /tmp/travelpal_metrics
     ports:
       - "8000:8000"
+    volumes:
+      - metrics_data:/tmp/travelpal_metrics
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,6 +70,9 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_MODEL: ${LLM_MODEL}
+      PROMETHEUS_MULTIPROC_DIR: /tmp/travelpal_metrics
+    volumes:
+      - metrics_data:/tmp/travelpal_metrics
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,9 +91,14 @@ services:
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Prometheus /api/metrics 的 Basic Auth 密码文件。
+      # 部署前必须在服务器创建：htpasswd -c /etc/nginx/htpasswd metrics
+      # （未创建会导致 nginx 启动失败，请先创建或删除本行与 nginx.conf 的 auth_basic 块）
+      - /etc/nginx/htpasswd:/etc/nginx/.htpasswd:ro
     depends_on:
       - backend
 
 volumes:
   postgres_data:
   redis_data:
+  metrics_data:

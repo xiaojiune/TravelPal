@@ -11,6 +11,7 @@
 """
 
 import asyncio
+import time
 import traceback
 from datetime import datetime, timezone
 from uuid import UUID
@@ -20,6 +21,7 @@ from celery import Celery
 from backend.config import AMAP_JS_KEY, AMAP_JS_SECURITY_CODE, CELERY_BROKER_URL
 from backend.data.model.database import async_session, engine
 from backend.data.model.models import PlanTask
+from backend.observability import task_duration, task_total
 
 celery_app = Celery("travelpal", broker=CELERY_BROKER_URL)
 
@@ -136,6 +138,8 @@ async def _execute_task(task_id: str) -> None:
         if task is None:
             return
 
+        task_type = task.task_type  # type: ignore[assignment]
+        start = time.monotonic()
         task.status = "running"  # type: ignore[assignment]
         task.started_at = datetime.now(timezone.utc)  # type: ignore[assignment]
         await session.commit()
@@ -171,3 +175,7 @@ async def _execute_task(task_id: str) -> None:
         finally:
             task.finished_at = datetime.now(timezone.utc)  # type: ignore[assignment]
             await session.commit()
+            # 任务耗时与结果指标（worker 进程侧，经 multiprocess 聚合到 /api/metrics）
+            status = "success" if task.status == "done" else "failed"  # type: ignore[comparison-overlap]
+            task_total.labels(task_type=task_type, status=status).inc()
+            task_duration.labels(task_type=task_type).observe(time.monotonic() - start)

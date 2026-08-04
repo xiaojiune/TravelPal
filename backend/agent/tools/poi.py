@@ -6,6 +6,7 @@ from openai import OpenAI
 
 from backend.agent.tools.prompts import PARSE_PROMPT, build_date_context
 from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from backend.observability import llm_calls, llm_tokens
 
 
 def _classify_poi(poi_type: str, name: str) -> str:
@@ -102,6 +103,16 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
             temperature=0.1,
             max_tokens=128,
         )
+        llm_calls.labels(kind="parse_biz_hours").inc()
+        # 营业时间解析走独立 OpenAI client（未收敛到 LLMService），单独计量
+        usage = getattr(resp, "usage", None)
+        if usage is not None:
+            prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+            completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+            if prompt_tokens:
+                llm_tokens.labels(kind="parse_biz_hours", direction="prompt").inc(prompt_tokens)
+            if completion_tokens:
+                llm_tokens.labels(kind="parse_biz_hours", direction="completion").inc(completion_tokens)
         content = resp.choices[0].message.content
         text = content.strip() if content else ""
         data = json.loads(text)

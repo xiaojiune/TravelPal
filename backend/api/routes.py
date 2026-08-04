@@ -1,6 +1,5 @@
 """FastAPI 路由定义：POI 查询、行程规划、Agent 对话、历史记录、异步任务。"""
 
-import inspect
 import json
 import traceback
 from uuid import UUID
@@ -10,8 +9,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.agent.chat import build_chat_messages, chat_complete, chat_stream
-from backend.agent.tools import TOOL_REGISTRY, parse_biz_hours
+from backend.agent.chat import build_chat_messages
+from backend.agent.orchestrator import stream_orchestrator
+from backend.agent.tools import parse_biz_hours
 from backend.api.schemas import (
     ChatRequest,
     HistoryCreate,
@@ -160,40 +160,17 @@ async def chat(req: ChatRequest):
         messages = build_chat_messages(req.message, req.plan_result)
 
         async def _stream():
-            """SSE 生成器：检测 tool_call → 执行工具 → 流式回复。"""
-            result = await chat_complete(messages)
-            if result.tool_calls:
-                messages.append(result.message)  # pyright: ignore[reportArgumentType]
-                for tc in result.tool_calls:
-                    tool_name = tc.name
-                    tool_fn = TOOL_REGISTRY.get(tool_name)
-                    if tool_fn:
-                        yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{tool_name}...'})}\n\n"
-                        if inspect.iscoroutinefunction(tool_fn):
-                            tool_result = await tool_fn(**tc.arguments)
-                        else:
-                            tool_result = tool_fn(**tc.arguments)
-                        yield f"data: {json.dumps({'type': 'tool_result', 'data': tool_result})}\n\n"
-                        messages.append(
-                            {
-                                "role": "tool",
-                                "tool_call_id": tc.id,
-                                "content": json.dumps(tool_result, ensure_ascii=False),
-                            }
-                        )
-                # 第二阶段：流式输出 LLM 回复
-                try:
-                    async for token in chat_stream(messages):
-                        yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
-                except Exception:
-                    yield f"data: {json.dumps({'type': 'error', 'data': '对话生成失败，请重试'})}\n\n"
-            else:
-                # 无工具调用，直接流式输出
-                try:
-                    async for token in chat_stream(messages):
-                        yield f"data: {json.dumps({'type': 'content', 'data': token})}\n\n"
-                except Exception:
-                    yield f"data: {json.dumps({'type': 'error', 'data': '对话生成失败，请重试'})}\n\n"
+            """SSE 生成器：LangGraph 编排产出事件，映射为 SSE 事件流。"""
+            try:
+                async for event_type, data in stream_orchestrator(messages):
+                    if event_type == "content":
+                        yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"
+                    elif event_type == "tool_status":
+                        yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{data}...'})}\n\n"
+                    elif event_type == "tool_result":
+                        yield f"data: {json.dumps({'type': 'tool_result', 'data': data})}\n\n"
+            except Exception:
+                yield f"data: {json.dumps({'type': 'error', 'data': '对话生成失败，请重试'})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
         return StreamingResponse(

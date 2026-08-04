@@ -5,8 +5,8 @@ import { usePlanStore } from '@/stores/plan'
 interface EditRow {
   isHotel: boolean; name: string; address: string
   lon: number; lat: number
-  twStart: number; twEnd: number; stay: number
-  expectedArrival: number; delete: boolean
+  twStart: number; twEnd: number; stay: number | null
+  expectedArrival: number | null; delete: boolean
 }
 
 export function useEditTable() {
@@ -30,7 +30,7 @@ export function useEditTable() {
         isHotel: true, name: store.hotelName, address: store.hotelAddress,
         lon: store.hotelLon, lat: store.hotelLat,
         twStart: store.hotelTwStart, twEnd: store.hotelTwEnd,
-        stay: 0, expectedArrival: 0, delete: false,
+        stay: null, expectedArrival: null, delete: false,
       })
     }
     store.spots.forEach(s => {
@@ -38,7 +38,7 @@ export function useEditTable() {
         isHotel: false, name: s.name, address: s.address || '',
         lon: s.lon, lat: s.lat,
         twStart: s.twStart, twEnd: s.twEnd,
-        stay: s.stay, expectedArrival: s.expectedArrival ?? 0, delete: false,
+        stay: s.stay || null, expectedArrival: s.expectedArrival || null, delete: false,
       })
     })
     editRows.value = rows
@@ -85,8 +85,8 @@ export function useEditTable() {
     }
     store.spots = remaining.filter(r => !r.isHotel).map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
-      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
-      expectedArrival: r.expectedArrival,
+      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay ?? 0,
+      expectedArrival: r.expectedArrival ?? 0,
       address: r.address,
     }))
     editHint.value = ''
@@ -108,8 +108,8 @@ export function useEditTable() {
     store.isParamsSaved = true
     store.spots = spotsOnly.map(r => ({
       name: r.name, lon: r.lon, lat: r.lat,
-      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay,
-      expectedArrival: r.expectedArrival,
+      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay ?? 0,
+      expectedArrival: r.expectedArrival ?? 0,
       address: r.address,
     }))
     _saving = false

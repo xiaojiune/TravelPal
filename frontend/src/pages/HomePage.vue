@@ -146,7 +146,6 @@
           </div>
         </n-collapse-item>
       </n-collapse>
-      <div v-if="dayStartMsg" class="hint error">{{ dayStartMsg }}</div>
     </section>
 
     <div class="form-actions">
@@ -173,7 +172,7 @@ defineOptions({ name: 'HomePage' })
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
 import type { SuggestResult } from '@/services/api'
@@ -184,6 +183,7 @@ import { useTaskPolling } from '@/composables/useTaskPolling'
 const store = usePlanStore()
 const router = useRouter()
 const message = useMessage()
+const dialog = useDialog()
 
 const { startPolling } = useTaskPolling()
 
@@ -202,7 +202,13 @@ const {
 const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store.hotelLon !== 0)
 const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
 const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 8) + 1))
-const dayStartMsg = ref('')
+
+/** 分钟 → HH:MM（用于展示启程时间确认提示）。 */
+function fmtMinutes(m: number): string {
+  const hh = String(Math.floor(m / 60)).padStart(2, '0')
+  const mm = String(m % 60).padStart(2, '0')
+  return `${hh}:${mm}`
+}
 
 // ====== 步骤条 ======
 /** 首页四步引导：完成置 finish、当前置 process、未到置 wait（跳过中间态直接到下一步）。 */
@@ -254,11 +260,19 @@ async function fetchSuggest() {
     message.warning('请先在「规划点管理」中点击「确认规划点参数」')
     return
   }
-  if (!store.dayStart) {
-    dayStartMsg.value = '请输入启程时间'
+  if (!store.dayStartConfirmed) {
+    dialog.warning({
+      title: '确认启程时间',
+      content: `你未确定启程时间，当前启程时间为 ${fmtMinutes(store.dayStart)}。是否继续？`,
+      positiveText: '我已知晓，继续',
+      negativeText: '取消',
+      onPositiveClick: () => {
+        store.dayStartConfirmed = true
+        fetchSuggest()
+      },
+    })
     return
   }
-  dayStartMsg.value = ''
   store.suggestions = []
   store.deepResults = []
   store.planResult = null

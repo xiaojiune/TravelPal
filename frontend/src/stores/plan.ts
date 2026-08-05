@@ -1,6 +1,6 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import type {
   SpotFormItem,
   PlanRequestPayload,
@@ -20,6 +20,11 @@ export const usePlanStore = defineStore('plan', () => {
   const hotelTwStart = ref(0)
   const hotelTwEnd = ref(1440)
   const dayStart = ref(0)
+  /** 用户是否已确认启程时间（默认 0=午夜合法，确认后本会话不再提示，改值需重新确认）。 */
+  const dayStartConfirmed = ref(false)
+  watch(dayStart, () => {
+    dayStartConfirmed.value = false
+  })
   const spots = ref<SpotFormItem[]>([])
   const penaltyWeight = ref(100)
   const earlyWaitWeight = ref(0.1)
@@ -168,6 +173,7 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwStart.value = 0
     hotelTwEnd.value = 1440
     dayStart.value = 0
+    dayStartConfirmed.value = false
     spots.value = []
     minDays.value = null
     isParamsSaved.value = false
@@ -196,6 +202,7 @@ export const usePlanStore = defineStore('plan', () => {
     hotelTwStart,
     hotelTwEnd,
     dayStart,
+    dayStartConfirmed,
     spots,
     penaltyWeight,
     earlyWaitWeight,

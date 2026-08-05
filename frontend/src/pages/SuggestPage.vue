@@ -4,7 +4,7 @@
 
     <div v-if="!store.suggestions.length && !store.deepResults.length" class="empty-state">
       <p>暂无方案建议，请先在首页输入规划参数。</p>
-      <router-link to="/" class="btn btn-primary">返回首页</router-link>
+      <n-button type="primary" @click="router.push('/')">返回首页</n-button>
     </div>
 
     <template v-else>
@@ -32,25 +32,19 @@
       <!-- ====== 模式切换 + 深度操作区 ====== -->
       <div class="action-bar">
         <div class="mode-toggle">
-          <button
-            class="btn btn-mode"
-            :class="{ active: mode === 'fast' }"
-            @click="mode = 'fast'; deepNDays = null"
-          >快速</button>
-          <button
-            class="btn btn-mode"
-            :class="{ active: mode === 'deep' }"
-            @click="mode = 'deep'; deepNDays = defaultDays"
-          >深度</button>
+          <n-radio-group v-model:value="mode" @update:value="onModeChange">
+            <n-radio-button value="fast">快速</n-radio-button>
+            <n-radio-button value="deep">深度</n-radio-button>
+          </n-radio-group>
         </div>
 
         <div v-if="mode === 'deep'" class="deep-form">
           <label>行程天数</label>
-          <input v-model.number="deepNDays" type="number" min="1" :max="maxDayOption" placeholder="天数" />
+          <n-input-number v-model:value="deepNDays" :min="1" :max="maxDayOption" placeholder="天数" style="width: 130px" />
           <span class="hint">建议 {{ defaultDays }} 天</span>
-          <button class="btn btn-primary" :disabled="!deepNDays || store.loading" @click="runDeep">
-            {{ store.loading ? '计算中...' : '🚀 获取规划' }}
-          </button>
+          <n-button type="primary" :loading="store.loading" :disabled="!deepNDays" @click="runDeep">
+            🚀 获取规划
+          </n-button>
         </div>
         <div v-if="mode === 'fast'" class="mode-hint">
           💡 点击上方方案卡片直接查看规划结果
@@ -89,6 +83,7 @@
 /** 方案建议页：快速/深度双模式入口。快速点击卡片直达，深度生成结果卡片后点击跳转。 */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
 import { useTaskPolling } from '@/composables/useTaskPolling'
@@ -96,12 +91,20 @@ import type { SuggestionItem, PlanResult } from '@/types'
 
 const store = usePlanStore()
 const router = useRouter()
+const message = useMessage()
 
 const { startPolling } = useTaskPolling()
 
 const mode = ref<'fast' | 'deep'>('fast')
 const deepNDays = ref<number | null>(null)
 const deepAlgoTime = ref(0)
+
+/** 模式切换：切到快速清空天数，切到深度预填建议天数。 */
+function onModeChange(value: string | number) {
+  mode.value = value as 'fast' | 'deep'
+  if (mode.value === 'fast') deepNDays.value = null
+  else deepNDays.value = defaultDays.value
+}
 
 /** 按天数分组建议，每组内部按成本升序排列。 */
 const groupedSuggestions = computed(() => {
@@ -182,7 +185,7 @@ async function runDeep() {
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
   } catch (e: unknown) {
-    alert('深度规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
+    message.error('深度规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
   } finally {
     store.loading = false
   }
@@ -223,16 +226,9 @@ function viewDeepResult(r: PlanResult) {
 
 /* ====== 操作栏 ====== */
 .action-bar { margin: 20px 0; padding: 16px; background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px; }
-.mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-.btn-mode {
-  flex: 1; padding: 8px; border: 1px solid var(--tp-border); border-radius: 6px;
-  background: var(--tp-bg); color: var(--tp-text-2); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
-}
-.btn-mode.active { background: var(--tp-primary); color: #fff; border-color: var(--tp-primary); }
+.mode-toggle { display: flex; margin-bottom: 12px; }
 .deep-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .deep-form label { font-size: 13px; color: var(--tp-text-2); }
-.deep-form input { width: 72px; padding: 6px 8px; border: 1px solid var(--tp-border); border-radius: 4px; font-size: 13px; text-align: center; }
 .deep-form .hint { font-size: 12px; color: var(--tp-text-3); }
 .mode-hint { font-size: 13px; color: var(--tp-text-3); text-align: center; padding: 4px 0; }
 .algo-time { font-size: 12px; color: var(--tp-text-3); text-align: center; padding: 2px 0; }
@@ -240,8 +236,4 @@ function viewDeepResult(r: PlanResult) {
 /* ====== 深度结果区 ====== */
 .deep-section { margin-top: 20px; }
 .deep-section h3 { font-size: 15px; margin-bottom: 10px; color: var(--tp-primary); }
-
-.btn { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: var(--tp-primary); color: #fff; }
 </style>

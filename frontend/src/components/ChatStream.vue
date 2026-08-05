@@ -13,7 +13,8 @@
             quaternary
             class="quick-tip"
             @click="quickAsk(t)"
-          >{{ t }}</n-button>
+            >{{ t }}</n-button
+          >
         </div>
       </div>
       <ChatMessage
@@ -57,8 +58,13 @@ import { useTypewriter } from '@/composables/useTypewriter'
 import type { ChatMessage as ChatMessageType } from '@/types'
 
 interface PoiItem {
-  name?: string; lon?: number; lat?: number; address?: string
-  tw_start?: number; tw_end?: number; poi_type?: string
+  name?: string
+  lon?: number
+  lat?: number
+  address?: string
+  tw_start?: number
+  tw_end?: number
+  poi_type?: string
 }
 
 interface Props {
@@ -123,7 +129,11 @@ async function send() {
     }
     // SSE 手动解析：逐 chunk 读取字节流，拼行长尾后按 \n 分割
     const body = resp.body
-    if (!body) { messages.value[msgIndex].content = '响应体为空'; loading.value = false; return }
+    if (!body) {
+      messages.value[msgIndex].content = '响应体为空'
+      loading.value = false
+      return
+    }
     const reader = body.getReader()
     const decoder = new TextDecoder()
     let partial = ''

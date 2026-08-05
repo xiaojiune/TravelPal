@@ -3,7 +3,9 @@
     <!-- 标题栏：点击切换折叠。折叠态只显示图标 + 数量 -->
     <div class="pending-head" @click="collapsed = !collapsed">
       <span class="pending-title">📋 待选</span>
-      <span v-if="store.pendingPois.length" class="pending-count">{{ store.pendingPois.length }}</span>
+      <span v-if="store.pendingPois.length" class="pending-count">{{
+        store.pendingPois.length
+      }}</span>
       <span class="pending-fold">{{ collapsed ? '▶' : '◀' }}</span>
     </div>
     <template v-if="!collapsed">
@@ -31,16 +33,16 @@
         <div class="pending-detail">
           {{ poi.lon?.toFixed(4) }}, {{ poi.lat?.toFixed(4) }}
           <template v-if="poi.tw_start != null && poi.tw_end != null">
-            · {{ Math.floor(poi.tw_start! / 60) }}:{{ String(poi.tw_start! % 60).padStart(2, '0') }}~{{ Math.floor(poi.tw_end! / 60) }}:{{ String(poi.tw_end! % 60).padStart(2, '0') }}
+            · {{ Math.floor(poi.tw_start! / 60) }}:{{
+              String(poi.tw_start! % 60).padStart(2, '0')
+            }}~{{ Math.floor(poi.tw_end! / 60) }}:{{ String(poi.tw_end! % 60).padStart(2, '0') }}
           </template>
         </div>
         <div class="pending-actions">
           <n-button size="tiny" type="primary" @click="store.addPoiToForm(poi)">
             {{ poi.poi_type === 'hotel' ? '🏨 设为酒店' : '➕ 添加' }}
           </n-button>
-          <n-button size="tiny" quaternary @click="store.removePendingPoi(i)">
-            ✕ 取消
-          </n-button>
+          <n-button size="tiny" quaternary @click="store.removePendingPoi(i)"> ✕ 取消 </n-button>
         </div>
       </div>
     </template>
@@ -74,7 +76,9 @@ const collapsed = ref(false)
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  transition: width 0.2s ease, min-width 0.2s ease;
+  transition:
+    width 0.2s ease,
+    min-width 0.2s ease;
 }
 .pending-panel.collapsed {
   width: 44px;

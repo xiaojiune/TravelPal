@@ -1,7 +1,14 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult, SpotDictItem, PoiItem } from '@/types'
+import type {
+  SpotFormItem,
+  PlanRequestPayload,
+  SuggestionItem,
+  PlanResult,
+  SpotDictItem,
+  PoiItem,
+} from '@/types'
 
 export const usePlanStore = defineStore('plan', () => {
   // ====== 输入状态 ======
@@ -29,7 +36,7 @@ export const usePlanStore = defineStore('plan', () => {
       hotelTwStart.value = poi.twStart ?? 0
       hotelTwEnd.value = poi.twEnd ?? 1440
     } else {
-      if (spots.value.some(s => s.name === poi.name)) return
+      if (spots.value.some((s) => s.name === poi.name)) return
       spots.value.push({
         name: poi.name,
         lon: poi.lon,
@@ -50,7 +57,7 @@ export const usePlanStore = defineStore('plan', () => {
   /** 接收 Agent 工具查询结果，去重后加入待选栏。 */
   function addPendingPoi(poi: PoiItem) {
     if (!poi.name) return
-    if (!pendingPois.value.some(p => p.name === poi.name)) {
+    if (!pendingPois.value.some((p) => p.name === poi.name)) {
       pendingPois.value.push(poi)
     }
   }
@@ -73,7 +80,7 @@ export const usePlanStore = defineStore('plan', () => {
       address: poi.address,
       poi_type: poi.poi_type,
     })
-    const idx = pendingPois.value.findIndex(p => p.name === poi.name)
+    const idx = pendingPois.value.findIndex((p) => p.name === poi.name)
     if (idx !== -1) pendingPois.value.splice(idx, 1)
   }
 
@@ -118,7 +125,10 @@ export const usePlanStore = defineStore('plan', () => {
   // ====== 方法 ======
 
   /** 构建 POST /api/plan 或 /api/suggest 请求体。nDays=null 时引擎端自动推断。 */
-  function buildRequest(nDays: number | null, extra?: { cost_matrix?: number[][]; dist_matrix?: number[][] }): PlanRequestPayload {
+  function buildRequest(
+    nDays: number | null,
+    extra?: { cost_matrix?: number[][]; dist_matrix?: number[][] },
+  ): PlanRequestPayload {
     return {
       city: city.value,
       hotel_name: hotelName.value,
@@ -128,7 +138,7 @@ export const usePlanStore = defineStore('plan', () => {
       hotel_tw_end: hotelTwEnd.value,
       day_start: dayStart.value,
       min_days: minDays.value ?? null,
-      spots: spots.value.map(s => ({
+      spots: spots.value.map((s) => ({
         name: s.name,
         lon: Number(s.lon),
         lat: Number(s.lat),
@@ -142,7 +152,9 @@ export const usePlanStore = defineStore('plan', () => {
       penalty_weight: penaltyWeight.value,
       early_wait_weight: earlyWaitWeight.value,
       late_return_weight: lateReturnWeight.value,
-      ...(extra?.cost_matrix ? { cost_matrix: extra.cost_matrix, dist_matrix: extra.dist_matrix } : {}),
+      ...(extra?.cost_matrix
+        ? { cost_matrix: extra.cost_matrix, dist_matrix: extra.dist_matrix }
+        : {}),
     }
   }
 
@@ -176,14 +188,42 @@ export const usePlanStore = defineStore('plan', () => {
   }
 
   return {
-    city, hotelName, hotelLon, hotelLat, hotelAddress,
-    hotelTwStart, hotelTwEnd, dayStart,
-    spots, penaltyWeight, earlyWaitWeight, lateReturnWeight,
+    city,
+    hotelName,
+    hotelLon,
+    hotelLat,
+    hotelAddress,
+    hotelTwStart,
+    hotelTwEnd,
+    dayStart,
+    spots,
+    penaltyWeight,
+    earlyWaitWeight,
+    lateReturnWeight,
     minDays,
-    isParamsSaved, historyRecordId, historyRequestParams,
-    suggestions, suggestSpots, selectedNDays, selectedMethod,
-    planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestPolylines, suggestAlgoTime, amapApiKey, amapSecurityCode, loading,
-    pendingPois, addPendingPoi, removePendingPoi, addPoiToForm, addAllPendingPois,
-    buildRequest, reset, addSpot,
+    isParamsSaved,
+    historyRecordId,
+    historyRequestParams,
+    suggestions,
+    suggestSpots,
+    selectedNDays,
+    selectedMethod,
+    planResult,
+    deepResults,
+    suggestCostMatrix,
+    suggestDistMatrix,
+    suggestPolylines,
+    suggestAlgoTime,
+    amapApiKey,
+    amapSecurityCode,
+    loading,
+    pendingPois,
+    addPendingPoi,
+    removePendingPoi,
+    addPoiToForm,
+    addAllPendingPois,
+    buildRequest,
+    reset,
+    addSpot,
   }
 })

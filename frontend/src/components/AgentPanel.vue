@@ -52,11 +52,17 @@ const panelWidth = ref(window.innerWidth / 3)
 const dragging = ref(false)
 
 /** 最小宽度：页面 1/4。 */
-function minPanelWidth() { return window.innerWidth * 0.25 }
+function minPanelWidth() {
+  return window.innerWidth * 0.25
+}
 /** 最大宽度：页面 1/2。 */
-function maxPanelWidth() { return window.innerWidth * 0.5 }
+function maxPanelWidth() {
+  return window.innerWidth * 0.5
+}
 /** 默认宽度：页面 1/3。 */
-function defaultPanelWidth() { return window.innerWidth / 3 }
+function defaultPanelWidth() {
+  return window.innerWidth / 3
+}
 
 /** 按下手柄开始拖拽：注册全局监听，防止拖出面板后失去事件。 */
 function onResizeStart() {

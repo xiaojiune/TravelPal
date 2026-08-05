@@ -31,14 +31,23 @@ export function useTaskPolling() {
         try {
           const t = await getTask(taskId)
           if (t.status === 'done') {
-            if (timer !== null) { clearInterval(timer); timer = null }
+            if (timer !== null) {
+              clearInterval(timer)
+              timer = null
+            }
             resolve((t.result as Record<string, unknown>) || {})
           } else if (t.status === 'failed') {
-            if (timer !== null) { clearInterval(timer); timer = null }
+            if (timer !== null) {
+              clearInterval(timer)
+              timer = null
+            }
             reject(new Error(t.error || '规划任务失败'))
           }
         } catch (e) {
-          if (timer !== null) { clearInterval(timer); timer = null }
+          if (timer !== null) {
+            clearInterval(timer)
+            timer = null
+          }
           reject(e)
         }
       }, interval)

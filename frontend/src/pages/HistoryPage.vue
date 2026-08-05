@@ -19,7 +19,9 @@
     <template v-else>
       <div class="history-list">
         <div v-for="r in items" :key="r.id" class="history-card" @click="viewRecord(r)">
-          <n-button text :focusable="false" class="btn-delete" @click.stop="deleteRecord(r)">×</n-button>
+          <n-button text :focusable="false" class="btn-delete" @click.stop="deleteRecord(r)"
+            >×</n-button
+          >
           <div class="h-main">
             <span class="h-city">{{ r.city }}</span>
             <span class="h-days">{{ r.n_days }} 天</span>
@@ -109,7 +111,7 @@ function deleteRecord(r: HistorySummary) {
     onPositiveClick: async () => {
       try {
         await deleteHistory(r.id, getDeviceId())
-        items.value = items.value.filter(x => x.id !== r.id)
+        items.value = items.value.filter((x) => x.id !== r.id)
         total.value--
       } catch {
         message.error('删除失败，可能不是你分享的方案。')
@@ -118,31 +120,105 @@ function deleteRecord(r: HistorySummary) {
   })
 }
 
-watch(() => route.path, (path) => {
-  if (path === '/history') loadList()
-}, { immediate: true })
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/history') loadList()
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
-.page-history { max-width: 800px; margin: 0; }
-.subtitle { font-size: 13px; color: var(--tp-text-3); margin-top: -8px; margin-bottom: 20px; }
-.loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 60px 0; color: var(--tp-text-3); }
-.empty { display: flex; justify-content: center; padding: 60px 0; }
-.history-list { display: flex; flex-direction: column; gap: 8px; }
+.page-history {
+  max-width: 800px;
+  margin: 0;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--tp-text-3);
+  margin-top: -8px;
+  margin-bottom: 20px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 60px 0;
+  color: var(--tp-text-3);
+}
+.empty {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .history-card {
   position: relative;
-  background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px;
-  padding: 14px 18px; cursor: pointer; transition: box-shadow .15s;
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
 }
-.history-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.h-main { display: flex; gap: 16px; align-items: center; }
-.h-city { font-size: 16px; font-weight: 700; color: var(--tp-primary); }
-.h-days { background: var(--tp-primary-soft); color: var(--tp-primary); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-.h-cost { font-size: 14px; color: var(--tp-text); }
-.h-spots { font-size: 12px; color: var(--tp-text-3); }
-.h-meta { margin-top: 4px; font-size: 11px; color: var(--tp-text-3); display: flex; gap: 12px; flex-wrap: wrap; }
-.h-note { font-style: italic; color: var(--tp-text-3); }
-.btn-delete { position: absolute; top: 4px; right: 8px; color: var(--tp-text-3); }
-.btn-delete:hover { color: var(--tp-error); }
-.pagination { display: flex; justify-content: center; margin-top: 20px; }
+.history-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.h-main {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.h-city {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tp-primary);
+}
+.h-days {
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.h-cost {
+  font-size: 14px;
+  color: var(--tp-text);
+}
+.h-spots {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
+.h-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--tp-text-3);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.h-note {
+  font-style: italic;
+  color: var(--tp-text-3);
+}
+.btn-delete {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  color: var(--tp-text-3);
+}
+.btn-delete:hover {
+  color: var(--tp-error);
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
 </style>

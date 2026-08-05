@@ -13,7 +13,13 @@
               <router-link to="/history">历史记录</router-link>
             </div>
             <!-- 全局 Agent 入口：导航栏右侧按钮，点击导航栏下方浮出面板 -->
-            <n-button class="nav-agent" circle quaternary :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'" @click="agentOpen = !agentOpen">
+            <n-button
+              class="nav-agent"
+              circle
+              quaternary
+              :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
+              @click="agentOpen = !agentOpen"
+            >
               🤖
             </n-button>
           </nav>

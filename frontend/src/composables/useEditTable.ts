@@ -3,20 +3,26 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 
 interface EditRow {
-  isHotel: boolean; name: string; address: string
-  lon: number; lat: number
-  twStart: number; twEnd: number; stay: number | null
-  expectedArrival: number | null; delete: boolean
+  isHotel: boolean
+  name: string
+  address: string
+  lon: number
+  lat: number
+  twStart: number
+  twEnd: number
+  stay: number | null
+  expectedArrival: number | null
+  delete: boolean
 }
 
 export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
-  let _rebuilding = false  // 重建中标志，阻止 editRows watch 触发解锁
-  let _saving = false      // 保存中标志，阻止 store watch 重建
+  let _rebuilding = false // 重建中标志，阻止 editRows watch 触发解锁
+  let _saving = false // 保存中标志，阻止 store watch 重建
 
-  rebuildEditRows()  // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
+  rebuildEditRows() // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
 
   /** 已有确认点位时展示管理表格。 */
   const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
@@ -27,40 +33,62 @@ export function useEditTable() {
     const rows: EditRow[] = []
     if (store.hotelName && store.hotelLon) {
       rows.push({
-        isHotel: true, name: store.hotelName, address: store.hotelAddress,
-        lon: store.hotelLon, lat: store.hotelLat,
-        twStart: store.hotelTwStart, twEnd: store.hotelTwEnd,
-        stay: null, expectedArrival: null, delete: false,
+        isHotel: true,
+        name: store.hotelName,
+        address: store.hotelAddress,
+        lon: store.hotelLon,
+        lat: store.hotelLat,
+        twStart: store.hotelTwStart,
+        twEnd: store.hotelTwEnd,
+        stay: null,
+        expectedArrival: null,
+        delete: false,
       })
     }
-    store.spots.forEach(s => {
+    store.spots.forEach((s) => {
       rows.push({
-        isHotel: false, name: s.name, address: s.address || '',
-        lon: s.lon, lat: s.lat,
-        twStart: s.twStart, twEnd: s.twEnd,
-        stay: s.stay || null, expectedArrival: s.expectedArrival || null, delete: false,
+        isHotel: false,
+        name: s.name,
+        address: s.address || '',
+        lon: s.lon,
+        lat: s.lat,
+        twStart: s.twStart,
+        twEnd: s.twEnd,
+        stay: s.stay || null,
+        expectedArrival: s.expectedArrival || null,
+        delete: false,
       })
     })
     editRows.value = rows
-    nextTick(() => { _rebuilding = false })
+    nextTick(() => {
+      _rebuilding = false
+    })
   }
 
   /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
-  watch([() => store.spots, () => store.hotelName, () => store.hotelLon, () => store.hotelAddress], () => {
-    if (!_saving) {
-      store.isParamsSaved = false
-      editHint.value = ''
-    }
-    rebuildEditRows()
-  }, { deep: true, flush: 'sync' })
+  watch(
+    [() => store.spots, () => store.hotelName, () => store.hotelLon, () => store.hotelAddress],
+    () => {
+      if (!_saving) {
+        store.isParamsSaved = false
+        editHint.value = ''
+      }
+      rebuildEditRows()
+    },
+    { deep: true, flush: 'sync' },
+  )
 
   /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
-  watch(editRows, () => {
-    if (!_rebuilding) {
-      store.isParamsSaved = false
-      editHint.value = ''
-    }
-  }, { deep: true })
+  watch(
+    editRows,
+    () => {
+      if (!_rebuilding) {
+        store.isParamsSaved = false
+        editHint.value = ''
+      }
+    },
+    { deep: true },
+  )
 
   /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */
   function formatBiz(start: number, end: number) {
@@ -71,44 +99,54 @@ export function useEditTable() {
 
   /** 删除勾选行。酒店行被删则清空 store 酒店信息；景点行直接移除。 */
   function deleteSelectedRows() {
-    const remaining = editRows.value.filter(r => !r.delete)
+    const remaining = editRows.value.filter((r) => !r.delete)
     if (remaining.length === editRows.value.length) {
       editHint.value = '没有选中要删除的行'
       return
     }
-    const hotelRow = remaining.find(r => r.isHotel)
+    const hotelRow = remaining.find((r) => r.isHotel)
     if (!hotelRow) {
       store.hotelName = ''
       store.hotelLon = 0
       store.hotelLat = 0
       store.hotelAddress = ''
     }
-    store.spots = remaining.filter(r => !r.isHotel).map(r => ({
-      name: r.name, lon: r.lon, lat: r.lat,
-      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay ?? 0,
-      expectedArrival: r.expectedArrival ?? 0,
-      address: r.address,
-    }))
+    store.spots = remaining
+      .filter((r) => !r.isHotel)
+      .map((r) => ({
+        name: r.name,
+        lon: r.lon,
+        lat: r.lat,
+        twStart: r.twStart,
+        twEnd: r.twEnd,
+        stay: r.stay ?? 0,
+        expectedArrival: r.expectedArrival ?? 0,
+        address: r.address,
+      }))
     editHint.value = ''
   }
 
   /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
   function applyEdits() {
-    const hotelRow = editRows.value.find(r => r.isHotel)
+    const hotelRow = editRows.value.find((r) => r.isHotel)
     if (hotelRow) {
       store.hotelTwStart = hotelRow.twStart
       store.hotelTwEnd = hotelRow.twEnd
     }
-    const spotsOnly = editRows.value.filter(r => !r.isHotel)
+    const spotsOnly = editRows.value.filter((r) => !r.isHotel)
     if (spotsOnly.length === 0) {
       editHint.value = '请先搜索并添加景点'
       return
     }
     _saving = true
     store.isParamsSaved = true
-    store.spots = spotsOnly.map(r => ({
-      name: r.name, lon: r.lon, lat: r.lat,
-      twStart: r.twStart, twEnd: r.twEnd, stay: r.stay ?? 0,
+    store.spots = spotsOnly.map((r) => ({
+      name: r.name,
+      lon: r.lon,
+      lat: r.lat,
+      twStart: r.twStart,
+      twEnd: r.twEnd,
+      stay: r.stay ?? 0,
       expectedArrival: r.expectedArrival ?? 0,
       address: r.address,
     }))
@@ -116,5 +154,13 @@ export function useEditTable() {
     editHint.value = '参数已保存'
   }
 
-  return { editRows, editHint, showManagement, rebuildEditRows, formatBiz, deleteSelectedRows, applyEdits }
+  return {
+    editRows,
+    editHint,
+    showManagement,
+    rebuildEditRows,
+    formatBiz,
+    deleteSelectedRows,
+    applyEdits,
+  }
 }

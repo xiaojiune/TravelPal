@@ -40,15 +40,19 @@
 
         <div v-if="mode === 'deep'" class="deep-form">
           <label>行程天数</label>
-          <n-input-number v-model:value="deepNDays" :min="1" :max="maxDayOption" placeholder="天数" style="width: 130px" />
+          <n-input-number
+            v-model:value="deepNDays"
+            :min="1"
+            :max="maxDayOption"
+            placeholder="天数"
+            style="width: 130px"
+          />
           <span class="hint">建议 {{ defaultDays }} 天</span>
           <n-button type="primary" :loading="store.loading" :disabled="!deepNDays" @click="runDeep">
             🚀 获取规划
           </n-button>
         </div>
-        <div v-if="mode === 'fast'" class="mode-hint">
-          💡 点击上方方案卡片直接查看规划结果
-        </div>
+        <div v-if="mode === 'fast'" class="mode-hint">💡 点击上方方案卡片直接查看规划结果</div>
         <div v-if="mode === 'fast' && store.suggestAlgoTime" class="algo-time">
           ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(3) }}s
         </div>
@@ -115,17 +119,19 @@ const groupedSuggestions = computed(() => {
       seen.add(s.n_days)
       groups.push({
         n_days: s.n_days,
-        items: store.suggestions.filter(x => x.n_days === s.n_days).sort((a, b) => a.cost - b.cost),
+        items: store.suggestions
+          .filter((x) => x.n_days === s.n_days)
+          .sort((a, b) => a.cost - b.cost),
       })
     }
   }
   return groups.sort((a, b) => a.n_days - b.n_days)
 })
 
-const maxDayOption = computed(() => Math.max(...store.suggestions.map(s => s.n_days), 1))
+const maxDayOption = computed(() => Math.max(...store.suggestions.map((s) => s.n_days), 1))
 const defaultDays = computed(() => {
   if (!store.suggestions.length) return 1
-  return store.suggestions.reduce((a, b) => a.cost < b.cost ? a : b).n_days
+  return store.suggestions.reduce((a, b) => (a.cost < b.cost ? a : b)).n_days
 })
 
 /**
@@ -173,7 +179,7 @@ async function runDeep() {
   store.deepResults = []
   try {
     const req = store.buildRequest(deepNDays.value, {
-      cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined,  // 复用成本矩阵，避免 re-fetch
+      cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined, // 复用成本矩阵，避免 re-fetch
       dist_matrix: store.suggestDistMatrix.length ? store.suggestDistMatrix : undefined,
     })
     req.mode = 'deep'
@@ -200,40 +206,131 @@ function viewDeepResult(r: PlanResult) {
 </script>
 
 <style scoped>
-.page-suggest { max-width: 700px; margin: 0; }
-.empty-state { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
-.empty-state .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
-.suggest-section { margin-bottom: 24px; }
-.day-group { margin-bottom: 24px; }
-.day-group h3 { font-size: 16px; margin-bottom: 10px; color: var(--tp-text); border-left: 3px solid var(--tp-primary); padding-left: 10px; }
-.card-list { display: flex; flex-direction: column; gap: 8px; }
+.page-suggest {
+  max-width: 700px;
+  margin: 0;
+}
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--tp-text-3);
+}
+.empty-state .btn {
+  display: inline-block;
+  margin-top: 16px;
+  text-decoration: none;
+}
+.suggest-section {
+  margin-bottom: 24px;
+}
+.day-group {
+  margin-bottom: 24px;
+}
+.day-group h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: var(--tp-text);
+  border-left: 3px solid var(--tp-primary);
+  padding-left: 10px;
+}
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .suggest-card {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px;
-  padding: 10px 16px; cursor: pointer; transition: box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
 }
-.suggest-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.suggest-card.disabled { opacity: 0.5; cursor: default; }
-.suggest-card.disabled:hover { box-shadow: none; }
-.result-card { border-color: var(--tp-primary); background: var(--tp-primary-soft); }
-.card-body { display: flex; align-items: center; gap: 14px; }
+.suggest-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.suggest-card.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.suggest-card.disabled:hover {
+  box-shadow: none;
+}
+.result-card {
+  border-color: var(--tp-primary);
+  background: var(--tp-primary-soft);
+}
+.card-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .card-method {
-  background: var(--tp-primary-soft); color: var(--tp-primary);
-  padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.card-cost { font-size: 14px; color: var(--tp-text-2); }
-.card-meta { font-size: 12px; color: var(--tp-text-3); }
+.card-cost {
+  font-size: 14px;
+  color: var(--tp-text-2);
+}
+.card-meta {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
 
 /* ====== 操作栏 ====== */
-.action-bar { margin: 20px 0; padding: 16px; background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px; }
-.mode-toggle { display: flex; margin-bottom: 12px; }
-.deep-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.deep-form label { font-size: 13px; color: var(--tp-text-2); }
-.deep-form .hint { font-size: 12px; color: var(--tp-text-3); }
-.mode-hint { font-size: 13px; color: var(--tp-text-3); text-align: center; padding: 4px 0; }
-.algo-time { font-size: 12px; color: var(--tp-text-3); text-align: center; padding: 2px 0; }
+.action-bar {
+  margin: 20px 0;
+  padding: 16px;
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+}
+.mode-toggle {
+  display: flex;
+  margin-bottom: 12px;
+}
+.deep-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.deep-form label {
+  font-size: 13px;
+  color: var(--tp-text-2);
+}
+.deep-form .hint {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
+.mode-hint {
+  font-size: 13px;
+  color: var(--tp-text-3);
+  text-align: center;
+  padding: 4px 0;
+}
+.algo-time {
+  font-size: 12px;
+  color: var(--tp-text-3);
+  text-align: center;
+  padding: 2px 0;
+}
 
 /* ====== 深度结果区 ====== */
-.deep-section { margin-top: 20px; }
-.deep-section h3 { font-size: 15px; margin-bottom: 10px; color: var(--tp-primary); }
+.deep-section {
+  margin-top: 20px;
+}
+.deep-section h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--tp-primary);
+}
 </style>

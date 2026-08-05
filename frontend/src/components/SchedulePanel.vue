@@ -4,8 +4,16 @@
     <div v-if="!dailySchedules?.length" class="empty">暂无行程数据</div>
     <div v-for="(day, di) in dailySchedules" v-else :key="di" class="day-section">
       <div class="day-header">
-        <span class="day-title" :class="{ 'day-active': highlightDays?.includes(di) }">第 {{ di + 1 }} 天</span>
-        <button class="btn-highlight" :class="{ active: highlightDays?.includes(di) }" @click="emit('toggle-day', di)">◎ 高显</button>
+        <span class="day-title" :class="{ 'day-active': highlightDays?.includes(di) }"
+          >第 {{ di + 1 }} 天</span
+        >
+        <button
+          class="btn-highlight"
+          :class="{ active: highlightDays?.includes(di) }"
+          @click="emit('toggle-day', di)"
+        >
+          ◎ 高显
+        </button>
       </div>
       <table v-show="allExpanded || highlightDays?.includes(di)" class="schedule-table">
         <thead>
@@ -21,14 +29,30 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(item, ii) in day" :key="ii" :class="{ 'depot-row': item.name === '酒店（返回）' || item.name === '酒店（出发）' }" :style="{ cursor: item.name !== '酒店（返回）' && item.name !== '酒店（出发）' ? 'pointer' : '' }" @click="item.name !== '酒店（返回）' && item.name !== '酒店（出发）' && emit('select-spot', item.name)">
+          <tr
+            v-for="(item, ii) in day"
+            :key="ii"
+            :class="{ 'depot-row': item.name === '酒店（返回）' || item.name === '酒店（出发）' }"
+            :style="{
+              cursor: item.name !== '酒店（返回）' && item.name !== '酒店（出发）' ? 'pointer' : '',
+            }"
+            @click="
+              item.name !== '酒店（返回）' &&
+              item.name !== '酒店（出发）' &&
+              emit('select-spot', item.name)
+            "
+          >
             <td>{{ item.name }}</td>
             <td>{{ fmt(item.arrival) }}</td>
             <td>{{ fmt(item.departure) }}</td>
             <td>{{ item.tw || '-' }}</td>
             <td>{{ item.stay ?? '-' }}</td>
-            <td :class="statusColor(item.arrival_status)">{{ statusClass(item.arrival_status) }}</td>
-            <td :class="statusColor(item.departure_status)">{{ statusClass(item.departure_status) }}</td>
+            <td :class="statusColor(item.arrival_status)">
+              {{ statusClass(item.arrival_status) }}
+            </td>
+            <td :class="statusColor(item.departure_status)">
+              {{ statusClass(item.departure_status) }}
+            </td>
             <td v-if="onRemovePoi && item.name !== '酒店（返回）'">
               <button class="btn-remove" title="移除景点" @click="onRemovePoi(item.name)">✕</button>
             </td>
@@ -105,30 +129,117 @@ function statusColor(s: string | null | undefined) {
 </script>
 
 <style scoped>
-.schedule-panel { background: var(--tp-surface); border: 1px solid var(--tp-border); border-radius: 8px; padding: 16px; max-height: 600px; overflow-y: auto; }
-.schedule-panel h3 { margin-bottom: 12px; font-size: 15px; }
-.empty { color: var(--tp-text-3); font-size: 13px; padding: 20px 0; text-align: center; }
-.day-section { margin-bottom: 16px; }
-.day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--tp-primary-soft); }
-.day-title { font-size: 14px; color: var(--tp-text-3); font-weight: 400; }
-.day-title.day-active { color: var(--tp-primary); font-weight: 700; }
-.btn-highlight { background: none; border: 1px solid var(--tp-border); border-radius: 4px; font-size: 11px; color: var(--tp-text-3); cursor: pointer; padding: 2px 8px; transition: all .15s; }
-.btn-highlight:hover { border-color: var(--tp-primary); color: var(--tp-primary); }
-.btn-highlight.active { background: var(--tp-primary-soft); border-color: var(--tp-primary); color: var(--tp-primary); font-weight: 600; }
-.schedule-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.schedule-table th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--tp-border); color: var(--tp-text-3); font-weight: 600; }
-.schedule-table td { padding: 4px 6px; border-bottom: 1px solid var(--tp-bg); }
-.depot-row td { color: var(--tp-text-3); font-style: italic; }
-.schedule-table tbody tr:not(.depot-row):hover { background: var(--tp-primary-soft); }
-.schedule-table tbody tr:not(.depot-row).row-highlight { background: var(--tp-primary-soft); }
-.status-normal { color: var(--tp-success); }
-.status-early { color: var(--tp-warning); }
-.status-late { color: var(--tp-error); font-weight: 600; }
-.btn-remove {
-  background: none; border: 1px solid var(--tp-border); border-radius: 4px;
-  cursor: pointer; color: var(--tp-error); font-size: 12px; width: 22px; height: 22px;
-  display: inline-flex; align-items: center; justify-content: center;
-  line-height: 1; padding: 0;
+.schedule-panel {
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 600px;
+  overflow-y: auto;
 }
-.btn-remove:hover { background: var(--tp-error-soft); border-color: var(--tp-error); }
+.schedule-panel h3 {
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.empty {
+  color: var(--tp-text-3);
+  font-size: 13px;
+  padding: 20px 0;
+  text-align: center;
+}
+.day-section {
+  margin-bottom: 16px;
+}
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--tp-primary-soft);
+}
+.day-title {
+  font-size: 14px;
+  color: var(--tp-text-3);
+  font-weight: 400;
+}
+.day-title.day-active {
+  color: var(--tp-primary);
+  font-weight: 700;
+}
+.btn-highlight {
+  background: none;
+  border: 1px solid var(--tp-border);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--tp-text-3);
+  cursor: pointer;
+  padding: 2px 8px;
+  transition: all 0.15s;
+}
+.btn-highlight:hover {
+  border-color: var(--tp-primary);
+  color: var(--tp-primary);
+}
+.btn-highlight.active {
+  background: var(--tp-primary-soft);
+  border-color: var(--tp-primary);
+  color: var(--tp-primary);
+  font-weight: 600;
+}
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.schedule-table th {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--tp-border);
+  color: var(--tp-text-3);
+  font-weight: 600;
+}
+.schedule-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--tp-bg);
+}
+.depot-row td {
+  color: var(--tp-text-3);
+  font-style: italic;
+}
+.schedule-table tbody tr:not(.depot-row):hover {
+  background: var(--tp-primary-soft);
+}
+.schedule-table tbody tr:not(.depot-row).row-highlight {
+  background: var(--tp-primary-soft);
+}
+.status-normal {
+  color: var(--tp-success);
+}
+.status-early {
+  color: var(--tp-warning);
+}
+.status-late {
+  color: var(--tp-error);
+  font-weight: 600;
+}
+.btn-remove {
+  background: none;
+  border: 1px solid var(--tp-border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--tp-error);
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+.btn-remove:hover {
+  background: var(--tp-error-soft);
+  border-color: var(--tp-error);
+}
 </style>

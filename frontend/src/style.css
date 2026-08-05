@@ -30,7 +30,7 @@ body {
   padding: 12px 24px;
   background: var(--tp-surface);
   border-bottom: 1px solid var(--tp-border);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   /* 高于 Agent 面板遮罩(1999)与面板(2000)，保证导航栏始终可交互 */
   position: relative;
   z-index: 2001;
@@ -87,4 +87,3 @@ body {
   color: var(--tp-text-3);
   text-decoration: none;
 }
-

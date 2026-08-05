@@ -2,20 +2,7 @@
   <div class="chat-stream">
     <div ref="historyRef" class="chat-history">
       <div v-if="messages.length === 0" class="welcome">
-        <h2>👋 你好！我是你的旅行伴侣</h2>
-        <p>不是生成文字攻略，是生成可执行的行程方案。告诉我你想去哪，我来算最优路线。</p>
-        <p class="quick-tip-label">试试这样说：</p>
-        <div class="quick-tips">
-          <n-button
-            v-for="t in quickTips"
-            :key="t"
-            size="small"
-            quaternary
-            class="quick-tip"
-            @click="quickAsk(t)"
-            >{{ t }}</n-button
-          >
-        </div>
+        你想到哪了，我们就从哪开始。
       </div>
       <ChatMessage
         v-for="(msg, i) in messages"
@@ -24,6 +11,9 @@
         :content="msg.content"
         :time="msg.time"
       />
+      <div v-if="messages.length === 0" class="hello-bubble">
+        <n-button size="small" secondary @click="sayHello">你好</n-button>
+      </div>
     </div>
     <div class="input-bar">
       <n-input
@@ -82,18 +72,15 @@ const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
 const { displayText, append, reset } = useTypewriter({ speed: 30 })
 
-/** 快捷提示气泡：点击直接作为用户消息发送，降低输入门槛。 */
-const quickTips = ['广州 3 天，喜欢历史和美食', '帮我避开人多的景点', '预算 3000，怎么安排最省？']
-
 /** 当前时间格式化为 HH:MM，作为消息时间戳。 */
 function formatTime(d: Date): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** 点击快捷提示：填入输入框并立即发送。 */
-function quickAsk(text: string) {
+/** 预设气泡「你好」：点击以「你好」作为用户消息发起对话。 */
+function sayHello() {
   if (loading.value) return
-  inputText.value = text
+  inputText.value = '你好'
   send()
 }
 
@@ -203,31 +190,30 @@ function scrollToBottom() {
   display: flex;
   flex-direction: column;
 }
+/* 中间背板欢迎语（C 同行者型）：消息为空时居中展示 */
 .welcome {
   text-align: center;
-  margin-top: 60px;
+  margin-top: 80px;
+  padding: 0 24px;
+  font-size: 14px;
+  line-height: 1.8;
   color: var(--tp-text-2);
 }
-.welcome h2 {
-  margin-bottom: 8px;
-}
-.quick-tip-label {
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--tp-text-3);
-}
-.quick-tips {
+/* 底部预设气泡「你好」：贴近聊天框左边、带边框装饰，点击发起对话 */
+.hello-bubble {
+  margin-top: auto;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
+  justify-content: flex-start;
+  padding: 8px 0 12px;
 }
 .input-bar {
   display: flex;
   gap: 8px;
-  padding: 12px 20px;
-  border-top: 1px solid var(--tp-border);
+  /* 聊天框上抬：不贴面板底缘，留一个字左右空白 */
+  padding: 10px 12px;
+  margin: 0 8px 12px;
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
   background: var(--tp-surface);
 }
 </style>

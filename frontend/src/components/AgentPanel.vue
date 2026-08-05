@@ -15,6 +15,10 @@
         >
           <span class="handle-grip">⋮</span>
         </div>
+        <div class="context-bar">
+          <div class="context-title">TravelPal</div>
+          <div class="context-status">{{ sessionStatus.dot }} {{ sessionStatus.text }}</div>
+        </div>
         <ChatStream class="chat-stream-area" @tool-result="store.addPendingPoi" />
       </div>
     </Transition>
@@ -34,7 +38,7 @@
  * - 待选栏在左侧 PendingPanel（共享 plan store.pendingPois），
  *   查询结果经 tool-result 事件写入 store
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import ChatStream from '@/components/ChatStream.vue'
 import { usePlanStore } from '@/stores/plan'
 
@@ -43,6 +47,16 @@ defineOptions({ name: 'AgentPanel' })
 const show = defineModel<boolean>('show', { default: false })
 
 const store = usePlanStore()
+
+// ====== 会话上下文状态栏 ======
+/** 顶部上下文栏状态三态：根据表单景点与规划结果判定 Agent 当前能做什么。 */
+const sessionStatus = computed(() => {
+  if (store.planResult) return { dot: '🔵', text: '方案已生成，可调整' }
+  if (store.spots.length > 0) {
+    return { dot: '🟡', text: `规划进行中... 已选 ${store.spots.length} 个景点` }
+  }
+  return { dot: '🟢', text: '准备出发' }
+})
 
 // ====== 面板宽度拖拽 ======
 /** 面板右侧固定偏移（与 .agent-panel 的 right 一致，贴窗口右缘）。 */
@@ -87,7 +101,7 @@ function onResizeEnd() {
   document.removeEventListener('mouseup', onResizeEnd)
 }
 
-/** 双击手柄恢复默认宽度（50vw）。 */
+/** 双击手柄恢复默认宽度（页面 1/3）。 */
 function resetPanelWidth() {
   panelWidth.value = defaultPanelWidth()
 }
@@ -108,6 +122,8 @@ function resetPanelWidth() {
   bottom: 0;
   right: 0;
   z-index: 2000;
+  display: flex;
+  flex-direction: column;
   background: var(--tp-surface);
   border: 1px solid var(--tp-border);
   border-bottom: none;
@@ -116,6 +132,36 @@ function resetPanelWidth() {
   overflow: hidden;
   /* 以导航栏 🤖 按钮中心为锚点（右缘内 28px、顶缘上方 28px），等比扩散/收回 */
   transform-origin: calc(100% - 28px) -28px;
+}
+/* 顶部上下文栏：全宽、上下高度减半（紧凑），标题左对齐大字，状态徽章居中靠下叠加在下半部分 */
+.context-bar {
+  position: relative;
+  min-height: 48px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--tp-border);
+  background: var(--tp-surface);
+  overflow: hidden;
+}
+.context-title {
+  position: absolute;
+  left: 12px;
+  top: 2px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  color: var(--tp-primary);
+}
+.context-status {
+  position: absolute;
+  bottom: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--tp-text-2);
 }
 /* 宽度拖拽手柄：面板左边缘竖条 + 视觉把手 */
 .resize-handle {
@@ -151,7 +197,8 @@ function resetPanelWidth() {
   opacity: 1;
 }
 .chat-stream-area {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 /* 球式扩散动画（分层时序 B）：
    打开——面板先从球按钮位置等比扩散，遮罩 0.1s 后淡入；

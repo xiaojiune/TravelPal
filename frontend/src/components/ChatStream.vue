@@ -3,13 +3,25 @@
     <div ref="historyRef" class="chat-history">
       <div v-if="messages.length === 0" class="welcome">
         <h2>👋 你好！我是你的旅行伴侣</h2>
-        <p>聊聊天吧——可以聊聊今天的规划，或者让我给点建议～</p>
+        <p>不是生成文字攻略，是生成可执行的行程方案。告诉我你想去哪，我来算最优路线。</p>
+        <p class="quick-tip-label">试试这样说：</p>
+        <div class="quick-tips">
+          <n-button
+            v-for="t in quickTips"
+            :key="t"
+            size="small"
+            quaternary
+            class="quick-tip"
+            @click="quickAsk(t)"
+          >{{ t }}</n-button>
+        </div>
       </div>
       <ChatMessage
         v-for="(msg, i) in messages"
         :key="i"
         :role="msg.role"
         :content="msg.content"
+        :time="msg.time"
       />
     </div>
     <div class="input-bar">
@@ -64,6 +76,21 @@ const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
 const { displayText, append, reset } = useTypewriter({ speed: 30 })
 
+/** 快捷提示气泡：点击直接作为用户消息发送，降低输入门槛。 */
+const quickTips = ['广州 3 天，喜欢历史和美食', '帮我避开人多的景点', '预算 3000，怎么安排最省？']
+
+/** 当前时间格式化为 HH:MM，作为消息时间戳。 */
+function formatTime(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** 点击快捷提示：填入输入框并立即发送。 */
+function quickAsk(text: string) {
+  if (loading.value) return
+  inputText.value = text
+  send()
+}
+
 /**
  * 发送用户消息，读取 SSE 流式响应并逐字打字机渲染。
  *
@@ -74,10 +101,11 @@ const { displayText, append, reset } = useTypewriter({ speed: 30 })
 async function send() {
   const text = inputText.value.trim()
   if (!text || loading.value) return
+  const now = formatTime(new Date())
   inputText.value = ''
-  messages.value.push({ role: 'user', content: text })
+  messages.value.push({ role: 'user', content: text, time: now })
   // 先占位空气泡，SSE 流式追加内容
-  messages.value.push({ role: 'assistant', content: '' })
+  messages.value.push({ role: 'assistant', content: '', time: now })
   loading.value = true
   reset()
   const msgIndex = messages.value.length - 1
@@ -172,6 +200,18 @@ function scrollToBottom() {
 }
 .welcome h2 {
   margin-bottom: 8px;
+}
+.quick-tip-label {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--tp-text-3);
+}
+.quick-tips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 .input-bar {
   display: flex;

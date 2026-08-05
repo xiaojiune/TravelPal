@@ -88,6 +88,7 @@ export interface ScheduleItem {
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  time?: string
 }
 
 /** 规划结果中的景点字典项（从后端 pipeline spots 反序列化） */

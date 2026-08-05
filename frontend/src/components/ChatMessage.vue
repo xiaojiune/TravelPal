@@ -1,7 +1,10 @@
 <template>
   <div class="chat-message" :class="role">
     <div class="avatar">{{ role === 'user' ? '👤' : '🤖' }}</div>
-    <div class="bubble">{{ content }}</div>
+    <div class="msg-body">
+      <div class="bubble">{{ content }}</div>
+      <div v-if="time" class="msg-time">{{ time }}</div>
+    </div>
   </div>
 </template>
 
@@ -14,10 +17,12 @@
  * Props:
  *   role: 'user' | 'assistant'   — 消息角色
  *   content: string               — 消息内容（父组件 SSE 追加）
+ *   time: string                  — 消息发送时间（HH:MM），可选
  */
 interface Props {
   role: string
   content: string
+  time?: string
 }
 defineProps<Props>()
 </script>
@@ -55,5 +60,18 @@ defineProps<Props>()
 .chat-message.user .bubble {
   background: var(--tp-primary);
   color: #fff;
+}
+.msg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.chat-message.user .msg-body {
+  align-items: flex-end;
+}
+.msg-time {
+  font-size: 10px;
+  color: var(--tp-text-3);
 }
 </style>

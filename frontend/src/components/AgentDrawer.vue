@@ -7,6 +7,16 @@
           <div v-if="pendingPois.length === 0" class="pending-empty">
             对话中查询的 POI 将出现在这里
           </div>
+          <n-button
+            v-if="pendingPois.length > 0"
+            size="small"
+            type="primary"
+            block
+            class="pending-add-all"
+            @click="addAllPois"
+          >
+            ➕ 全部加入行程
+          </n-button>
           <div v-for="(poi, i) in pendingPois" :key="i" class="pending-card">
             <div class="pending-header">
               {{ poi.name }}
@@ -90,6 +100,12 @@ function addPoiToForm(poi: PoiItem) {
 function removePoi(index: number) {
   pendingPois.value.splice(index, 1)
 }
+
+/** 一键将全部待选 POI 加入首页表单（addPoiToForm 会逐个 splice，需遍历副本）。 */
+function addAllPois() {
+  const all = pendingPois.value.slice()
+  for (const poi of all) addPoiToForm(poi)
+}
 </script>
 
 <style scoped>
@@ -115,6 +131,9 @@ function removePoi(index: number) {
   color: var(--tp-text-3);
   text-align: center;
   margin-top: 40px;
+}
+.pending-add-all {
+  margin-bottom: 10px;
 }
 .pending-card {
   padding: 10px;

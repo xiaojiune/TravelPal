@@ -3,6 +3,10 @@
     <h1>TravelPal</h1>
     <p class="subtitle">输入城市与景点，获取最优行程方案</p>
 
+    <n-steps class="page-steps" size="small">
+      <n-step v-for="(t, i) in steps" :key="t" :title="t" :status="stepStatus[i]" />
+    </n-steps>
+
     <section class="form-section">
       <h3>城市</h3>
       <div class="form-row">
@@ -41,8 +45,8 @@
             <th>名称</th>
             <th>地址</th>
             <th>营业时间</th>
-            <th style="width:110px">停留(分)</th>
-            <th style="width:110px">预计到达</th>
+            <th style="width:90px">停留(分)</th>
+            <th style="width:90px">预计到达</th>
           </tr>
         </thead>
         <tbody>
@@ -51,8 +55,8 @@
             <td>{{ row.isHotel ? '🏨 ' : '' }}{{ row.name }}</td>
             <td class="addr">{{ row.address }}</td>
             <td class="biz-hours">{{ formatBiz(row.twStart, row.twEnd) }}</td>
-            <td><n-input-number v-model:value="row.stay" :min="0" size="small" placeholder="请输入" style="width:100%" /></td>
-            <td><n-input-number v-model:value="row.expectedArrival" :min="0" :max="1440" size="small" placeholder="请输入" style="width:100%" /></td>
+            <td><n-input-number v-model:value="row.stay" :min="0" size="tiny" placeholder="请输入" style="width:100%" /></td>
+            <td><n-input-number v-model:value="row.expectedArrival" :min="0" :max="1440" size="tiny" placeholder="请输入" style="width:100%" /></td>
           </tr>
         </tbody>
       </table>
@@ -64,20 +68,23 @@
     </section>
 
     <section class="form-section">
-      <h3>算法参数</h3>
-      <div class="form-grid-3">
-        <div><label>启程时间</label><n-input-number v-model:value="store.dayStart" :min="0" :max="1440" placeholder="请输入" style="width:100%" /><span class="unit-info">0=午夜, 480=08:00</span></div>
-        <div><label>最小天数</label><n-input-number v-model:value="store.minDays" :min="1" placeholder="自动" style="width:100%" /><span class="unit-info">默认 n_spots//8+1={{ minDaysHint }}</span></div>
-        <div><label>迟到惩罚</label><n-input-number v-model:value="store.penaltyWeight" :step="10" style="width:100%" /></div>
-        <div><label>等待惩罚</label><n-input-number v-model:value="store.earlyWaitWeight" :step="0.1" style="width:100%" /></div>
-        <div><label>晚归惩罚</label><n-input-number v-model:value="store.lateReturnWeight" :step="10" style="width:100%" /></div>
-      </div>
+      <n-collapse v-model:expanded-names="paramsExpanded">
+        <n-collapse-item name="params" title="⚙️ 高级设置（算法参数）">
+          <div class="form-grid-3">
+            <div><label>启程时间</label><n-input-number v-model:value="store.dayStart" :min="0" :max="1440" placeholder="请输入" style="width:100%" /><span class="unit-info">0=午夜, 480=08:00</span></div>
+            <div><label>最小天数</label><n-input-number v-model:value="store.minDays" :min="1" placeholder="自动" style="width:100%" /><span class="unit-info">默认 n_spots//8+1={{ minDaysHint }}</span></div>
+            <div><label>迟到惩罚</label><n-input-number v-model:value="store.penaltyWeight" :step="10" style="width:100%" /></div>
+            <div><label>等待惩罚</label><n-input-number v-model:value="store.earlyWaitWeight" :step="0.1" style="width:100%" /></div>
+            <div><label>晚归惩罚</label><n-input-number v-model:value="store.lateReturnWeight" :step="10" style="width:100%" /></div>
+          </div>
+        </n-collapse-item>
+      </n-collapse>
       <div v-if="dayStartMsg" class="hint error">{{ dayStartMsg }}</div>
     </section>
 
     <div class="form-actions">
       <n-button type="primary" size="large" :disabled="!canSuggest || store.loading" :loading="store.loading" @click="fetchSuggest">
-        🚀 获取方案建议
+        🚀 生成最优行程
       </n-button>
     </div>
   </div>
@@ -118,6 +125,24 @@ const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store
 const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
 const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 8) + 1))
 const dayStartMsg = ref('')
+
+// ====== 步骤条 ======
+/** 首页四步引导：完成置 finish、当前置 process、未到置 wait（跳过中间态直接到下一步）。 */
+const steps = ['选择城市', '设置酒店', '添加景点', '生成方案']
+const stepStatus = computed<('finish' | 'process' | 'wait')[]>(() => {
+  const s: ('finish' | 'process' | 'wait')[] = ['wait', 'wait', 'wait', 'wait']
+  if (!store.city.trim()) { s[0] = 'process'; return s }
+  s[0] = 'finish'
+  if (!hotelConfirmed.value) { s[1] = 'process'; return s }
+  s[1] = 'finish'
+  if (store.spots.length === 0) { s[2] = 'process'; return s }
+  s[2] = 'finish'
+  s[3] = 'process'
+  return s
+})
+
+/** 高级设置（算法参数）折叠面板，默认收起。 */
+const paramsExpanded = ref<string[]>([])
 
 // ====== 管理表格 ======
 const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } = useEditTable()
@@ -173,6 +198,7 @@ async function fetchSuggest() {
 <style scoped>
 .page-home { max-width: 860px; margin: 0 auto; }
 .subtitle { color: var(--tp-text-2); margin-bottom: 24px; }
+.page-steps { margin-bottom: 20px; }
 .form-section { background: var(--tp-surface); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid var(--tp-border); }
 .form-section h3 { margin-bottom: 12px; font-size: 15px; }
 .form-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }

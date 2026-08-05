@@ -160,15 +160,17 @@ watch(
 }
 .history-card {
   position: relative;
-  background: var(--tp-surface);
-  border: 1px solid var(--tp-border);
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
   border-radius: 8px;
   padding: 14px 18px;
   cursor: pointer;
-  transition: box-shadow 0.15s;
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
 }
 .history-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
 }
 .h-main {
   display: flex;

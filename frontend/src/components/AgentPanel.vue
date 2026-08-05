@@ -115,7 +115,8 @@ function resetPanelWidth() {
   background: rgba(0, 0, 0, 0.3);
   z-index: 1999;
 }
-/* 面板：右上角锚点（transform-origin 球按钮位置），顶部悬空圆角、底部贴底直角 */
+/* 面板：右上角锚点（transform-origin 球按钮位置），顶部悬空圆角、底部贴底直角。
+   米白暖底 + 青绿细边框（卡片 token），浮层投影保留以承载悬浮层级语义 */
 .agent-panel {
   position: fixed;
   top: 57px;
@@ -124,8 +125,8 @@ function resetPanelWidth() {
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  background: var(--tp-surface);
-  border: 1px solid var(--tp-border);
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -139,7 +140,7 @@ function resetPanelWidth() {
   min-height: 48px;
   padding: 0 12px;
   border-bottom: 1px solid var(--tp-border);
-  background: var(--tp-surface);
+  background: var(--tp-bg-card);
   overflow: hidden;
 }
 .context-title {

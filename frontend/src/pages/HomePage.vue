@@ -296,11 +296,17 @@ async function fetchSuggest() {
   margin-bottom: 20px;
 }
 .form-section {
-  background: var(--tp-surface);
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 16px;
-  border: 1px solid var(--tp-border);
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.form-section:hover {
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
 }
 .form-section h3 {
   margin-bottom: 12px;

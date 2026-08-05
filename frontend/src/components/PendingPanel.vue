@@ -129,9 +129,15 @@ const collapsed = ref(false)
 .pending-card {
   padding: 10px;
   margin: 0 8px 8px;
-  border: 1px solid var(--tp-border);
+  border: 1px solid var(--tp-card-border);
   border-radius: 8px;
-  background: var(--tp-surface);
+  background: var(--tp-bg-card);
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.pending-card:hover {
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
 }
 .pending-header {
   font-weight: 600;

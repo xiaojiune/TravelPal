@@ -32,6 +32,12 @@ export const brandColors = {
   text2: '#666666',
   text3: '#999999',
 
+  // 卡片组件 token（极浅米白暖白背景 + 青绿细边框 + 极淡阴影，hover 轻微抬升）
+  bgCard: '#FAFAF7',
+  cardBorder: 'rgba(32, 201, 151, 0.25)',
+  cardShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+  cardShadowHover: '0 4px 12px rgba(0, 0, 0, 0.10)',
+
   // 深色模式（预留，未启用；背景避免纯黑，soft 带青绿倾向保持色调统一）
   dark: {
     bg: '#1A1D21',
@@ -77,6 +83,10 @@ export function applyThemeVars() {
   root.setProperty('--tp-text', brandColors.text)
   root.setProperty('--tp-text-2', brandColors.text2)
   root.setProperty('--tp-text-3', brandColors.text3)
+  root.setProperty('--tp-bg-card', brandColors.bgCard)
+  root.setProperty('--tp-card-border', brandColors.cardBorder)
+  root.setProperty('--tp-card-shadow', brandColors.cardShadow)
+  root.setProperty('--tp-card-shadow-hover', brandColors.cardShadowHover)
   // 深色模式预留变量（当前不启用，定义以保持 token 完整）
   root.setProperty('--tp-bg-dark', brandColors.dark.bg)
   root.setProperty('--tp-surface-dark', brandColors.dark.surface)

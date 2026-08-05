@@ -242,15 +242,17 @@ function viewDeepResult(r: PlanResult) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--tp-surface);
-  border: 1px solid var(--tp-border);
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
   border-radius: 8px;
   padding: 10px 16px;
   cursor: pointer;
-  transition: box-shadow 0.15s;
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
 }
 .suggest-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
 }
 .suggest-card.disabled {
   opacity: 0.5;
@@ -258,6 +260,7 @@ function viewDeepResult(r: PlanResult) {
 }
 .suggest-card.disabled:hover {
   box-shadow: none;
+  transform: none;
 }
 .result-card {
   border-color: var(--tp-primary);

@@ -234,13 +234,19 @@ watch(
   flex-wrap: wrap;
 }
 .metric {
-  background: var(--tp-surface);
-  border: 1px solid var(--tp-border);
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
   border-radius: 8px;
   padding: 12px 20px;
   text-align: center;
   flex: 1;
   min-width: 100px;
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.metric:hover {
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
 }
 .metric-label {
   display: block;

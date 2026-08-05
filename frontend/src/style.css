@@ -36,11 +36,26 @@ body {
   z-index: 2001;
 }
 
+.nav-brand-area {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
+}
+
 .nav-brand {
   font-size: 20px;
   font-weight: 700;
   color: var(--tp-primary);
   text-decoration: none;
+}
+
+.nav-slogan {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--tp-text-3);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .nav-links {
@@ -65,7 +80,26 @@ body {
 /* 导航栏右侧 Agent 入口按钮：推至最右 */
 .nav-agent {
   margin-left: auto;
-  font-size: 18px;
+}
+
+/* 首访引导：按钮轻微上下弹跳，仅首次打开页面出现一次 */
+@keyframes agent-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-2px);
+  }
+}
+.agent-attention {
+  animation: agent-bounce 1s ease-in-out 3;
 }
 
 .main-content {

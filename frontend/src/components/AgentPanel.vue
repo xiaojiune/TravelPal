@@ -146,7 +146,8 @@ function resetPanelWidth() {
 .context-title {
   position: absolute;
   left: 12px;
-  top: 2px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 20px;
   font-weight: 700;
   line-height: 1;

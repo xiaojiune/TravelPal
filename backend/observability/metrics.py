@@ -13,15 +13,15 @@
 
 import os
 
-from backend.config import PROMETHEUS_MULTIPROC_DIR
+from backend.config import settings
 
 # 必须在 import prometheus_client 之前设置环境变量：
 # prometheus_client 在模块导入时通过 get_value_class() 一次性决定单/多进程模式
 # （values.py 模块级 `ValueClass = get_value_class()`），之后修改 os.environ 不会生效。
 # 若顺序颠倒，所有 Metric 将锁定单进程内存模式，worker 侧指标无法写入共享 mmap。
-if PROMETHEUS_MULTIPROC_DIR:
-    os.makedirs(PROMETHEUS_MULTIPROC_DIR, exist_ok=True)
-    os.environ.setdefault("PROMETHEUS_MULTIPROC_DIR", PROMETHEUS_MULTIPROC_DIR)
+if settings.PROMETHEUS_MULTIPROC_DIR:
+    os.makedirs(settings.PROMETHEUS_MULTIPROC_DIR, exist_ok=True)
+    os.environ.setdefault("PROMETHEUS_MULTIPROC_DIR", settings.PROMETHEUS_MULTIPROC_DIR)
 
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
@@ -117,7 +117,7 @@ def metrics_response() -> tuple[str, bytes]:
       避免 REGISTRY 中 counter 对象自身 collect 与聚合结果重复计数。
     - 单进程模式（未配置目录）：直接输出 REGISTRY 中定义的指标。
     """
-    if PROMETHEUS_MULTIPROC_DIR:
+    if settings.PROMETHEUS_MULTIPROC_DIR:
         exposition_registry = CollectorRegistry()
         multiprocess.MultiProcessCollector(exposition_registry)
         return CONTENT_TYPE_LATEST, generate_latest(exposition_registry)

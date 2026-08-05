@@ -1,6 +1,5 @@
 """FastAPI 应用工厂与启动入口。"""
 
-import os
 import time
 from contextlib import asynccontextmanager
 
@@ -9,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
 from backend.api.routes import router
+from backend.config import settings
 from backend.data.model.database import close_db, init_db
 from backend.observability import http_duration, http_requests, metrics_response
 
@@ -23,13 +23,12 @@ async def lifespan(app: FastAPI):
     Yields:
         None: 应用运行期间 yield，退出后执行关闭逻辑。
     """
-    skip_db = os.getenv("SKIP_DB", "").lower() in ("1", "true")
-    if not skip_db:
+    if not settings.SKIP_DB:
         await init_db()
     else:
         print("[SKIP_DB] 跳过数据库初始化，历史记录端点不可用")
     yield
-    if not skip_db:
+    if not settings.SKIP_DB:
         await close_db()
 
 
@@ -117,7 +116,7 @@ def main():
     """启动 uvicorn 开发服务器，DEV_RELOAD 环境变量控制热重载。"""
     import uvicorn
 
-    reload = os.getenv("DEV_RELOAD", "").lower() in ("1", "true")
+    reload = settings.DEV_RELOAD
     uvicorn.run("backend.api.server:app", host="0.0.0.0", port=8000, reload=reload)
 
 

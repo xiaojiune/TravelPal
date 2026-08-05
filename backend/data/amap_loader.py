@@ -7,7 +7,7 @@ import time
 import numpy as np
 import requests
 
-from backend.config import AMAP_API_KEY
+from backend.config import settings
 from backend.observability import driving_calls, driving_duration, matrix_build_duration
 from backend.utils.decorators import legacy_only
 
@@ -150,7 +150,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         params = {
             "keywords": poi_name,
             "city": city,
-            "key": AMAP_API_KEY,
+            "key": settings.AMAP_API_KEY,
             "extensions": "all",
             "city_limit": True,
             "types": "风景名胜",
@@ -214,7 +214,7 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
     params = {
         "origin": f"{origin[0]},{origin[1]}",
         "destination": f"{destination[0]},{destination[1]}",
-        "key": AMAP_API_KEY,
+        "key": settings.AMAP_API_KEY,
         "strategy": "32",
     }
     start = time.monotonic()

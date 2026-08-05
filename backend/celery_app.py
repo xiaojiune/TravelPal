@@ -18,12 +18,12 @@ from uuid import UUID
 
 from celery import Celery
 
-from backend.config import AMAP_JS_KEY, AMAP_JS_SECURITY_CODE, CELERY_BROKER_URL
+from backend.config import settings
 from backend.data.model.database import async_session, engine
 from backend.data.model.models import PlanTask
 from backend.observability import task_duration, task_total
 
-celery_app = Celery("travelpal", broker=CELERY_BROKER_URL)
+celery_app = Celery("travelpal", broker=settings.CELERY_BROKER_URL)
 
 # 长任务队列配置说明：
 # - task_acks_late: 任务执行完成后才 ack，worker 崩溃不丢任务（配合 at-least-once）
@@ -164,8 +164,8 @@ async def _execute_task(task_id: str) -> None:
                 cost_matrix_override=params.get("cost_matrix"),
                 dist_matrix_override=params.get("dist_matrix"),
             )
-            result["amap_api_key"] = AMAP_JS_KEY  # type: ignore[index]
-            result["amap_security_code"] = AMAP_JS_SECURITY_CODE  # type: ignore[index]
+            result["amap_api_key"] = settings.AMAP_JS_KEY  # type: ignore[index]
+            result["amap_security_code"] = settings.AMAP_JS_SECURITY_CODE  # type: ignore[index]
             task.status = "done"  # type: ignore[assignment]
             task.result = result  # type: ignore[assignment]
         except Exception as e:

@@ -5,7 +5,7 @@ import json
 from openai import OpenAI
 
 from backend.agent.tools.prompts import PARSE_PROMPT, build_date_context
-from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from backend.config import settings
 from backend.observability import llm_calls, llm_tokens
 
 
@@ -96,9 +96,9 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
     prompt = PARSE_PROMPT.format(date_context=date_context, opentime2=opentime2)
 
     try:
-        client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+        client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL)
         resp = client.chat.completions.create(
-            model=LLM_MODEL,
+            model=settings.LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
             max_tokens=128,

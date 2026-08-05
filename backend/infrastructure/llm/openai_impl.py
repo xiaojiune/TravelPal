@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 
 from openai import OpenAI
 
-from backend.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from backend.config import settings
 from backend.domain.llm_service import LLMResult, LLMService, ToolCallResult
 from backend.observability import llm_calls, llm_tokens
 
@@ -18,7 +18,7 @@ class OpenAILLMService(LLMService):
     """基于 OpenAI SDK 的 LLMService 实现（DeepSeek OpenAI 兼容接口）。"""
 
     def __init__(self) -> None:
-        self.client = OpenAI(api_key=LLM_API_KEY, base_url=LLM_BASE_URL)
+        self.client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL)
 
     async def complete(
         self,
@@ -39,7 +39,7 @@ class OpenAILLMService(LLMService):
             LLMResult: assistant 完整消息 + 解析后的工具调用列表。
         """
         resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
-            model=LLM_MODEL,
+            model=settings.LLM_MODEL,
             messages=messages,  # pyright: ignore[reportArgumentType]
             tools=tools,  # pyright: ignore[reportArgumentType]
             tool_choice=tool_choice,  # pyright: ignore[reportArgumentType]
@@ -84,7 +84,7 @@ class OpenAILLMService(LLMService):
             str: 逐 token 的回复内容。
         """
         resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
-            model=LLM_MODEL,
+            model=settings.LLM_MODEL,
             messages=messages,  # pyright: ignore[reportArgumentType]
             stream=True,
             **kwargs,

@@ -56,3 +56,28 @@ body {
   flex: 1;
   padding: 24px;
 }
+
+.footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--tp-text-3);
+  font-size: 12px;
+}
+
+.footer a {
+  color: var(--tp-text-3);
+  text-decoration: none;
+}
+
+/* 全局 Agent 浮动入口按钮：固定左上角，层级高于页面内容与地图 */
+.agent-fab {
+  position: fixed;
+  left: 24px;
+  top: 96px;
+  z-index: 2000;
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+

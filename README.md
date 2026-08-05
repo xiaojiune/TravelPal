@@ -1,6 +1,6 @@
-# TravelPal · 旅行伴侣
+# TravelPal
 
-**Agent 陪你聊，算法陪你走，从一句话到每一程。**
+**不占有的陪伴，不缺席的可靠。**
 
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
 [![codecov](https://codecov.io/gh/xiaojiune/TravelPal/branch/dev/graph/badge.svg)](https://codecov.io/gh/xiaojiune/TravelPal)
@@ -23,6 +23,8 @@
 ---
 
 ## ✨ 核心功能
+
+**Agent 陪你聊，算法陪你走，从一句话到每一程。**
 
 - **双引擎求解**：CA 快速求解可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
 - **算法验证**：基于 Dumas TSPTW 基准测试集（n20~n200）多规模算例验证，求解时间秒至分钟级

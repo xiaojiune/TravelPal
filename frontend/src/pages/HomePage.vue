@@ -1,6 +1,6 @@
 <template>
   <div class="page-home">
-    <h1>旅行伴侣</h1>
+    <h1>TravelPal</h1>
     <p class="subtitle">输入城市与景点，获取最优行程方案</p>
 
     <section class="form-section">

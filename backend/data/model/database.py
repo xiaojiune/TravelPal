@@ -2,7 +2,6 @@
 
 from collections.abc import AsyncGenerator
 
-from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -23,8 +22,6 @@ class Base(DeclarativeBase):
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """获取异步数据库会话，用于 FastAPI Depends 注入。"""
-    if settings.SKIP_DB:
-        raise HTTPException(status_code=503, detail="数据库未启用（SKIP_DB 模式）")
     async with async_session() as session:
         yield session
 

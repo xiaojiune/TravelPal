@@ -1,13 +1,13 @@
-"""对话流：SSE 聊天入口，支持 Mock 和 DeepSeek 两种后端。"""
+"""对话消息构建：注入 RAG 文档上下文与 README 项目自述。
 
-import asyncio
+编排（LLM 调用 + 工具分发 + SSE 事件流）已由 orchestrator.py（LangGraph）接管，
+本模块仅保留消息组装职责。
+"""
+
 import json
 import os
 
 from backend.agent.tools.prompts import CHAT_SYSTEM
-from backend.domain.llm_service import LLMResult, LLMService
-from backend.infrastructure.llm.factory import get_llm_service
-from backend.utils.decorators import placeholder
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -63,78 +63,3 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
         {"role": "system", "content": system},
         {"role": "user", "content": message},
     ]
-
-
-# 装饰器定义见 backend/utils/decorators.py
-# 说明：模拟 SSE 回复，MOCK_MODE=True 时使用，无需 LLM API Key
-@placeholder
-async def mock_stream_chat(messages: list[dict]):
-    """调试用：MOCK_MODE=True 时模拟 SSE 流式回复，无需 LLM API Key。
-
-    Args:
-        messages: OpenAI-compatible messages 列表。
-
-    Yields:
-        str: 模拟回复的逐字符 token。
-    """
-    reply = "今天的安排不错，下午可以去附近的公园走走！"
-    for char in reply:
-        yield char
-        await asyncio.sleep(0.05)
-
-
-async def stream_chat(messages: list[dict], service: LLMService | None = None):
-    """流式聊天，通过 LLMService 接口调用具体实现。
-
-    Args:
-        messages: OpenAI-compatible messages 列表。
-        service: LLM 服务实现；None 时由工厂按配置获取。
-
-    Yields:
-        str: 流式响应的逐 token 内容。
-    """
-    llm = service or get_llm_service()
-    async for token in llm.stream(messages):
-        yield token
-
-
-async def chat_complete(messages: list[dict], service: LLMService | None = None) -> LLMResult:
-    """非流式补全，用于 tool_call 检测。
-
-    Args:
-        messages: OpenAI-compatible messages 列表。
-        service: LLM 服务实现；None 时由工厂按配置获取。
-
-    Returns:
-        LLMResult: 完整 assistant 消息 + 工具调用列表。
-    """
-    from backend.agent.tools.prompts import TOOL_DEFINITIONS
-
-    llm = service or get_llm_service()
-    return await llm.complete(
-        messages,
-        tools=TOOL_DEFINITIONS,
-        tool_choice="auto",
-        temperature=0.7,
-        max_tokens=1024,
-    )
-
-
-MOCK_MODE = False
-
-
-async def chat_stream(messages: list[dict]):
-    """统一入口：MOCK_MODE=True 时模拟，否则调 DeepSeek。
-
-    Args:
-        messages: OpenAI-compatible messages 列表。
-
-    Yields:
-        str: 流式响应的逐 token 内容。
-    """
-    if MOCK_MODE:
-        async for token in mock_stream_chat(messages):
-            yield token
-    else:
-        async for token in stream_chat(messages):
-            yield token

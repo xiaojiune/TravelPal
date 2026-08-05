@@ -40,8 +40,6 @@ class Settings(BaseSettings):
     WEATHER_TRANSPORT: str = "http"
     # Prometheus 多进程指标共享目录（backend 与 celery worker 必须指向同一目录才能聚合）
     PROMETHEUS_MULTIPROC_DIR: str = "/tmp/travelpal_metrics"
-    # 跳过数据库初始化/依赖（本地快速联调，历史记录端点不可用）
-    SKIP_DB: bool = False
     # uvicorn 开发热重载开关
     DEV_RELOAD: bool = False
 

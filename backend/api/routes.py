@@ -144,8 +144,8 @@ async def plan(req: PlanRequest):
 async def chat(req: ChatRequest):
     """LLM Agent 对话接口，SSE 流式输出。
 
-    Mock 模式返回死 token，方便前端联调。
-    正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
+    编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
+    （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
 
     Args:
         req: 聊天请求，含 message 和可选的 plan_result 上下文。

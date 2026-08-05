@@ -23,13 +23,9 @@ async def lifespan(app: FastAPI):
     Yields:
         None: 应用运行期间 yield，退出后执行关闭逻辑。
     """
-    if not settings.SKIP_DB:
-        await init_db()
-    else:
-        print("[SKIP_DB] 跳过数据库初始化，历史记录端点不可用")
+    await init_db()
     yield
-    if not settings.SKIP_DB:
-        await close_db()
+    await close_db()
 
 
 # ================== HTTP 指标中间件 ==================

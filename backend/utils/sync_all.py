@@ -1,7 +1,8 @@
 """从 __init__.py 的 from X import Y 语句自动生成 __all__。
 
 用法:
-    python -m backend.utils.sync_all
+    python -m backend.utils.sync_all            # 写盘同步
+    python -m backend.utils.sync_all --check    # dry-run，仅比对不写盘，不一致 exit 1
 
 设计原则:
     - import 行是公开接口的唯一真实来源
@@ -9,6 +10,7 @@
     - 脚本不增加不减少导入，只生成 __all__
 """
 
+import argparse
 import ast
 import os
 
@@ -18,8 +20,6 @@ BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # ================== AST 解析 ==================
 
 _COLLECT_EXCLUDE = frozenset({"Callable"})
-
-BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _collect_names(source: str) -> list[str]:
@@ -91,14 +91,15 @@ def _rebuild(source: str, names: list[str]) -> str:
 # ================== 文件写入 ==================
 
 
-def sync_file(path: str) -> bool:
+def sync_file(path: str, write: bool = True) -> bool:
     """对单个 __init__.py 执行同步：解析 import 行 → 生成 __all__ → 写回文件。
 
     Args:
         path: __init__.py 的绝对路径。
+        write: True 时写回文件；False 为 dry-run（--check），只比对不写盘。
 
     Returns:
-        bool: True 表示文件已被修改，False 表示无需变更。
+        bool: True 表示文件需要修改（write=True 时已写回），False 表示无需变更。
     """
     with open(path, encoding="utf-8", newline="") as f:
         source = f.read()
@@ -111,30 +112,54 @@ def sync_file(path: str) -> bool:
     if new_source == source:
         return False
 
-    with open(path, "w", encoding="utf-8", newline="") as f:
-        f.write(new_source)
+    if write:
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            f.write(new_source)
     return True
 
 
 # ================== CLI 入口 ==================
 
 
-def main():
-    """扫描 backend/ 下所有 __init__.py，同步 __all__ 后输出变更清单。"""
+def main(argv: list[str] | None = None) -> int:
+    """扫描 backend/ 下所有 __init__.py，同步 __all__ 后输出变更清单。
+
+    Args:
+        argv: 命令行参数（argparse 解析）。--check 时 dry-run 只比对不写盘，
+            存在未同步项则退出码为 1（供 CI 校验用）。
+
+    Returns:
+        int: 0 表示全部最新；--check 模式下存在差异时返回 1。
+    """
+    parser = argparse.ArgumentParser(description="同步 backend 所有 __init__.py 的 __all__")
+    parser.add_argument(
+        "-c",
+        "--check",
+        action="store_true",
+        help="dry-run：只比对不写盘，存在未同步项时退出码为 1",
+    )
+    args = parser.parse_args(argv)
+
     changed = []
     for root, _dirs, files in os.walk(BACKEND):
         if "__init__.py" in files:
             path = os.path.join(root, "__init__.py")
-            if sync_file(path):
+            if sync_file(path, write=not args.check):
                 changed.append(os.path.relpath(path, BACKEND))
 
     if changed:
+        if args.check:
+            print("存在未同步的 __all__，请运行 python -m backend.utils.sync_all：")
+            for p in changed:
+                print(f"  {p}")
+            return 1
         print("同步 __all__ 完成：")
         for p in changed:
             print(f"  {p}")
     else:
         print("所有文件已最新，无需修改。")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

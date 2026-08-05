@@ -4,10 +4,16 @@
         dc-migration migrate \
         clean help
 
+# 迁移脚本消息：make dc-migration MESSAGE="xxx" 指定，默认 auto
+MESSAGE ?= auto
+
 # ======== 安装构建 ========
 
 install: ## 一键安装前后端依赖
-	.venv/bin/poetry install && cd frontend && npm ci
+	@echo '==> 安装后端依赖（poetry）'
+	.venv/bin/poetry install
+	@echo '==> 安装前端依赖（npm ci）'
+	cd frontend && npm ci
 
 build: ## 前端生产构建
 	cd frontend && npm run build
@@ -18,8 +24,8 @@ gen-api: ## 重新生成前端 API 类型（后端 schema 变更后执行）
 gen-all: ## 自动同步所有 __init__.py 的 __all__（增删 import 后执行）
 	.venv/bin/python -m backend.utils.sync_all
 
-sync-check: ## 校验 __all__ 与 import 是否一致（同步后应无差异）
-	.venv/bin/python -m backend.utils.sync_all && git diff --exit-code
+sync-check: ## 校验 __all__ 与 import 是否一致（dry-run，不一致退出 1）
+	.venv/bin/python -m backend.utils.sync_all --check
 
 # ======== 开发 ========
 
@@ -37,8 +43,8 @@ dev: ## 启动前端开发服务器（Vite HMR）
 
 # ======== 代码质量 ========
 
-lint: ## 前端 lint（ESLint）
-	cd frontend && npm run lint
+lint: ## 前端 lint 自动修复（ESLint --fix）
+	cd frontend && npm run lint:fix
 
 format: ## 前端代码格式化（Prettier）
 	cd frontend && npx prettier --write src/
@@ -58,12 +64,29 @@ ruff-format: ## 后端 Python 代码格式化（ruff）
 pyright: ## 后端 Python 类型检查
 	.venv/bin/pyright backend/
 
-check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类型 + 测试）
-	.venv/bin/ruff format --check backend/ && \
-	.venv/bin/ruff check backend/ && \
-	.venv/bin/pyright backend/ && \
-	.venv/bin/pytest && \
-	cd frontend && npm run lint && npx vue-tsc --noEmit
+check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类型 + 测试 + 一致性）
+	@echo '==> ruff format --check（后端格式）'
+	.venv/bin/ruff format --check backend/
+	@echo '==> ruff check（后端 lint）'
+	.venv/bin/ruff check backend/
+	@echo '==> pyright（后端类型）'
+	.venv/bin/pyright backend/
+	@echo '==> pytest（后端测试）'
+	.venv/bin/pytest
+	@echo '==> poetry check --lock（后端依赖一致性）'
+	.venv/bin/poetry check --lock
+	@echo '==> sync_all --check（__all__ 同步）'
+	.venv/bin/python -m backend.utils.sync_all --check
+	@echo '==> npm ci --dry-run（前端依赖一致性）'
+	cd frontend && npm ci --dry-run --ignore-scripts --no-audit --no-fund
+	@echo '==> eslint（前端）'
+	cd frontend && npm run lint
+	@echo '==> prettier --check（前端格式）'
+	cd frontend && npx prettier --check src/
+	@echo '==> vue-tsc（前端类型）'
+	cd frontend && npx vue-tsc --noEmit
+	@echo '==> OpenAPI 类型同步'
+	cd frontend && npm run gen:api && git diff --exit-code -- src/api/types.generated.ts
 
 # ======== 测试 ========
 
@@ -96,8 +119,8 @@ deploy-up: ## 全量部署（PostgreSQL + Redis + 后端 + Celery worker + 前�
 deploy-down: ## 停止全量部署
 	docker compose down
 
-dc-migration: ## 生成数据库迁移脚本（对比 models.py，需 docker compose up -d）
-	.venv/bin/alembic revision --autogenerate -m "$(filter-out $@,$(MAKECMDGOALS))"
+dc-migration: ## 生成数据库迁移脚本（对比 models.py，需 docker compose up -d）；指定消息：make dc-migration MESSAGE="xxx"
+	.venv/bin/alembic revision --autogenerate -m "$(MESSAGE)"
 
 migrate: ## 应用数据库迁移到最新版本（需 docker compose up -d）
 	.venv/bin/alembic upgrade head

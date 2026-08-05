@@ -146,7 +146,7 @@ watch(() => store.planResult, (val) => {
 </script>
 
 <style scoped>
-.page-plan { max-width: 1200px; margin: 0 auto; }
+.page-plan { max-width: 1200px; margin: 0; }
 .empty-state { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
 .metrics-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .metric {

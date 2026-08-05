@@ -71,7 +71,8 @@ body {
 .main-content {
   flex: 1;
   min-width: 0;
-  padding: 24px;
+  /* 左侧约一个「TravelPal」标题宽的距离（160px），其余保持 24px */
+  padding: 24px 24px 24px 160px;
   overflow-y: auto;
 }
 

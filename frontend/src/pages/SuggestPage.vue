@@ -200,7 +200,7 @@ function viewDeepResult(r: PlanResult) {
 </script>
 
 <style scoped>
-.page-suggest { max-width: 700px; margin: 0 auto; }
+.page-suggest { max-width: 700px; margin: 0; }
 .empty-state { text-align: center; padding: 60px 0; color: var(--tp-text-3); }
 .empty-state .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
 .suggest-section { margin-bottom: 24px; }

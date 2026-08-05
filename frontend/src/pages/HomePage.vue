@@ -196,7 +196,7 @@ async function fetchSuggest() {
 </script>
 
 <style scoped>
-.page-home { max-width: 860px; margin: 0 auto; }
+.page-home { max-width: 860px; margin: 0; }
 .subtitle { color: var(--tp-text-2); margin-bottom: 24px; }
 .page-steps { margin-bottom: 20px; }
 .form-section { background: var(--tp-surface); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border: 1px solid var(--tp-border); }

@@ -124,7 +124,7 @@ watch(() => route.path, (path) => {
 </script>
 
 <style scoped>
-.page-history { max-width: 800px; margin: 0 auto; }
+.page-history { max-width: 800px; margin: 0; }
 .subtitle { font-size: 13px; color: var(--tp-text-3); margin-top: -8px; margin-bottom: 20px; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 60px 0; color: var(--tp-text-3); }
 .empty { display: flex; justify-content: center; padding: 60px 0; }

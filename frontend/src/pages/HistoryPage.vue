@@ -51,6 +51,7 @@ import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { getHistoryList, getHistoryDetail, deleteHistory, getDeviceId } from '@/services/api'
 import type { HistorySummary } from '@/services/api'
+import type { PlanResult } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,7 +94,7 @@ function goPage(p: number) {
 async function viewRecord(r: HistorySummary) {
   try {
     const detail = await getHistoryDetail(r.id)
-    store.planResult = detail.plan_result as any
+    store.planResult = detail.plan_result as PlanResult
     store.historyRecordId = r.id
     store.historyRequestParams = detail.request_params as Record<string, unknown> | null
     router.push('/plan')

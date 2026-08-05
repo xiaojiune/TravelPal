@@ -37,7 +37,8 @@ async def get_plan(
     """提交一个完整行程规划任务，立即返回 task_id 供轮询。
 
     参数与后端 PlanRequest 全量对齐。spots 每项含 name/lon/lat/tw_start/tw_end/stay
-    （由调用方先经 poi_lookup 获取坐标与营业时间）。cost_matrix/dist_matrix 可选，
+    （由调用方先经 poi_lookup 获取坐标与营业时间；缺 tw_start/tw_end/stay 将直接
+    失败，不填默认值）。cost_matrix/dist_matrix 可选，
     不传时 worker 内自动拉取驾车 API 构建成本矩阵（耗时较长，由异步任务消化）。
 
     Args:

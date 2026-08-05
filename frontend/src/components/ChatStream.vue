@@ -45,17 +45,7 @@
 import { ref, nextTick } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
-import type { ChatMessage as ChatMessageType } from '@/types'
-
-interface PoiItem {
-  name?: string
-  lon?: number
-  lat?: number
-  address?: string
-  tw_start?: number
-  tw_end?: number
-  poi_type?: string
-}
+import type { ChatMessage as ChatMessageType, PoiItem } from '@/types'
 
 interface Props {
   apiPath?: string

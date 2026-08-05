@@ -140,7 +140,6 @@ const defaultDays = computed(() => {
  */
 function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
   return {
-    type: 'solution',
     solution: {
       routes: s.routes,
       total_cost: s.cost,
@@ -156,7 +155,7 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     amap_api_key: store.amapApiKey,
     amap_security_code: store.amapSecurityCode,
     algo_time: store.suggestAlgoTime,
-    polylines: Object.keys(store.suggestPolylines).length ? store.suggestPolylines : undefined,
+    polylines: store.suggestPolylines,
   }
 }
 

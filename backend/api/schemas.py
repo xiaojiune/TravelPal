@@ -214,6 +214,111 @@ class HistoryDeleteRequest(BaseModel):
 # ================== 异步规划任务 ==================
 
 
+class SpotDictItem(BaseModel):
+    """规划结果中的景点/酒店字典项（result.spots 字段值）。
+
+    与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+    (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
+    """
+
+    name: str
+    x: float
+    y: float
+    tw: list[float]
+    stay: float
+    original_tw: list[float]
+    lon: float | None = None
+    lat: float | None = None
+    expected_arrival: float | None = None
+
+
+class ScheduleItem(BaseModel):
+    """每日行程中的一条记录（result.daily_schedules 元素）。
+
+    stay 为展示字符串（如 "180 min" 或 "-"），arrival/departure 为距午夜分钟数。
+    """
+
+    name: str
+    arrival: int
+    departure: int
+    tw: str
+    stay: str
+    arrival_status: str
+    departure_status: str
+
+
+class PlanSolution(BaseModel):
+    """规划求解结果（PlanResult.solution 字段）。"""
+
+    routes: list[list[int]]
+    histories: list[list[float]] | None = None
+    total_cost: float
+    total_dist: float
+    wait: float
+    late: float
+    valid: bool
+
+
+class SuggestionItem(BaseModel):
+    """方案建议项（SuggestResult.suggestions 列表元素）。
+
+    daily_schedules 由 pipeline 在 suggest 阶段补全，老任务数据可能缺失。
+    """
+
+    n_days: int
+    method: str
+    cost: float
+    total_dist: float
+    wait: float
+    late: float
+    routes: list[list[int]]
+    daily_schedules: list[list[ScheduleItem]] | None = None
+
+
+class SuggestResult(BaseModel):
+    """suggest 任务完成时的完整响应（TaskDetail.result）。
+
+    对应 run_planning 建议分支 + celery_app 注入的高德 JS Key。
+    """
+
+    type: str = "suggestion"
+    suggestions: list[SuggestionItem]
+    algo_time: float
+    spots: dict[str, SpotDictItem]
+    cost_matrix: list[list[float]]
+    dist_matrix: list[list[float]]
+    polylines: dict[str, str]
+    amap_api_key: str
+    amap_security_code: str
+    message: str | None = None
+
+
+class PlanResult(BaseModel):
+    """plan 任务完成时的完整响应（TaskDetail.result）。
+
+    对应 run_planning 求解分支 + celery_app 注入的高德 JS Key。
+    注意后端不返回 type 字段，前端自行构造展示标记。
+    """
+
+    solution: PlanSolution
+    mode: str | None = None
+    best_days: int
+    best_m: str
+    spots: dict[str, SpotDictItem]
+    dataset_name: str | None = None
+    algo_time: float
+    daily_schedules: list[list[ScheduleItem]]
+    cost_matrix: list[list[float]] | None = None
+    dist_matrix: list[list[float]] | None = None
+    polylines: dict[str, str]
+    commentary: str | None = None
+    amap_api_key: str | None = None
+    amap_security_code: str | None = None
+
+
+TaskResult = SuggestResult | PlanResult
+
+
 class TaskSubmitResponse(BaseModel):
     """提交异步规划任务后返回的响应，前端据此轮询任务状态。"""
 
@@ -231,5 +336,5 @@ class TaskDetail(BaseModel):
     task_id: str
     task_type: str
     status: str
-    result: dict | None = None
+    result: TaskResult | None = None
     error: str | None = None

@@ -3,11 +3,8 @@ import type { components } from '@/api/types.generated'
 
 // ==================== API 类型（由 OpenAPI 驱动） ====================
 
-/** 发送给后端的 PlanRequest */
-export type PlanRequestPayload = components['schemas']['PlanRequest'] & {
-  cost_matrix?: number[][]
-  dist_matrix?: number[][]
-}
+/** 发送给后端的 PlanRequest（cost_matrix/dist_matrix 已由后端 schema 覆盖，不再重复扩展） */
+export type PlanRequestPayload = components['schemas']['PlanRequest']
 
 /** POI 查找结果 */
 export type POILookupItem = components['schemas']['POILookupItem']
@@ -15,49 +12,24 @@ export type POILookupItem = components['schemas']['POILookupItem']
 /** POI 查找响应 */
 export type POILookupResponse = components['schemas']['POILookupResponse']
 
-// ==================== 后端响应类型（无对应 schema，手工维护） ====================
+// ==================== 后端响应类型（由 OpenAPI 驱动） ====================
+// 由 backend/api/schemas.py 的 Pydantic 响应模型生成；改后端 schema 后执行
+// make gen-api 自动同步，禁止手工改动。
 
-/** 方案建议项（ca_suggest 响应） */
-export interface SuggestionItem {
-  n_days: number
-  method: string
-  cost: number
-  total_dist: number
-  wait: number
-  late: number
-  routes: number[][]
-  daily_schedules?: ScheduleItem[][]
-}
+/** 方案建议项（SuggestResult.suggestions 元素） */
+export type SuggestionItem = components['schemas']['SuggestionItem']
 
 /** 规划结果的 solution 子对象 */
-export interface PlanResultSolution {
-  routes: number[][]
-  histories?: number[][]
-  total_cost: number
-  total_dist: number
-  wait: number
-  late: number
-  valid: boolean
-}
+export type PlanResultSolution = components['schemas']['PlanSolution']
 
-/** 规划结果（run_planning 响应） */
-export interface PlanResult {
-  type: string
-  solution?: PlanResultSolution
-  best_days?: number
-  best_m?: string
-  daily_schedules?: ScheduleItem[][]
-  commentary?: string
-  city?: string
-  spots?: Record<string, SpotDictItem>
-  cost_matrix?: number[][]
-  dist_matrix?: number[][]
-  amap_api_key?: string
-  amap_security_code?: string
-  algo_time?: number
-  /** 真实路径坐标字典。key 为 "fromIdx_toIdx"（如 "0_3"），value 为高德 polyline 格式 "lng,lat;lng,lat" */
-  polylines?: Record<string, string>
-}
+/** 规划结果（plan 任务 result） */
+export type PlanResult = components['schemas']['PlanResult']
+
+/** 行程项（stay 为展示字符串，如 "180 min" 或 "-"） */
+export type ScheduleItem = components['schemas']['ScheduleItem']
+
+/** 规划结果中的景点字典项（result.spots 值） */
+export type SpotDictItem = components['schemas']['SpotDictItem']
 
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 
@@ -71,17 +43,6 @@ export interface SpotFormItem {
   stay: number
   expectedArrival?: number
   address?: string
-}
-
-/** 行程项 */
-export interface ScheduleItem {
-  name: string
-  arrival: number
-  departure: number
-  tw: string
-  stay: number
-  arrival_status: string
-  departure_status: string
 }
 
 /** 聊天消息 */
@@ -100,16 +61,4 @@ export interface PoiItem {
   tw_start?: number
   tw_end?: number
   poi_type?: string
-}
-
-/** 规划结果中的景点字典项（从后端 pipeline spots 反序列化） */
-export interface SpotDictItem {
-  name: string
-  x: number
-  y: number
-  lon?: number
-  lat?: number
-  tw?: [number, number]
-  stay?: number
-  original_tw?: [number, number]
 }

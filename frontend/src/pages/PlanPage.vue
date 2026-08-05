@@ -188,7 +188,7 @@ async function doShare() {
   try {
     await postHistory({
       device_id: getDeviceId(),
-      city: r.city || store.city,
+      city: store.city,
       hotel: store.hotelName,
       n_days: r.best_days ?? 1,
       cost: r.solution?.total_cost,

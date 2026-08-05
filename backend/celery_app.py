@@ -57,6 +57,9 @@ def _build_poi_cache(params: dict):
     }
     spots = []
     for s in params["spots"]:
+        missing = [k for k in ("tw_start", "tw_end", "stay") if s.get(k) is None]
+        if missing:
+            raise ValueError(f"景点 '{s.get('name', '?')}' 缺少字段 {missing}，请先通过 poi_lookup 获取坐标与营业时间")
         spots.append(
             {
                 "name": s["name"],

@@ -11,7 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AgentDrawer: typeof import('./src/components/AgentDrawer.vue')['default']
+    AgentPanel: typeof import('./src/components/AgentPanel.vue')['default']
     AmapMap: typeof import('./src/components/AmapMap.vue')['default']
     ChatMessage: typeof import('./src/components/ChatMessage.vue')['default']
     ChatStream: typeof import('./src/components/ChatStream.vue')['default']
@@ -22,8 +22,6 @@ declare module 'vue' {
     NCollapseItem: typeof import('naive-ui')['NCollapseItem']
     NConfigProvider: typeof import('naive-ui')['NConfigProvider']
     NDialogProvider: typeof import('naive-ui')['NDialogProvider']
-    NDrawer: typeof import('naive-ui')['NDrawer']
-    NDrawerContent: typeof import('naive-ui')['NDrawerContent']
     NEmpty: typeof import('naive-ui')['NEmpty']
     NInput: typeof import('naive-ui')['NInput']
     NInputNumber: typeof import('naive-ui')['NInputNumber']
@@ -35,6 +33,7 @@ declare module 'vue' {
     NStep: typeof import('naive-ui')['NStep']
     NSteps: typeof import('naive-ui')['NSteps']
     NTag: typeof import('naive-ui')['NTag']
+    PendingPanel: typeof import('./src/components/PendingPanel.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SchedulePanel: typeof import('./src/components/SchedulePanel.vue')['default']

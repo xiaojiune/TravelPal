@@ -16,6 +16,13 @@ body {
   flex-direction: column;
 }
 
+/* 主体区：左侧待选栏 + 主内容，撑满导航栏与 footer 之间 */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .nav-bar {
   display: flex;
   align-items: center;
@@ -24,6 +31,9 @@ body {
   background: var(--tp-surface);
   border-bottom: 1px solid var(--tp-border);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  /* 高于 Agent 面板遮罩(1999)与面板(2000)，保证导航栏始终可交互 */
+  position: relative;
+  z-index: 2001;
 }
 
 .nav-brand {
@@ -52,9 +62,17 @@ body {
   color: var(--tp-primary);
 }
 
+/* 导航栏右侧 Agent 入口按钮：推至最右 */
+.nav-agent {
+  margin-left: auto;
+  font-size: 18px;
+}
+
 .main-content {
   flex: 1;
+  min-width: 0;
   padding: 24px;
+  overflow-y: auto;
 }
 
 .footer {
@@ -67,17 +85,5 @@ body {
 .footer a {
   color: var(--tp-text-3);
   text-decoration: none;
-}
-
-/* 全局 Agent 浮动入口按钮：固定左上角，层级高于页面内容与地图 */
-.agent-fab {
-  position: fixed;
-  left: 24px;
-  top: 96px;
-  z-index: 2000;
-  width: 56px;
-  height: 56px;
-  font-size: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 

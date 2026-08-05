@@ -91,6 +91,17 @@ export interface ChatMessage {
   time?: string
 }
 
+/** Agent 对话查询到的 POI（待选栏暂存项，tool_result 事件载荷） */
+export interface PoiItem {
+  name?: string
+  lon?: number
+  lat?: number
+  address?: string
+  tw_start?: number
+  tw_end?: number
+  poi_type?: string
+}
+
 /** 规划结果中的景点字典项（从后端 pipeline spots 反序列化） */
 export interface SpotDictItem {
   name: string

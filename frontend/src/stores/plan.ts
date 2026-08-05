@@ -1,7 +1,7 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult, SpotDictItem } from '@/types'
+import type { SpotFormItem, PlanRequestPayload, SuggestionItem, PlanResult, SpotDictItem, PoiItem } from '@/types'
 
 export const usePlanStore = defineStore('plan', () => {
   // ====== 输入状态 ======
@@ -41,6 +41,46 @@ export const usePlanStore = defineStore('plan', () => {
       })
     }
     isParamsSaved.value = false
+  }
+
+  // ====== Agent 待选栏状态（全局共享，面板与左侧静态栏共用） ======
+  /** 对话中查询到的 POI 暂存列表（去重，供加入首页表单）。 */
+  const pendingPois = ref<PoiItem[]>([])
+
+  /** 接收 Agent 工具查询结果，去重后加入待选栏。 */
+  function addPendingPoi(poi: PoiItem) {
+    if (!poi.name) return
+    if (!pendingPois.value.some(p => p.name === poi.name)) {
+      pendingPois.value.push(poi)
+    }
+  }
+
+  /** 从待选栏移除指定下标项（不做其他操作）。 */
+  function removePendingPoi(index: number) {
+    pendingPois.value.splice(index, 1)
+  }
+
+  /** 将待选 POI 添加到首页输入列表，然后从待选栏移除。 */
+  function addPoiToForm(poi: PoiItem) {
+    if (!poi.name || poi.lon == null || poi.lat == null) return
+    addSpot({
+      name: poi.name,
+      lon: poi.lon,
+      lat: poi.lat,
+      twStart: poi.tw_start ?? 480,
+      twEnd: poi.tw_end ?? 1020,
+      stay: 0,
+      address: poi.address,
+      poi_type: poi.poi_type,
+    })
+    const idx = pendingPois.value.findIndex(p => p.name === poi.name)
+    if (idx !== -1) pendingPois.value.splice(idx, 1)
+  }
+
+  /** 一键将全部待选 POI 加入首页表单（addPoiToForm 会逐个 splice，需遍历副本）。 */
+  function addAllPendingPois() {
+    const all = pendingPois.value.slice()
+    for (const poi of all) addPoiToForm(poi)
   }
 
   // ====== 参数确认锁 ======
@@ -143,6 +183,7 @@ export const usePlanStore = defineStore('plan', () => {
     isParamsSaved, historyRecordId, historyRequestParams,
     suggestions, suggestSpots, selectedNDays, selectedMethod,
     planResult, deepResults, suggestCostMatrix, suggestDistMatrix, suggestPolylines, suggestAlgoTime, amapApiKey, amapSecurityCode, loading,
+    pendingPois, addPendingPoi, removePendingPoi, addPoiToForm, addAllPendingPois,
     buildRequest, reset, addSpot,
   }
 })

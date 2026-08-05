@@ -12,24 +12,27 @@
               <router-link to="/plan">规划结果</router-link>
               <router-link to="/history">历史记录</router-link>
             </div>
+            <!-- 全局 Agent 入口：导航栏右侧按钮，点击导航栏下方浮出面板 -->
+            <n-button class="nav-agent" circle quaternary :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'" @click="agentOpen = !agentOpen">
+              🤖
+            </n-button>
           </nav>
-          <main class="main-content">
-            <router-view v-slot="{ Component }">
-              <keep-alive>
-                <component :is="Component" />
-              </keep-alive>
-            </router-view>
-          </main>
+          <div class="app-body">
+            <PendingPanel />
+            <main class="main-content">
+              <router-view v-slot="{ Component }">
+                <keep-alive>
+                  <component :is="Component" />
+                </keep-alive>
+              </router-view>
+            </main>
+          </div>
           <footer class="footer">
             <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
               ICP备案/许可证号：桂ICP备2026015614号-1
             </a>
           </footer>
-          <!-- 全局 Agent 入口：右下角浮动按钮唤起右侧抽屉，跨页面常驻 -->
-          <n-button class="agent-fab" circle size="large" @click="agentOpen = !agentOpen">
-            🤖
-          </n-button>
-          <AgentDrawer v-model:show="agentOpen" />
+          <AgentPanel v-model:show="agentOpen" />
         </div>
       </n-dialog-provider>
     </n-message-provider>
@@ -37,12 +40,20 @@
 </template>
 
 <script setup lang="ts">
-/** 根组件：全局导航栏 + <router-view> 页面出口 + 全局 Agent 抽屉入口。导航链接覆盖 4 个页面，样式内联于 <style> 中无外部依赖。 */
-import { ref } from 'vue'
+/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧待选栏 + 页面出口 + Agent 下拉面板。导航链接覆盖 4 个页面。 */
+import { ref, onMounted, onUnmounted } from 'vue'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
-import AgentDrawer from '@/components/AgentDrawer.vue'
+import PendingPanel from '@/components/PendingPanel.vue'
+import AgentPanel from '@/components/AgentPanel.vue'
 
-/** 全局 Agent 抽屉显隐。 */
+/** 全局 Agent 面板显隐（导航栏按钮 / 遮罩点击 / Esc 三路控制）。 */
 const agentOpen = ref(false)
+
+/** Esc 收起 Agent 面板。 */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') agentOpen.value = false
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>

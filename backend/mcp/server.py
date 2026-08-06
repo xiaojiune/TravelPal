@@ -10,8 +10,9 @@
 import asyncio
 import sys
 
-from backend.agent.tools import TOOL_REGISTRY
 from mcp.server import MCPServer
+
+from backend.agent.tools import TOOL_REGISTRY
 
 __all__ = ["build_server", "main"]
 

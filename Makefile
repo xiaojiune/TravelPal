@@ -89,6 +89,9 @@ check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类�
 	cd frontend && npm run gen:api && git diff --exit-code -- src/api/types.generated.ts
 
 # ======== 测试 ========
+# 串行执行：实测 pytest-xdist 对 numba（@njit 编译按进程重复）+ sklearn（自带多线程）
+# 的求解测试无收益甚至更慢。当前规模（<100 点、秒级求解）无并行需求；
+# 未来若走 learning-based 求解（GNN/Transformer 学启发式）再考虑 GPU 加速。
 
 test: ## 运行全部 Python 测试
 	.venv/bin/pytest

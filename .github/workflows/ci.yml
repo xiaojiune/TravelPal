@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [dev, main]
 
+# 同名分支/workflow 新 run 顶掉旧 run，避免 dev 连续 push 的无效排队
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,6 +30,8 @@ jobs:
         run: |
           python -m backend.utils.sync_all
           git diff --exit-code
+      # 串行执行：实测 pytest-xdist 对 numba/sklearn 求解测试无收益甚至更慢，
+      # 当前规模（<100 点、秒级求解）无并行需求；未来走 learning-based 求解时再考虑 GPU
       - name: Run tests with coverage
         run: pytest --cov --cov-report=xml
       - uses: codecov/codecov-action@v5

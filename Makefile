@@ -36,7 +36,7 @@ mcp-serve: ## 启动 MCP Server（stdio 传输，供外部 AI 助手通过 MCP �
 	.venv/bin/python -m backend.mcp.server
 
 celery: ## 启动 Celery worker（消费异步规划任务，需 dc-up + serve）
-	.venv/bin/celery -A backend.celery_app worker --loglevel=info --concurrency=1
+	.venv/bin/celery -A backend.tasks.app worker --loglevel=info --concurrency=1
 
 dev: ## 启动前端开发服务器（Vite HMR）
 	cd frontend && npm run dev

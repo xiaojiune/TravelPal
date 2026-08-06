@@ -11,9 +11,9 @@
 
 from uuid import UUID
 
-from backend.celery_app import submit_task
 from backend.data.model.database import async_session
 from backend.data.model.models import PlanTask
+from backend.tasks.submit import submit_task
 
 
 async def get_plan(

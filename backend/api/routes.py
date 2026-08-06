@@ -26,10 +26,10 @@ from backend.api.schemas import (
     TaskDetail,
     TaskSubmitResponse,
 )
-from backend.celery_app import submit_task
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import HistoryRecord, PlanTask
+from backend.tasks.submit import submit_task
 
 router = APIRouter()
 

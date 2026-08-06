@@ -154,7 +154,7 @@ TravelPal/
 | [`agent.md`](docs/structure/agent.md) | LLM Agent 交互流程 |
 | [`data.md`](docs/structure/data.md) | 统一数据字典 |
 | [`ADR/`](docs/ADR/) | 架构决策记录（ADR-001 ~ ADR-007） |
-| [`deploy.md`](docs/deploy.md) | 服务器部署与 HTTPS |
+| [`deploy.md`](docs/runbooks/deploy.md) | 服务器部署与 HTTPS |
 
 ## 许可
 

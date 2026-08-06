@@ -31,16 +31,18 @@
    structure/agent
    structure/data
    structure/tools
-   structure/docs
+   structure/README
 
 .. toctree::
    :maxdepth: 1
    :caption: 规范与路线图
 
-   coding
-   git
+   runbooks/coding
+   runbooks/git
    产品路线图
-   deploy
+   runbooks/deploy
+   runbooks/troubleshooting
+   runbooks/README
 
 .. toctree::
    :maxdepth: 2

@@ -76,6 +76,6 @@ ADR 本身有生命周期，与决策内组件的实施状态是**两套体系**
 
 ## 六、交叉引用
 
-- 编码规范：[`../coding.md`](../coding.md)
-- 文档组织结构：[`../structure/docs.md`](../structure/docs.md)
-- 部署指引：[`../deploy.md`](../deploy.md)
+- 编码规范：[`../runbooks/coding.md`](../runbooks/coding.md)
+- 文档组织结构：[`../structure/README.md`](../structure/README.md)
+- 部署指引：[`../runbooks/deploy.md`](../runbooks/deploy.md)

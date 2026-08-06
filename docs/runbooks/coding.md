@@ -1,6 +1,6 @@
 # 编码规范
 
-> ADR（架构决策记录）写作规范见 [`docs/ADR/README.md`](ADR/README.md)，新增决策使用 [TEMPLATE.md](ADR/TEMPLATE.md)。
+> ADR（架构决策记录）写作规范见 [`docs/ADR/README.md`](../ADR/README.md)，新增决策使用 [TEMPLATE.md](../ADR/TEMPLATE.md)。
 
 ## 注释四级体系
 

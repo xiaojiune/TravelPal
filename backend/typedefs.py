@@ -93,3 +93,28 @@ class PlanResult(TypedDict):
     commentary: str
     amap_api_key: NotRequired[str]
     amap_security_code: NotRequired[str]
+
+
+class TaskParams(TypedDict):
+    """异步任务请求参数（PlanRequest.model_dump() 序列化，存 plan_tasks.request_params JSONB）。
+
+    字段与 schemas.PlanRequest 对齐；cost_matrix/dist_matrix 可选
+    （suggest 阶段结果复用，传入则跳过驾车 API 拉取）。
+    """
+
+    city: str
+    hotel_name: str
+    hotel_lon: float
+    hotel_lat: float
+    hotel_tw_start: float
+    hotel_tw_end: float
+    day_start: int
+    min_days: int | None
+    spots: list[dict]
+    mode: str
+    n_days: int | None
+    penalty_weight: float
+    early_wait_weight: float
+    late_return_weight: float
+    cost_matrix: NotRequired[list[list[float]]]
+    dist_matrix: NotRequired[list[list[float]]]

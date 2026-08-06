@@ -36,7 +36,7 @@ REGISTRY = CollectorRegistry()
 
 
 # ================== LLM ==================
-# kind: complete（非流式）/ stream（流式）/ parse_biz_hours（营业时间解析）
+# kind: complete（非流式，含工具调用）/ stream（流式）/ parse（单轮纯文本，如营业时间解析）
 llm_calls = Counter(
     "travelpal_llm_calls_total",
     "LLM 调用次数，按调用类型区分",

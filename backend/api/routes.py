@@ -60,7 +60,7 @@ async def poi_lookup(req: POILookupRequest):
                 failed.append(result)
             else:
                 lon, lat, biz_hours, address, pname, cityname, actual_name, _ = result
-                parsed = parse_biz_hours(biz_hours) if biz_hours else None
+                parsed = await parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else None
                 tw_end = parsed[1] if parsed else None
                 items.append(

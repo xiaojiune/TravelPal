@@ -2,11 +2,8 @@
 
 import json
 
-from openai import OpenAI
-
 from backend.agent.tools.prompts import PARSE_PROMPT, build_date_context
-from backend.config import settings
-from backend.observability import llm_calls, llm_tokens
+from backend.infrastructure.llm.factory import get_llm_service
 
 
 def _classify_poi(poi_type: str, name: str) -> str:
@@ -28,10 +25,11 @@ def _classify_poi(poi_type: str, name: str) -> str:
     return "spot"
 
 
-def poi_lookup(city: str, names: list[str]) -> list[dict]:
+async def poi_lookup(city: str, names: list[str]) -> list[dict]:
     """批量通过高德 API 查询 POI 的坐标、地址和营业时间。
 
     自动识别每个 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
+    内部 LLM 解析（parse_biz_hours）走 domain/LLMService 防腐层。
 
     Args:
         city: 所在城市。
@@ -53,7 +51,7 @@ def poi_lookup(city: str, names: list[str]) -> list[dict]:
                 continue
             lon, lat, biz_hours, address, _, _, actual_name, poi_type_str = result
             poi_type = _classify_poi(poi_type_str, actual_name)
-            parsed = parse_biz_hours(biz_hours) if biz_hours else None
+            parsed = await parse_biz_hours(biz_hours) if biz_hours else None
             if poi_type == "hotel":
                 tw_start = 0
                 tw_end = 1440
@@ -76,8 +74,8 @@ def poi_lookup(city: str, names: list[str]) -> list[dict]:
     return results
 
 
-def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
-    """LLM 解析高德 opentime2 营业时间。
+async def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
+    """LLM 解析高德 opentime2 营业时间（经 LLMService 防腐层）。
 
     Args:
         opentime2: 高德 API 返回的原始 opentime2 字符串。
@@ -90,31 +88,15 @@ def parse_biz_hours(opentime2: str) -> tuple[int, int] | None:
     stripped = opentime2.strip()
     if not stripped:
         return None
-        return None
 
     date_context = build_date_context()
     prompt = PARSE_PROMPT.format(date_context=date_context, opentime2=opentime2)
 
+    service = get_llm_service()
+    text = await service.complete_text(prompt, temperature=0.1, max_tokens=128)
+    if text is None:
+        return None
     try:
-        client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL)
-        resp = client.chat.completions.create(
-            model=settings.LLM_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=128,
-        )
-        llm_calls.labels(kind="parse_biz_hours").inc()
-        # 营业时间解析走独立 OpenAI client（未收敛到 LLMService），单独计量
-        usage = getattr(resp, "usage", None)
-        if usage is not None:
-            prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
-            completion_tokens = getattr(usage, "completion_tokens", 0) or 0
-            if prompt_tokens:
-                llm_tokens.labels(kind="parse_biz_hours", direction="prompt").inc(prompt_tokens)
-            if completion_tokens:
-                llm_tokens.labels(kind="parse_biz_hours", direction="completion").inc(completion_tokens)
-        content = resp.choices[0].message.content
-        text = content.strip() if content else ""
         data = json.loads(text)
         if data is not None:
             start = int(data["start"])

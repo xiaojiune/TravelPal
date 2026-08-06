@@ -16,6 +16,7 @@ from backend.data.model.models import PlanTask
 from backend.observability import task_duration, task_total
 from backend.tasks.app import celery_app
 from backend.tasks.executors import TASK_EXECUTORS
+from backend.typedefs import TaskParams
 
 
 @celery_app.task(name="travelpal.run_plan_task")
@@ -72,7 +73,7 @@ async def _execute_task(task_id: str) -> None:
 
         try:
             executor = TASK_EXECUTORS[task_type]  # type: ignore[index]
-            params: dict = task.request_params  # type: ignore[assignment]
+            params: TaskParams = task.request_params  # type: ignore[assignment]
             result = executor(params)
             result["amap_api_key"] = settings.AMAP_JS_KEY  # type: ignore[index]
             result["amap_security_code"] = settings.AMAP_JS_SECURITY_CODE  # type: ignore[index]

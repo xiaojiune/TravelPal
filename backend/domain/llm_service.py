@@ -77,3 +77,26 @@ class LLMService(Protocol):
         """
         ...
         yield ""
+
+    async def complete_text(
+        self,
+        prompt: str,
+        temperature: float = 0.1,
+        max_tokens: int = 128,
+        **kwargs,
+    ) -> str | None:
+        """单轮纯文本补全（无工具调用），返回 assistant 内容。
+
+        供营业时间解析等「纯解析器」子任务复用：只需一段文本输出，
+        不需要工具调用检测。调用异常时返回 None（由调用方自行降级）。
+
+        Args:
+            prompt: 用户消息文本。
+            temperature: 采样温度（解析类任务用低温，默认 0.1）。
+            max_tokens: 输出 token 上限（默认 128）。
+            **kwargs: 透传其余模型参数。
+
+        Returns:
+            str | None: assistant 内容（去首尾空白）；调用异常时返回 None。
+        """
+        ...

@@ -105,12 +105,48 @@ class OpenAILLMService(LLMService):
                 getattr(last_usage, "completion_tokens", 0) or 0
             )
 
+    async def complete_text(
+        self,
+        prompt: str,
+        temperature: float = 0.1,
+        max_tokens: int = 128,
+        **kwargs,
+    ) -> str | None:
+        """单轮纯文本补全（无工具调用），返回 assistant 内容。
+
+        与 complete() 的区别：不传 tools，无工具调用检测，直接返回内容字符串。
+        供营业时间解析等纯解析器子任务复用（见 agent/tools/poi.py parse_biz_hours）。
+
+        Args:
+            prompt: 用户消息文本。
+            temperature: 采样温度（解析类任务用低温，默认 0.1）。
+            max_tokens: 输出 token 上限（默认 128）。
+            **kwargs: 透传其余模型参数。
+
+        Returns:
+            str | None: assistant 内容（去首尾空白）；调用异常时返回 None。
+        """
+        try:
+            resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
+                model=settings.LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs,
+            )
+            llm_calls.labels(kind="parse").inc()
+            _record_usage("parse", resp)
+            content = resp.choices[0].message.content
+            return content.strip() if content else None
+        except Exception:
+            return None
+
 
 def _record_usage(kind: str, resp) -> None:
     """记录 LLM 响应的 token 消耗（prompt/completion 分别计量）。
 
     Args:
-        kind: 调用类型（complete / stream / parse_biz_hours）。
+        kind: 调用类型（complete / stream / parse）。
         resp: OpenAI 兼容响应对象（含 usage 属性）。
 
     用法说明：usage 缺失或为 None 时跳过 token 计量（仅调用次数已计）。

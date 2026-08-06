@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 
+from backend.agent.tools.adjust import add_poi
 from backend.agent.tools.driving import get_driving
 from backend.agent.tools.plan import get_plan, get_plan_result
 from backend.agent.tools.poi import parse_biz_hours, poi_lookup
@@ -13,6 +14,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
     "get_plan": get_plan,
     "get_plan_result": get_plan_result,
     "get_driving": get_driving,
+    "add_poi": add_poi,
 }
 
 # 工具分组元数据（方案 B 平行映射）：TOOL_REGISTRY 保持纯注册表，分类独立维护。
@@ -25,9 +27,11 @@ TOOL_CATEGORIES: dict[str, str] = {
     "get_plan": "planning",
     "get_plan_result": "planning",
     "get_driving": "driving",
+    "add_poi": "planning",
 }
 
 __all__ = [
+    "add_poi",
     "get_driving",
     "get_plan",
     "get_plan_result",

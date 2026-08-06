@@ -16,5 +16,11 @@ class TestClassifyPoi:
     def test_spot_park(self):
         assert _classify_poi("风景名胜;公园", "白云山") == "spot"
 
+    def test_facility_restaurant(self):
+        assert _classify_poi("餐饮服务;中餐厅", "陶陶居") == "facility"
+
+    def test_facility_by_name(self):
+        assert _classify_poi("风景名胜;公园", "星巴克咖啡") == "facility"
+
     def test_unknown_category(self):
-        assert _classify_poi("餐饮服务;中餐厅", "陶陶居") == "spot"
+        assert _classify_poi("公司企业;写字楼", "某企业") == "spot"

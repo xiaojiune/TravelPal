@@ -317,9 +317,10 @@ def adjust_plan(
     dist_matrix_list: list,
     routes: list,
     adjustments: dict,
+    city: str = "",
 ) -> PlanResult:
     """
-    对已有方案执行调整（均衡、移除景点、改天数）。
+    对已有方案执行调整（均衡、移除景点、改天数、添加景点）。
 
     从 routes 重构分组 → 按 adjustments 类型分发 → 重新求解 → 生成新每日行程。
 
@@ -330,6 +331,7 @@ def adjust_plan(
         routes: 当前方案路径列表，每组含首尾 depot。
         adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
             {"add_poi": {name, lon, lat, tw_start, tw_end, stay}} 之一。
+        city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。
@@ -375,8 +377,10 @@ def adjust_plan(
     elif "add_poi" in adjustments:
         from backend.agent.planning import add_poi_to_plan
         from backend.data.amap_loader import _get_driving_data
+        from backend.data.driving_cache import get_driving_pair, set_driving_pair
 
         poi = adjustments["add_poi"]
+        poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
         new_idx = max(spots_dict.keys()) + 1
         spots_dict[new_idx] = {  # pyright: ignore[reportArgumentType]
             "name": poi["name"],
@@ -397,10 +401,22 @@ def adjust_plan(
                 new_cost[i][i] = 0
                 new_dist[i][i] = 0
                 continue
+            target_point = {"name": spot["name"], "lon": spot["x"], "lat": spot["y"]}
+            cached = get_driving_pair(city, poi_point, target_point)
+            if cached is not None:
+                # 点对缓存命中：复用上次拉取的驾车数据，跳过 API 调用
+                new_cost[new_idx][i] = new_cost[i][new_idx] = cached["duration_min"]
+                new_dist[new_idx][i] = new_dist[i][new_idx] = cached["distance_km"]
+                continue
             d_km, dur, _ = _get_driving_data((poi["lon"], poi["lat"]), (spot["x"], spot["y"]))  # pyright: ignore[reportGeneralTypeIssues]
             if dur is not None:
-                new_cost[new_idx][i] = new_cost[i][new_idx] = round(dur / 60.0, 2)
-                new_dist[new_idx][i] = new_dist[i][new_idx] = round(d_km, 2)  # pyright: ignore[reportCallIssue, reportArgumentType]
+                data = {
+                    "duration_min": round(dur / 60.0, 2),
+                    "distance_km": round(d_km, 2),  # pyright: ignore[reportCallIssue, reportArgumentType]
+                }
+                new_cost[new_idx][i] = new_cost[i][new_idx] = data["duration_min"]
+                new_dist[new_idx][i] = new_dist[i][new_idx] = data["distance_km"]
+                set_driving_pair(city, poi_point, target_point, data)
             else:
                 new_cost[new_idx][i] = new_cost[i][new_idx] = -1
                 new_dist[new_idx][i] = new_dist[i][new_idx] = -1

@@ -112,14 +112,14 @@ class TestOrchestratorContract:
         # 默认全量 5 个工具
         fake_all = asyncio.run(run(None))
         all_names = {d["function"]["name"] for d in fake_all.seen_tools[0]}
-        assert all_names == {"poi_lookup", "search_rag", "get_plan", "get_plan_result", "get_driving"}
+        assert all_names == {"poi_lookup", "search_rag", "get_plan", "get_plan_result", "get_driving", "add_poi"}
 
         # 只裁剪出 poi 分类
         fake_poi = asyncio.run(run({"poi"}))
         poi_names = {d["function"]["name"] for d in fake_poi.seen_tools[0]}
         assert poi_names == {"poi_lookup"}
 
-        # 只裁剪出 planning 分类（两个重工具）
+        # 只裁剪出 planning 分类（重工具 + 方案调整）
         fake_plan = asyncio.run(run({"planning"}))
         plan_names = {d["function"]["name"] for d in fake_plan.seen_tools[0]}
-        assert plan_names == {"get_plan", "get_plan_result"}
+        assert plan_names == {"get_plan", "get_plan_result", "add_poi"}

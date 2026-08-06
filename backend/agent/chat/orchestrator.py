@@ -39,11 +39,14 @@ class OrchestratorState(TypedDict):
         messages: OpenAI 兼容消息列表（system/user/assistant/tool）。
         pending_tool_calls: 待执行的工具调用（agent 节点产出，tools 节点消费）。
         tools: 本次会话暴露的工具 schema（按 category 裁剪后，agent 节点据此决策）。
+        plan_result: 当前方案快照（PlanResult，可选）。用户进入方案修改场景时由
+            前端透传，工具执行时注入给声明 plan 参数的函数（如 add_poi）。
     """
 
     messages: list[dict]
     pending_tool_calls: list[ToolCallResult]
     tools: list[dict]
+    plan_result: dict | None
 
 
 async def _agent_node(state: OrchestratorState) -> dict:
@@ -88,10 +91,15 @@ async def _tools_node(state: OrchestratorState) -> dict:
         if tool_fn is None:
             continue
         writer(("tool_status", tc.name))
+        kwargs = dict(tc.arguments)
+        # 方案修改工具（add_poi）需要当前方案快照：编排层注入 plan_result
+        plan = state.get("plan_result")
+        if plan and "plan" in inspect.signature(tool_fn).parameters and "plan" not in kwargs:
+            kwargs["plan"] = plan
         if inspect.iscoroutinefunction(tool_fn):
-            tool_result = await tool_fn(**tc.arguments)
+            tool_result = await tool_fn(**kwargs)
         else:
-            tool_result = tool_fn(**tc.arguments)
+            tool_result = tool_fn(**kwargs)
         writer(("tool_result", tool_result))
         messages.append(
             {
@@ -129,7 +137,11 @@ def _build_graph():
 _graph = _build_graph()
 
 
-async def stream_orchestrator(messages: list[dict], categories: set[str] | None = None) -> AsyncIterator[tuple]:
+async def stream_orchestrator(
+    messages: list[dict],
+    categories: set[str] | None = None,
+    plan_result: dict | None = None,
+) -> AsyncIterator[tuple]:
     """运行编排器，产出 (event_type, data) 事件流。
 
     Args:
@@ -137,6 +149,8 @@ async def stream_orchestrator(messages: list[dict], categories: set[str] | None 
         categories: 本次会话暴露的工具分类集合（如 {"poi"}）；
             其余分类的工具 schema 不注入 LLM，实现按上下文裁剪工具；
             None 表示暴露全部工具。
+        plan_result: 当前方案快照（PlanResult，可选）。用户进入方案修改场景时
+            透传，供 add_poi 等方案修改工具注入。
 
     Yields:
         (event_type, data) 元组，event_type 为 content / tool_status / tool_result。
@@ -145,6 +159,7 @@ async def stream_orchestrator(messages: list[dict], categories: set[str] | None 
         "messages": list(messages),
         "pending_tool_calls": [],
         "tools": build_tool_definitions(categories),
+        "plan_result": plan_result,
     }
     async for mode, payload in _graph.astream(state, stream_mode="custom"):
         yield mode, payload

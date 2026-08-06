@@ -2,7 +2,7 @@
   <div class="chat-stream">
     <div ref="historyRef" class="chat-history">
       <div v-if="messages.length === 0" class="welcome">
-        你想到哪了，我们就从哪开始。
+        我不懂你的全部，但我懂你的旅途。
       </div>
       <ChatMessage
         v-for="(msg, i) in messages"
@@ -45,6 +45,7 @@
 import { ref, nextTick } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
+import { usePlanStore } from '@/stores/plan'
 import type { ChatMessage as ChatMessageType, PoiItem } from '@/types'
 
 interface Props {
@@ -55,6 +56,7 @@ defineOptions({ name: 'ChatStream' })
 
 const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
 const emit = defineEmits<{ (e: 'tool-result', payload: PoiItem): void }>()
+const store = usePlanStore()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
@@ -97,7 +99,7 @@ async function send() {
     const resp = await fetch(props.apiPath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ message: text, plan_result: store.planResult ?? null }),
     })
     if (!resp.ok) {
       messages.value[msgIndex].content = '请求失败，请重试'

@@ -9,7 +9,7 @@ run_planning 保持函数内延迟 import：worker 启动时不加载引擎，
 
 from typing import Callable, cast
 
-from backend.typedefs import PlanResult, PoiCache, PoiCacheItem, TaskParams
+from backend.typedefs import AdjustParams, PlanResult, PoiCache, PoiCacheItem, TaskParams
 
 __all__ = ["TASK_EXECUTORS", "_build_poi_cache"]
 
@@ -112,9 +112,36 @@ def _run_plan(params: TaskParams) -> PlanResult:
     )
 
 
+def _run_adjust(params: AdjustParams) -> PlanResult:
+    """adjust 任务执行体：基于已有方案快照执行调整指令（add_poi 等）。
+
+    走 pipeline.adjust_plan 分发（add_poi 分支驾车数据优先命中点对缓存）。
+
+    Args:
+        params: 调整任务参数（AdjustParams：快照 spots/矩阵/routes + adjustments）。
+
+    Returns:
+        PlanResult: 调整后的完整方案（mode="adjust"）。
+    """
+    from backend.engine.pipeline import adjust_plan
+
+    return cast(
+        PlanResult,
+        adjust_plan(
+            params["spots"],
+            params["cost_matrix"],
+            params["dist_matrix"],
+            params["routes"],
+            params["adjustments"],
+            city=params["city"],
+        ),
+    )
+
+
 # 任务类型 → 执行函数注册表（worker._execute_task 按 task_type 分发）。
-# suggest 返回 dict（结构对应 schemas.SuggestResult），plan 返回 PlanResult。
-TASK_EXECUTORS: dict[str, Callable[[TaskParams], PlanResult | dict]] = {
+# suggest 返回 dict（结构对应 schemas.SuggestResult），plan/adjust 返回 PlanResult。
+TASK_EXECUTORS: dict[str, Callable[..., PlanResult | dict]] = {
     "suggest": _run_suggest,
     "plan": _run_plan,
+    "adjust": _run_adjust,
 }

@@ -161,7 +161,7 @@ async def chat(req: ChatRequest):
         async def _stream():
             """SSE 生成器：LangGraph 编排产出事件，映射为 SSE 事件流。"""
             try:
-                async for event_type, data in stream_orchestrator(messages):
+                async for event_type, data in stream_orchestrator(messages, plan_result=req.plan_result):
                     if event_type == "content":
                         yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"
                     elif event_type == "tool_status":

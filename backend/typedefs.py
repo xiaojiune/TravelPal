@@ -118,3 +118,19 @@ class TaskParams(TypedDict):
     late_return_weight: float
     cost_matrix: NotRequired[list[list[float]]]
     dist_matrix: NotRequired[list[list[float]]]
+
+
+class AdjustParams(TypedDict):
+    """方案调整（add_poi）任务请求参数。
+
+    与 TaskParams 不同：基于已有方案快照（PlanResult），而不是从零规划的
+    PlanRequest。spots 为 PlanResult.spots（dict[int, SpotDict]），并携带
+    当前 routes 与 adjustments 指令。cost_matrix/dist_matrix 为快照矩阵。
+    """
+
+    city: str
+    spots: dict[int, SpotDict]
+    cost_matrix: list[list[float]]
+    dist_matrix: list[list[float]]
+    routes: list[list[int]]
+    adjustments: dict

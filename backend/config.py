@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal"
     # Celery 消息代理地址（redis），异步任务队列
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    # Redis 缓存地址（驾车成本点对缓存），默认与 broker 同实例
+    REDIS_URL: str = "redis://localhost:6379/0"
     # Embedding API Key（预留，当前未使用）
     EMBEDDING_API_KEY: str = ""
     # Embedding 模型名（预留，当前未使用）

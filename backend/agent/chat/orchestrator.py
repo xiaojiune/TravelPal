@@ -23,8 +23,8 @@ from typing import TypedDict
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
-from backend.agent.prompts import TOOL_DEFINITIONS
 from backend.agent.tools import TOOL_REGISTRY
+from backend.agent.tools.schema import build_tool_definitions
 from backend.domain.llm_service import ToolCallResult
 from backend.infrastructure.llm.factory import get_llm_service
 
@@ -38,24 +38,26 @@ class OrchestratorState(TypedDict):
     Attributes:
         messages: OpenAI 兼容消息列表（system/user/assistant/tool）。
         pending_tool_calls: 待执行的工具调用（agent 节点产出，tools 节点消费）。
+        tools: 本次会话暴露的工具 schema（按 category 裁剪后，agent 节点据此决策）。
     """
 
     messages: list[dict]
     pending_tool_calls: list[ToolCallResult]
+    tools: list[dict]
 
 
 async def _agent_node(state: OrchestratorState) -> dict:
     """LLM 决策节点：检测工具调用，无工具调用时流式输出最终回复。
 
     Args:
-        state: 当前图状态。
+        state: 当前图状态（含裁剪后的 tools schema）。
 
     Returns:
         更新后的 messages 与 pending_tool_calls；无工具调用时通过
         StreamWriter 实时推送 content 事件。
     """
     messages = list(state["messages"])
-    result = await _llm.complete(messages, tools=TOOL_DEFINITIONS, temperature=0.7, max_tokens=1024)
+    result = await _llm.complete(messages, tools=state["tools"], temperature=0.7, max_tokens=1024)
     if result.tool_calls:
         messages.append(result.message)
         return {"messages": messages, "pending_tool_calls": result.tool_calls}
@@ -127,15 +129,22 @@ def _build_graph():
 _graph = _build_graph()
 
 
-async def stream_orchestrator(messages: list[dict]) -> AsyncIterator[tuple]:
+async def stream_orchestrator(messages: list[dict], categories: set[str] | None = None) -> AsyncIterator[tuple]:
     """运行编排器，产出 (event_type, data) 事件流。
 
     Args:
         messages: OpenAI 兼容消息列表（初始 system/user 消息）。
+        categories: 本次会话暴露的工具分类集合（如 {"poi"}）；
+            其余分类的工具 schema 不注入 LLM，实现按上下文裁剪工具；
+            None 表示暴露全部工具。
 
     Yields:
         (event_type, data) 元组，event_type 为 content / tool_status / tool_result。
     """
-    state: OrchestratorState = {"messages": list(messages), "pending_tool_calls": []}
+    state: OrchestratorState = {
+        "messages": list(messages),
+        "pending_tool_calls": [],
+        "tools": build_tool_definitions(categories),
+    }
     async for mode, payload in _graph.astream(state, stream_mode="custom"):
         yield mode, payload

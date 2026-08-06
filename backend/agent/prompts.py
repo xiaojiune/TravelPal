@@ -1,8 +1,11 @@
-"""Agent 层所有 LLM prompt 与工具 schema 的集中管理。
+"""Agent 层所有 LLM prompt 的集中管理。
 
 集中管理以便审查和维护一致性。按用途分两节：
-- 编排提示词：CHAT_SYSTEM（对话系统提示）/ TOOL_DEFINITIONS（Function Calling 工具 schema）
+- 编排提示词：CHAT_SYSTEM（对话系统提示）
 - 工具提示词：PARSE_PROMPT（营业时间解析，poi 工具用）/ build_date_context（日期上下文）
+
+注意：工具 schema 不在此手写维护——由 tools/schema.py 从函数类型注解自动生成
+（与 MCP input_schema 同源），编排器通过 build_tool_definitions() 获取。
 
 消费方：agent/chat/（编排链路）、agent/tools/poi.py。
 """
@@ -83,25 +86,3 @@ CHAT_SYSTEM = (
     "可以暂时跳出旅行伴侣角色。既非旅行也非项目问题时再温和引导回旅行话题\n"
     "7. 当用户询问某个景点/POI的位置或地址时，使用 poi_lookup 工具查询"
 )
-
-POI_TOOL_DEF = {
-    "type": "function",
-    "function": {
-        "name": "poi_lookup",
-        "description": "批量查询景点/POI 的详细地址、坐标和营业时间",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "names": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "POI 名称列表（酒店/景点）",
-                },
-                "city": {"type": "string", "description": "所在城市"},
-            },
-            "required": ["names", "city"],
-        },
-    },
-}
-
-TOOL_DEFINITIONS = [POI_TOOL_DEF]

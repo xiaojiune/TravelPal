@@ -1,7 +1,15 @@
+# 默认日志轮转：单容器日志上限 10MB、保留 3 份，超限自动覆盖（避免无限增长占满磁盘）
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: travelpal-postgres
+    logging: *default-logging
     environment:
       POSTGRES_USER: travelpal
       POSTGRES_PASSWORD: travelpal123
@@ -19,6 +27,7 @@ services:
   redis:
     image: redis:alpine
     container_name: travelpal-redis
+    logging: *default-logging
     ports:
       - "6379:6379"
     volumes:
@@ -32,6 +41,7 @@ services:
         PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-backend
+    logging: *default-logging
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
       CELERY_BROKER_URL: redis://redis:6379/0
@@ -60,6 +70,7 @@ services:
         PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-worker
+    logging: *default-logging
     command: [".venv/bin/celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
@@ -86,6 +97,7 @@ services:
       args:
         NPM_REGISTRY: https://registry.npmmirror.com
     container_name: travelpal-nginx
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"

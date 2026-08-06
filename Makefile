@@ -1,6 +1,6 @@
 .PHONY: install build gen-api gen-all sync-check serve mcp-serve celery dev lint format typecheck \
         test check ruff ruff-fix ruff-format pyright \
-        dc-up dc-up-d dc-logs dc-ps dc-restart dc-build deploy-up deploy-down \
+        dc-up dc-logs dc-ps dc-restart dc-build deploy-up deploy-down \
         dc-migration migrate \
         clean help
 
@@ -95,10 +95,7 @@ test: ## 运行全部 Python 测试
 
 # ======== Docker ========
 
-dc-up: ## 启动基础设施（PostgreSQL + Redis，前台）
-	docker compose up postgres redis
-
-dc-up-d: ## 启动基础设施（PostgreSQL + Redis，后台）
+dc-up: ## 启动基础设施（PostgreSQL + Redis，后台）
 	docker compose up -d postgres redis
 
 dc-logs: ## 查看 Docker 日志

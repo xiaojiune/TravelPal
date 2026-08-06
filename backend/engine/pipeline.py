@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.agent.commentator import generate_commentary  # noqa: E402
+from backend.agent.planning import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.engine.search import balance_groups, cluster_and_solve, solve_groups  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
@@ -346,7 +346,7 @@ def adjust_plan(
     daily_schedules = None
 
     if "adjust_days" in adjustments:
-        from backend.agent.planner import adjust_plan_days
+        from backend.agent.planning import adjust_plan_days
 
         plan = adjust_plan_days(
             spots_dict,
@@ -359,7 +359,7 @@ def adjust_plan(
         best_days = plan["best_days"]
         best_m = plan["best_m"]
     elif "remove_poi" in adjustments:
-        from backend.agent.planner import remove_poi_from_plan
+        from backend.agent.planning import remove_poi_from_plan
 
         plan = remove_poi_from_plan(
             spots_dict,
@@ -373,7 +373,7 @@ def adjust_plan(
         best_days = plan["best_days"]
         best_m = plan["best_m"]
     elif "add_poi" in adjustments:
-        from backend.agent.planner import add_poi_to_plan
+        from backend.agent.planning import add_poi_to_plan
         from backend.data.amap_loader import _get_driving_data
 
         poi = adjustments["add_poi"]

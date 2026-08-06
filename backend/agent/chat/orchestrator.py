@@ -23,8 +23,8 @@ from typing import TypedDict
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 
+from backend.agent.prompts import TOOL_DEFINITIONS
 from backend.agent.tools import TOOL_REGISTRY
-from backend.agent.tools.prompts import TOOL_DEFINITIONS
 from backend.domain.llm_service import ToolCallResult
 from backend.infrastructure.llm.factory import get_llm_service
 

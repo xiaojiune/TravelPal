@@ -9,8 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.agent.chat import build_chat_messages
-from backend.agent.orchestrator import stream_orchestrator
+from backend.agent.chat import build_chat_messages, stream_orchestrator
 from backend.agent.tools import parse_biz_hours
 from backend.api.schemas import (
     ChatRequest,

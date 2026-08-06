@@ -2,7 +2,7 @@
 
 import json
 
-from backend.agent.tools.prompts import PARSE_PROMPT, build_date_context
+from backend.agent.prompts import PARSE_PROMPT, build_date_context
 from backend.infrastructure.llm.factory import get_llm_service
 
 

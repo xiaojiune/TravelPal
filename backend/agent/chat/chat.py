@@ -7,7 +7,7 @@
 import json
 import os
 
-from backend.agent.tools.prompts import CHAT_SYSTEM
+from backend.agent.prompts import CHAT_SYSTEM
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 

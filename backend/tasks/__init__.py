@@ -12,4 +12,9 @@
 
 from backend.tasks import app, executors, submit, worker
 
-__all__ = ["app", "executors", "submit", "worker"]
+__all__ = [
+    "app",
+    "executors",
+    "submit",
+    "worker",
+]

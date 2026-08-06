@@ -1,4 +1,11 @@
-"""所有 LLM prompt 模板。集中管理以便审查和维护一致性。"""
+"""Agent 层所有 LLM prompt 与工具 schema 的集中管理。
+
+集中管理以便审查和维护一致性。按用途分两节：
+- 编排提示词：CHAT_SYSTEM（对话系统提示）/ TOOL_DEFINITIONS（Function Calling 工具 schema）
+- 工具提示词：PARSE_PROMPT（营业时间解析，poi 工具用）/ build_date_context（日期上下文）
+
+消费方：agent/chat/（编排链路）、agent/tools/poi.py。
+"""
 
 from datetime import datetime
 
@@ -37,6 +44,8 @@ def build_date_context() -> str:
     return "；".join(parts)
 
 
+# ================== 工具提示词（poi 工具用） ==================
+
 PARSE_PROMPT = (
     "你是一个营业时间解析助手。\n"
     "高德地图 POI 的 opentime2 字段可能包含以下任意格式：\n"
@@ -58,6 +67,8 @@ PARSE_PROMPT = (
     "opentime2：{opentime2}"
 )
 
+
+# ================== 编排提示词（对话链路用） ==================
 
 CHAT_SYSTEM = (
     "你是一个旅行伴侣，正在陪用户一起规划旅行。\n"

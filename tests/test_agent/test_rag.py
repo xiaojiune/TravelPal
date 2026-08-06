@@ -1,6 +1,6 @@
-"""RAG 引擎 RagEngine 单元测试。"""
+"""RAG 引擎 RagEngine 单元测试（引擎位于基础设施层检索实现）。"""
 
-from backend.agent.tools.rag import RagEngine
+from backend.infrastructure.retrieval.bm25 import RagEngine
 
 
 class TestRagEngine:

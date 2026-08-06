@@ -1,9 +1,22 @@
 # 不应该被提交的文件
-raw_data/DataSets/
+# 测试数据集白名单：与 tests/conftest.py 五档 fixture 对齐，保证 CI 可拉取运行引擎测试
+# 通配忽略目录 → 解忽略目录 → 目录内再忽略 → 白名单文件（四层，缺一层目录内文件会暴露）
+raw_data/DataSets/*
+!raw_data/DataSets/n20w20/
+raw_data/DataSets/n20w20/*
 !raw_data/DataSets/n20w20/n20w20.001.txt
+!raw_data/DataSets/n40w20/
+raw_data/DataSets/n40w20/*
+!raw_data/DataSets/n40w20/n40w20.001.txt
+!raw_data/DataSets/n60w60/
+raw_data/DataSets/n60w60/*
 !raw_data/DataSets/n60w60/n60w60.003.txt
+!raw_data/DataSets/n80w20/
+raw_data/DataSets/n80w20/*
+!raw_data/DataSets/n80w20/n80w20.001.txt
+!raw_data/DataSets/n100w20/
+raw_data/DataSets/n100w20/*
 !raw_data/DataSets/n100w20/n100w20.001.txt
-!raw_data/DataSets/n200w40/n200w40.005.txt
 frontend/static/
 
 # 敏感配置

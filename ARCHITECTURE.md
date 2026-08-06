@@ -123,7 +123,8 @@ flowchart TB
 | 编码规范（P0-P3 注释体系） | `runbooks/coding.md` |
 | 部署指引 | `runbooks/deploy.md` |
 | Git 分支/提交规范 | `runbooks/git.md` |
-| 产品路线图 | `产品路线图.md` |
-| 产品标语与哲学展开 | `slogan.md` |
+| 产品路线图 | `product/产品路线图.md` |
+| 产品标语与哲学展开 | `product/slogan.md` |
+| 产品层索引（路线图/标语/意见收集） | `product/README.md` |
 | 故障排查手册 | `runbooks/troubleshooting.md` |
 | OpenAPI 规范 | `openapi.json`（Sphinx 构建自动生成） |

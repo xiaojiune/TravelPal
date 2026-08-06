@@ -39,7 +39,9 @@
 
    runbooks/coding
    runbooks/git
-   产品路线图
+   product/README
+   product/slogan
+   product/产品路线图
    runbooks/deploy
    runbooks/troubleshooting
    runbooks/README

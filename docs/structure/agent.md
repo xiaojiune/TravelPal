@@ -121,7 +121,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
 ### commentator.py
 
 `generate_commentary(plan_result)` → 自然语言评语。规则模板 + LLM 润色混合模式。
-详见 [`docs/产品路线图.md`](../产品路线图.md) 第一阶段。
+详见 [`docs/产品路线图.md`](../product/产品路线图.md) 第一阶段。
 
 ### planner.py
 

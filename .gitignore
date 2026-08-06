@@ -1,6 +1,4 @@
 # 不应该被提交的文件
-AAA-test/
-docs++/
 raw_data/DataSets/
 !raw_data/DataSets/n20w20/n20w20.001.txt
 !raw_data/DataSets/n60w60/n60w60.003.txt

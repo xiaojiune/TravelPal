@@ -19,6 +19,7 @@
    ADR/010
    ADR/011
    ADR/012
+   ADR/README
 
 .. toctree::
    :maxdepth: 2

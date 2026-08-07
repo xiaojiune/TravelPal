@@ -1,11 +1,11 @@
-"""方案调整工具：add_poi（向已有方案指定天添加新 POI 并单日重排，双路径）。
+"""方案调整工具：add_poi（向已有方案添加新 POI，双路径）。
 
-确定性优先：day 为目标天索引（0-indexed，第 1 天 = 0），由编排层从对话明确
-提取后传入。day 缺失时 schema 层（required）阻止调用，工具内再校验越界，
-驱动 LLM 向用户追问，不自动执行、不猜测归属。
+确定性优先（针对用户意图，而非 day）：编排层先引导用户明确意图——
+能说出目标天 → 单日重排；说不出 / 说"随便"（意图未定）→ 全局重排兜底。
+day 由编排层从对话提取后传入，缺失即表示用户意图未定。
 
 同步快路径：新点与目标天节点 + 酒店（depot）的驾车数据全部命中 Redis 点对
-缓存时，直接复用矩阵组装并单日重排，立即返回完整方案（PlanResult）。
+缓存时，直接复用矩阵组装并重排，立即返回完整方案（PlanResult）。
 异步路径：存在未命中的点对时，提交 adjust 任务由 worker 拉取驾车数据后
 重排，返回 {task_id, status} 供 get_plan_result 轮询。
 
@@ -72,13 +72,16 @@ def _target_day_nodes(routes: list, day: int) -> list[int]:
     return route[1:-1] if len(route) > 2 and route[0] == 0 else list(route)
 
 
-async def add_poi(city: str, poi: dict, day: int, plan: dict | None = None) -> dict:
-    """向已有方案指定天添加新 POI 并单日重排（双路径：缓存命中同步 / 未命中异步）。
+async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | None = None) -> dict:
+    """向已有方案添加新 POI（双路径：缓存命中同步 / 未命中异步）。
+
+    day 缺失（用户意图未定）时走全局重排；day 指定时走单日重排。
 
     Args:
         city: 所在城市。
         poi: 新点 {name, lon, lat, tw_start?, tw_end?, stay?, poi_type?}。
-        day: 目标天索引（0-indexed，第 1 天 = 0），必须明确，不自动猜测。
+        day: 目标天索引（0-indexed，第 1 天 = 0）。缺失表示用户未指定天，
+            按全局重排处理（意图未定兜底）。
         plan: 当前方案快照（PlanResult：spots/routes/cost_matrix/dist_matrix），
             编排层注入或外部调用方显式传入。
 
@@ -94,7 +97,34 @@ async def add_poi(city: str, poi: dict, day: int, plan: dict | None = None) -> d
     poi = await _extract_poi(poi)
     poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
 
-    # day 范围校验（确定性优先：越界不自动归位，抛出供 LLM 追问）
+    # day 缺失 → 全局重排（用户意图未定），无需缓存判定（全部点都需重排）
+    if day is None:
+        params = {
+            "city": city,
+            "spots": plan["spots"],
+            "cost_matrix": plan["cost_matrix"],
+            "dist_matrix": plan["dist_matrix"],
+            "routes": plan["solution"]["routes"],
+            "adjustments": {"add_poi": poi},
+        }
+        try:
+            from backend.engine.pipeline import adjust_plan
+
+            return cast(
+                dict,
+                adjust_plan(
+                    plan["spots"],
+                    plan["cost_matrix"],
+                    plan["dist_matrix"],
+                    plan["solution"]["routes"],
+                    {"add_poi": poi},
+                    city=city,
+                ),
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    # day 指定 → 单日重排；先做缓存命中判定
     try:
         target_nodes = _target_day_nodes(plan["solution"]["routes"], day)
     except ValueError as e:

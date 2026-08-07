@@ -7,6 +7,7 @@ from backend.agent.tools.driving import get_driving
 from backend.agent.tools.plan import get_plan, get_plan_result
 from backend.agent.tools.poi import parse_biz_hours, poi_lookup
 from backend.agent.tools.rag import search_rag
+from backend.agent.tools.remove import remove_poi
 
 TOOL_REGISTRY: dict[str, Callable] = {
     "poi_lookup": poi_lookup,
@@ -15,6 +16,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
     "get_plan_result": get_plan_result,
     "get_driving": get_driving,
     "add_poi": add_poi,
+    "remove_poi": remove_poi,
 }
 
 # 工具分组元数据（方案 B 平行映射）：TOOL_REGISTRY 保持纯注册表，分类独立维护。
@@ -28,6 +30,7 @@ TOOL_CATEGORIES: dict[str, str] = {
     "get_plan_result": "planning",
     "get_driving": "driving",
     "add_poi": "planning",
+    "remove_poi": "planning",
 }
 
 __all__ = [
@@ -38,6 +41,7 @@ __all__ = [
     "parse_biz_hours",
     "poi_lookup",
     "search_rag",
+    "remove_poi",
     "TOOL_REGISTRY",
     "TOOL_CATEGORIES",
 ]

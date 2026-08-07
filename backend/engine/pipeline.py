@@ -320,14 +320,15 @@ def adjust_plan(
 
     从 routes 重构分组 → 按 adjustments 类型分发 → 重新求解 → 生成新每日行程。
 
-    Args:
+     Args:
         spots_dict: 景点字典（与 run_planning 返回的 spots 格式一致）。
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
-            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>} 之一。\
-            add_poi 为单日重排（day 必填）。
+        adjustments: 调整指令 dict，支持 {"adjust_days": <int>}、{"remove_poi": "<poi_name>", "day": <int>}、\
+            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>?} 之一。\
+            remove_poi 为单日重排（day 必填）；add_poi 带 day 为单日重排，\
+            day 缺失（用户意图未定）时走全局重排（add_poi_to_plan，@placeholder 兜底）。
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
 
     Returns:
@@ -358,14 +359,18 @@ def adjust_plan(
         best_days = plan["best_days"]
         best_m = plan["best_m"]
     elif "remove_poi" in adjustments:
-        from backend.agent.planning import remove_poi_from_plan
+        from backend.agent.planning import remove_poi_from_day
 
-        plan = remove_poi_from_plan(
+        day = adjustments.get("day")
+        if day is None:
+            raise ValueError("remove_poi 调整必须指定目标天 day（0-indexed）")
+        plan = remove_poi_from_day(
             spots_dict,
             cost_matrix,
             dist_matrix,
             routes,
             adjustments["remove_poi"],
+            day,
         )
         daily_schedules = plan["daily_schedules"]
         result = plan["solution"]
@@ -378,8 +383,6 @@ def adjust_plan(
 
         poi = adjustments["add_poi"]
         day = adjustments.get("day")
-        if day is None:
-            raise ValueError("add_poi 调整必须指定目标天 day（0-indexed）")
         poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
         new_idx = max(spots_dict.keys()) + 1
         spots_dict[new_idx] = {  # pyright: ignore[reportArgumentType]
@@ -422,7 +425,13 @@ def adjust_plan(
                 new_dist[new_idx][i] = new_dist[i][new_idx] = -1
             time.sleep(0.4)
 
-        plan = add_poi_to_day(spots_dict, new_cost, new_dist, routes, new_idx, day)
+        if day is not None:
+            plan = add_poi_to_day(spots_dict, new_cost, new_dist, routes, new_idx, day)
+        else:
+            # 用户意图未定（未指定天）→ 全局重排兜底
+            from backend.agent.planning import add_poi_to_plan
+
+            plan = add_poi_to_plan(spots_dict, new_cost, new_dist, routes)
         daily_schedules = plan["daily_schedules"]
         result = plan["solution"]
         best_days = plan["best_days"]

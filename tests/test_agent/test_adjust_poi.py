@@ -60,6 +60,37 @@ def test_estimate_stay_fallback_by_name():
     assert stay == 45
 
 
+def test_add_poi_missing_day_global_path(monkeypatch):
+    """day 缺失（用户意图未定）→ 直接同步全局重排，不校验缓存不提交任务。"""
+    plan = _plan_snapshot()
+    fake_result = {"solution": {"routes": [[0, 1, 2, 3, 0]]}, "best_days": 2}
+
+    captured = {}
+
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+        captured["adjustments"] = adjustments
+        return fake_result
+
+    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr(adjust, "get_driving_pair", lambda *a, **k: None)
+
+    def _should_not_submit(*a, **k):
+        raise AssertionError("day 缺失应走同步全局路径，不应提交异步任务")
+
+    monkeypatch.setattr(adjust, "submit_task", _should_not_submit)
+
+    result = asyncio.run(
+        adjust.add_poi(
+            "广州",
+            {"name": "珠江夜游", "lon": 113.3, "lat": 23.12, "poi_type": "spot"},
+            plan=plan,
+        )
+    )
+    assert result is fake_result
+    assert "day" not in captured["adjustments"]
+    assert captured["adjustments"]["add_poi"]["name"] == "珠江夜游"
+
+
 def test_add_poi_sync_fast_path(monkeypatch):
     """目标天节点 + 酒店点对缓存全命中 → 同步直接重排，返回完整方案。"""
     plan = _plan_snapshot()

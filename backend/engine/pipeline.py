@@ -12,7 +12,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.agent.planning import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
-from backend.engine.search import cluster_and_solve, solve_groups  # noqa: E402
+from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
 from backend.utils.decorators import placeholder  # noqa: E402
 
@@ -320,7 +320,7 @@ def adjust_plan(
     city: str = "",
 ) -> PlanResult:
     """
-    对已有方案执行调整（均衡、移除景点、改天数、添加景点）。
+    对已有方案执行调整（移除景点、改天数、添加景点）。
 
     从 routes 重构分组 → 按 adjustments 类型分发 → 重新求解 → 生成新每日行程。
 
@@ -330,9 +330,8 @@ def adjust_plan(
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
         adjustments: 调整指令 dict，支持 {"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
-            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>}、\
-            {"balance": true, "metric": "stay"} 之一。add_poi 为单日重排（day 必填）；\
-            balance 为可量化参数统一均衡（metric 支持 stay，wait/dist/cost 后期扩展）。
+            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>} 之一。\
+            add_poi 为单日重排（day 必填）。
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
 
     Returns:
@@ -432,23 +431,6 @@ def adjust_plan(
         result = plan["solution"]
         best_days = plan["best_days"]
         best_m = "add_poi"
-    elif "balance" in adjustments:
-        from backend.agent.planning import balance_groups
-
-        core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
-        balanced = balance_groups(core_groups, spots_dict, metric=adjustments.get("metric", "stay"))
-        core_groups = [g[1:-1] for g in balanced]
-
-        result = solve_groups(
-            core_groups,
-            spots_dict,
-            cost_matrix,
-            solver_type="CA",
-        )
-        print(f"调整后总成本: {result['total_cost']:.1f}\n")
-        daily_schedules = _rebuild_schedule(result["routes"], spots_dict, cost_matrix)
-        best_days = len(routes)
-        best_m = "balance"
     else:
         raise ValueError(f"未识别的调整指令: {list(adjustments.keys())}")
 

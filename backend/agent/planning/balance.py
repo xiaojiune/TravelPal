@@ -1,7 +1,8 @@
 """方案均衡功能：按可量化参数把景点在组间重分配，使各天该参数尽可能均衡。
 
-定位：方案调整能力（planning 层），非求解器（engine）内部逻辑。被
-engine/pipeline.adjust_plan 分发调用（{"balance": true} 指令）。
+定位：方案调整能力（planning 层），非求解器（engine）内部逻辑。当前为
+占位（@placeholder）——原 pipeline.adjust_plan 的 {"balance": true} 指令分支
+已删除，暂无调用方，待未来前端或 Agent 接线后再启用。
 
 统一均衡函数：metric 决定衡量每日负荷的可量化参数——
 - "stay"：停留时间（当前实现，景点点级属性可直接取值）
@@ -17,6 +18,7 @@ from typing import Callable
 import numpy as np
 
 from backend.typedefs import SpotDict
+from backend.utils.decorators import placeholder
 
 # 单点负载函数注册表：metric -> (spots, node) -> float
 # 当前仅 stay（点级属性可直接算）；wait/dist/cost 需求解感知，后期按此扩展。
@@ -31,6 +33,7 @@ def _stay_load(spots: dict[int, SpotDict], node: int) -> float:
 _LOAD_FUNCS["stay"] = _stay_load
 
 
+@placeholder
 def balance_groups(
     groups: list,
     spots: dict[int, SpotDict],

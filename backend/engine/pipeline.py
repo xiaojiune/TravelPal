@@ -12,7 +12,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.agent.planning import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
-from backend.engine.search import balance_groups, cluster_and_solve, solve_groups  # noqa: E402
+from backend.engine.search import cluster_and_solve, solve_groups  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
 from backend.utils.decorators import placeholder  # noqa: E402
 
@@ -329,8 +329,10 @@ def adjust_plan(
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"balance": true}、{"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
-            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}} 之一。
+        adjustments: 调整指令 dict，支持 {"adjust_days": <int>}、{"remove_poi": "<poi_name>"}、\
+            {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>}、\
+            {"balance": true, "metric": "stay"} 之一。add_poi 为单日重排（day 必填）；\
+            balance 为可量化参数统一均衡（metric 支持 stay，wait/dist/cost 后期扩展）。
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
 
     Returns:
@@ -375,11 +377,14 @@ def adjust_plan(
         best_days = plan["best_days"]
         best_m = plan["best_m"]
     elif "add_poi" in adjustments:
-        from backend.agent.planning import add_poi_to_plan
+        from backend.agent.planning import add_poi_to_day
         from backend.data.amap_loader import _get_driving_data
         from backend.data.driving_cache import get_driving_pair, set_driving_pair
 
         poi = adjustments["add_poi"]
+        day = adjustments.get("day")
+        if day is None:
+            raise ValueError("add_poi 调整必须指定目标天 day（0-indexed）")
         poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
         new_idx = max(spots_dict.keys()) + 1
         spots_dict[new_idx] = {  # pyright: ignore[reportArgumentType]
@@ -422,15 +427,17 @@ def adjust_plan(
                 new_dist[new_idx][i] = new_dist[i][new_idx] = -1
             time.sleep(0.4)
 
-        plan = add_poi_to_plan(spots_dict, new_cost, new_dist, routes)
+        plan = add_poi_to_day(spots_dict, new_cost, new_dist, routes, new_idx, day)
         daily_schedules = plan["daily_schedules"]
         result = plan["solution"]
         best_days = plan["best_days"]
         best_m = "add_poi"
+    elif "balance" in adjustments:
+        from backend.agent.planning import balance_groups
+
         core_groups = [r[1:-1] if len(r) > 2 and r[0] == 0 else r for r in routes]
-        if adjustments.get("balance"):
-            balanced = balance_groups(core_groups, spots_dict)
-            core_groups = [g[1:-1] for g in balanced]
+        balanced = balance_groups(core_groups, spots_dict, metric=adjustments.get("metric", "stay"))
+        core_groups = [g[1:-1] for g in balanced]
 
         result = solve_groups(
             core_groups,

@@ -1,9 +1,13 @@
-"""方案调整工具：add_poi（向已有方案添加新 POI 并重排，双路径）。
+"""方案调整工具：add_poi（向已有方案指定天添加新 POI 并单日重排，双路径）。
 
-同步快路径：新点与方案内所有已有点（含酒店）的驾车数据全部命中 Redis 点对缓存时，
-直接复用矩阵组装并重排，立即返回完整方案（PlanResult）。
-异步路径：存在未命中的点对时，提交 adjust 任务由 worker 拉取驾车数据后重排，
-返回 {task_id, status} 供 get_plan_result 轮询。
+确定性优先：day 为目标天索引（0-indexed，第 1 天 = 0），由编排层从对话明确
+提取后传入。day 缺失时 schema 层（required）阻止调用，工具内再校验越界，
+驱动 LLM 向用户追问，不自动执行、不猜测归属。
+
+同步快路径：新点与目标天节点 + 酒店（depot）的驾车数据全部命中 Redis 点对
+缓存时，直接复用矩阵组装并单日重排，立即返回完整方案（PlanResult）。
+异步路径：存在未命中的点对时，提交 adjust 任务由 worker 拉取驾车数据后
+重排，返回 {task_id, status} 供 get_plan_result 轮询。
 
 停留时间三层降级：显式参数 → poi_type/名称关键词映射（poi.estimate_stay，
 无对话上下文时跳过 LLM 直用映射）→ 默认值。
@@ -46,12 +50,35 @@ async def _extract_poi(poi: dict) -> dict:
     }
 
 
-async def add_poi(city: str, poi: dict, plan: dict | None = None) -> dict:
-    """向已有方案添加新 POI 并重排全局路线（双路径：缓存命中同步 / 未命中异步）。
+def _target_day_nodes(routes: list, day: int) -> list[int]:
+    """取目标天包含的核心节点（剥掉首尾 depot），并校验 day 范围。
+
+    Args:
+        routes: 方案路径列表，每组含首尾 depot。
+        day: 目标天索引（0-indexed）。
+
+    Returns:
+        list[int]: 目标天的景点索引列表（不含 depot）。
+
+    Raises:
+        ValueError: day 越界或 routes 为空。
+    """
+    n_days = len(routes)
+    if not routes:
+        raise ValueError("方案无任何天，无法添加景点")
+    if not 0 <= day < n_days:
+        raise ValueError(f"目标天 day={day} 超出范围，方案共 {n_days} 天（第 1 天=0）")
+    route = routes[day]
+    return route[1:-1] if len(route) > 2 and route[0] == 0 else list(route)
+
+
+async def add_poi(city: str, poi: dict, day: int, plan: dict | None = None) -> dict:
+    """向已有方案指定天添加新 POI 并单日重排（双路径：缓存命中同步 / 未命中异步）。
 
     Args:
         city: 所在城市。
         poi: 新点 {name, lon, lat, tw_start?, tw_end?, stay?, poi_type?}。
+        day: 目标天索引（0-indexed，第 1 天 = 0），必须明确，不自动猜测。
         plan: 当前方案快照（PlanResult：spots/routes/cost_matrix/dist_matrix），
             编排层注入或外部调用方显式传入。
 
@@ -67,13 +94,19 @@ async def add_poi(city: str, poi: dict, plan: dict | None = None) -> dict:
     poi = await _extract_poi(poi)
     poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
 
-    # 同步快路径判定：新点 ↔ 全部已有点（含酒店）的驾车数据是否全部命中缓存
-    all_hit = True
-    for spot in plan["spots"].values():
-        target = {"name": spot["name"], "lon": spot["x"], "lat": spot["y"]}
-        if get_driving_pair(city, poi_point, target) is None:
-            all_hit = False
-            break
+    # day 范围校验（确定性优先：越界不自动归位，抛出供 LLM 追问）
+    try:
+        target_nodes = _target_day_nodes(plan["solution"]["routes"], day)
+    except ValueError as e:
+        return {"error": str(e)}
+
+    # 同步快路径判定：新点 ↔ 目标天节点 + 酒店(depot) 是否全部命中缓存
+    hotel = plan["spots"]["0"]
+    check_points = [{"name": hotel["name"], "lon": hotel["x"], "lat": hotel["y"]}]
+    for idx in target_nodes:
+        s = plan["spots"][str(idx)]
+        check_points.append({"name": s["name"], "lon": s["x"], "lat": s["y"]})
+    all_hit = all(get_driving_pair(city, poi_point, t) is not None for t in check_points)
 
     if all_hit:
         from backend.engine.pipeline import adjust_plan
@@ -86,7 +119,7 @@ async def add_poi(city: str, poi: dict, plan: dict | None = None) -> dict:
                     plan["cost_matrix"],
                     plan["dist_matrix"],
                     plan["solution"]["routes"],
-                    {"add_poi": poi},
+                    {"add_poi": poi, "day": day},
                     city=city,
                 ),
             )
@@ -99,7 +132,7 @@ async def add_poi(city: str, poi: dict, plan: dict | None = None) -> dict:
         "cost_matrix": plan["cost_matrix"],
         "dist_matrix": plan["dist_matrix"],
         "routes": plan["solution"]["routes"],
-        "adjustments": {"add_poi": poi},
+        "adjustments": {"add_poi": poi, "day": day},
     }
     try:
         task_id = await submit_task("adjust", params)

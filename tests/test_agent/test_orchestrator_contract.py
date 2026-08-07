@@ -128,6 +128,6 @@ class TestOrchestratorContract:
         assert poi_names == {"poi_lookup"}
 
         # 只裁剪出 planning 分类（重工具 + 方案调整）
-        fake_plan = asyncio.run(run({"planning"}))
+        fake_plan = asyncio.run(run({"plan"}))
         plan_names = {d["function"]["name"] for d in fake_plan.seen_tools[0]}
         assert plan_names == {"get_plan", "get_plan_result", "add_poi", "remove_poi"}

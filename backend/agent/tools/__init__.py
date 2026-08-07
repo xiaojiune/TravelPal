@@ -34,11 +34,11 @@ TOOL_REGISTRY: dict[str, Callable] = {
 TOOL_CATEGORIES: dict[str, str] = {
     "poi_lookup": "poi",
     "search_rag": "rag",
-    "get_plan": "planning",
-    "get_plan_result": "planning",
+    "get_plan": "plan",
+    "get_plan_result": "plan",
     "get_driving": "driving",
-    "add_poi": "planning",
-    "remove_poi": "planning",
+    "add_poi": "plan",
+    "remove_poi": "plan",
 }
 
 __all__ = [

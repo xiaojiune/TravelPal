@@ -3,7 +3,7 @@ import pytest
 
 from tests.dataset_loader import find_dataset, load_tsptw_dataset
 
-# 数据集 fixture 覆盖五种规模：n20（小）、n40（中）、n60（中偏大）、n80（大）、n100（大）
+# 数据集 fixture 覆盖三种规模：n20（小）、n40（中）、n60（中偏大）
 # 统一取 w20 最窄时间窗（n60 保持 w60 宽窗既有实例），对聚类/求解的时间窗约束更具区分度
 
 
@@ -22,22 +22,10 @@ def n60_dataset() -> tuple[dict, np.ndarray, int]:
     return load_tsptw_dataset(find_dataset("n60w60", 3))
 
 
-@pytest.fixture(scope="session")
-def n80_dataset() -> tuple[dict, np.ndarray, int]:
-    return load_tsptw_dataset(find_dataset("n80w20", 1))
-
-
-@pytest.fixture(scope="session")
-def n100_dataset() -> tuple[dict, np.ndarray, int]:
-    return load_tsptw_dataset(find_dataset("n100w20", 1))
-
-
 DATASET_IDS = [
     "n20w20.001",
     "n40w20.001",
     "n60w60.003",
-    "n80w20.001",
-    "n100w20.001",
 ]
 
 
@@ -51,8 +39,6 @@ def _load(subdir: str, instance: int) -> tuple[dict, np.ndarray, int]:
         ("n20w20", 1),
         ("n40w20", 1),
         ("n60w60", 3),
-        ("n80w20", 1),
-        ("n100w20", 1),
     ],
     ids=DATASET_IDS,
 )

@@ -7,8 +7,10 @@ import numpy as np
 
 from backend.engine.search import cluster_and_solve
 from backend.typedefs import SpotDict
+from backend.utils.decorators import refactor
 
 
+@refactor
 def adjust_plan_days(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -16,6 +18,9 @@ def adjust_plan_days(
     new_n_days: int,
 ) -> dict:
     """调整方案天数，保持景点不变，用新 n_days 重新规划。
+
+    TODO(重构方向)：改天数能力将由 suggest 阶段 CA 多解缓存替代，
+    本函数退化为缓存查询或删除。
 
     Args:
         spots_dict: 景点字典（与 run_planning 格式一致）。

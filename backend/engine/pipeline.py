@@ -14,7 +14,6 @@ from backend.agent.planning import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
-from backend.utils.decorators import placeholder  # noqa: E402
 
 # ================== 常量 ==================
 
@@ -308,9 +307,6 @@ def _rebuild_schedule(
 # ================== 方案调整 ==================
 
 
-# 装饰器定义见 backend/utils/decorators.py
-# 说明：方案调整编排（改天数/移除/添加景点），未接入任何端点
-@placeholder
 def adjust_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix_list: list,

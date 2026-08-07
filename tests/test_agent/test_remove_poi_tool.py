@@ -7,7 +7,7 @@ day 指定（单日）、同步失败异步兜底。
 
 import asyncio
 
-from backend.agent.tools import remove as remove_tool
+from backend.agent.tools.plan import remove_poi as remove_poi_fn
 
 
 def _plan_snapshot() -> dict:
@@ -25,14 +25,14 @@ def _plan_snapshot() -> dict:
 
 
 def test_missing_plan_returns_error():
-    result = asyncio.run(remove_tool.remove_poi("广州", "广州塔"))
+    result = asyncio.run(remove_poi_fn("广州", "广州塔"))
     assert "error" in result and "缺少当前方案" in result["error"]
 
 
 def test_incomplete_snapshot_returns_error():
     plan = _plan_snapshot()
     del plan["dist_matrix"]
-    result = asyncio.run(remove_tool.remove_poi("广州", "广州塔", plan=plan))
+    result = asyncio.run(remove_poi_fn("广州", "广州塔", plan=plan))
     assert "error" in result and "快照不完整" in result["error"]
 
 
@@ -52,9 +52,9 @@ def test_remove_poi_day_specified_passes_day(monkeypatch):
     def _should_not_submit(*a, **k):
         raise AssertionError("同步成功不应提交异步任务")
 
-    monkeypatch.setattr(remove_tool, "submit_task", _should_not_submit)
+    monkeypatch.setattr("backend.agent.tools.plan.remove.submit_task", _should_not_submit)
 
-    result = asyncio.run(remove_tool.remove_poi("广州", "广州塔", day=0, plan=plan))
+    result = asyncio.run(remove_poi_fn("广州", "广州塔", day=0, plan=plan))
     assert result is fake_result
     assert captured["adjustments"] == {"remove_poi": "广州塔", "day": 0}
 
@@ -72,7 +72,7 @@ def test_remove_poi_missing_day_global(monkeypatch):
 
     monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
 
-    result = asyncio.run(remove_tool.remove_poi("广州", "广州塔", plan=plan))
+    result = asyncio.run(remove_poi_fn("广州", "广州塔", plan=plan))
     assert result is fake_result
     assert captured["adjustments"] == {"remove_poi": "广州塔"}
 
@@ -91,7 +91,7 @@ def test_remove_poi_sync_failure_submits_async(monkeypatch):
         assert params["adjustments"] == {"remove_poi": "广州塔", "day": 5}
         return "task-999"
 
-    monkeypatch.setattr(remove_tool, "submit_task", fake_submit)
+    monkeypatch.setattr("backend.agent.tools.plan.remove.submit_task", fake_submit)
 
-    result = asyncio.run(remove_tool.remove_poi("广州", "广州塔", day=5, plan=plan))
+    result = asyncio.run(remove_poi_fn("广州", "广州塔", day=5, plan=plan))
     assert result == {"task_id": "task-999", "status": "pending"}

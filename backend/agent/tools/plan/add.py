@@ -9,7 +9,7 @@ day 由编排层从对话提取后传入，缺失即表示用户意图未定。
 异步路径：存在未命中的点对时，提交 adjust 任务由 worker 拉取驾车数据后
 重排，返回 {task_id, status} 供 get_plan_result 轮询。
 
-停留时间三层降级：显式参数 → poi_type/名称关键词映射（poi.estimate_stay，
+停留时间三层降级：显式参数 → poi_type/名称关键词映射（poi/estimate_stay，
 无对话上下文时跳过 LLM 直用映射）→ 默认值。
 
 plan 参数（当前方案快照）由编排层注入：内部 FC 经 orchestrator 的 plan_result
@@ -33,7 +33,7 @@ async def _extract_poi(poi: dict) -> dict:
     Returns:
         dict: pipeline.add_poi 分支所需的 {name, lon, lat, tw_start, tw_end, stay}。
     """
-    from backend.agent.tools.poi import estimate_stay
+    from backend.agent.tools.poi.service import estimate_stay
 
     stay = await estimate_stay(
         poi.get("poi_type", "spot"),

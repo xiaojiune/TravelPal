@@ -1,15 +1,18 @@
 """add_poi 工具（双路径）契约测试。
 
 覆盖：缺 plan 报错、快照不完整报错、停留时间三层降级、
-day 越界校验、同步快路径（目标天点对缓存全命中直接重排）、
+day 越界校验、day 缺失全局兜底、同步快路径（目标天点对缓存全命中直接重排）、
 异步路径（未命中提交 adjust 任务并携带 day）。
 不触网：monkeypatch 掉 driving_cache 与 submit_task。
 """
 
 import asyncio
 
-from backend.agent.tools import adjust
-from backend.agent.tools.poi import estimate_stay
+from backend.agent.tools.plan import add_poi as add_poi_fn
+from backend.agent.tools.poi.service import estimate_stay
+
+# add.py 顶层 import 的模块路径，供 monkeypatch 字符串方式打桩
+_ADJUST_MODULE = "backend.agent.tools.plan.add"
 
 
 def _plan_snapshot() -> dict:
@@ -27,21 +30,21 @@ def _plan_snapshot() -> dict:
 
 
 def test_missing_plan_returns_error():
-    result = asyncio.run(adjust.add_poi("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0))
+    result = asyncio.run(add_poi_fn("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0))
     assert "error" in result and "缺少当前方案" in result["error"]
 
 
 def test_incomplete_snapshot_returns_error():
     plan = _plan_snapshot()
     del plan["cost_matrix"]
-    result = asyncio.run(adjust.add_poi("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0, plan=plan))
+    result = asyncio.run(add_poi_fn("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0, plan=plan))
     assert "error" in result and "快照不完整" in result["error"]
 
 
 def test_day_out_of_range_returns_error():
     """day 越界（确定性优先：不自动归位，返回友好错误供 LLM 追问）。"""
     poi = {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}
-    result = asyncio.run(adjust.add_poi("广州", poi, 5, plan=_plan_snapshot()))
+    result = asyncio.run(add_poi_fn("广州", poi, 5, plan=_plan_snapshot()))
     assert "error" in result and "超出范围" in result["error"]
 
 
@@ -72,15 +75,14 @@ def test_add_poi_missing_day_global_path(monkeypatch):
         return fake_result
 
     monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
-    monkeypatch.setattr(adjust, "get_driving_pair", lambda *a, **k: None)
 
     def _should_not_submit(*a, **k):
         raise AssertionError("day 缺失应走同步全局路径，不应提交异步任务")
 
-    monkeypatch.setattr(adjust, "submit_task", _should_not_submit)
+    monkeypatch.setattr(f"{_ADJUST_MODULE}.submit_task", _should_not_submit)
 
     result = asyncio.run(
-        adjust.add_poi(
+        add_poi_fn(
             "广州",
             {"name": "珠江夜游", "lon": 113.3, "lat": 23.12, "poi_type": "spot"},
             plan=plan,
@@ -96,7 +98,9 @@ def test_add_poi_sync_fast_path(monkeypatch):
     plan = _plan_snapshot()
     fake_result = {"solution": {"routes": [[0, 1, 3, 0], [0, 2, 0]]}, "best_days": 2}
 
-    monkeypatch.setattr(adjust, "get_driving_pair", lambda *a, **k: {"duration_min": 10.0, "distance_km": 5.0})
+    monkeypatch.setattr(
+        f"{_ADJUST_MODULE}.get_driving_pair", lambda *a, **k: {"duration_min": 10.0, "distance_km": 5.0}
+    )
 
     captured = {}
 
@@ -109,10 +113,10 @@ def test_add_poi_sync_fast_path(monkeypatch):
     def _should_not_submit(*a, **k):
         raise AssertionError("不应提交异步任务")
 
-    monkeypatch.setattr(adjust, "submit_task", _should_not_submit)
+    monkeypatch.setattr(f"{_ADJUST_MODULE}.submit_task", _should_not_submit)
 
     result = asyncio.run(
-        adjust.add_poi(
+        add_poi_fn(
             "广州",
             {"name": "珠江夜游", "lon": 113.3, "lat": 23.12, "poi_type": "spot"},
             0,
@@ -128,7 +132,7 @@ def test_add_poi_async_submit_when_cache_miss(monkeypatch):
     """缓存未命中 → 提交 adjust 异步任务，返回 task_id/pending 并携带 day。"""
     plan = _plan_snapshot()
 
-    monkeypatch.setattr(adjust, "get_driving_pair", lambda *a, **k: None)
+    monkeypatch.setattr(f"{_ADJUST_MODULE}.get_driving_pair", lambda *a, **k: None)
 
     async def fake_submit(task_type, params):
         assert task_type == "adjust"
@@ -137,10 +141,10 @@ def test_add_poi_async_submit_when_cache_miss(monkeypatch):
         assert params["adjustments"]["day"] == 1
         return "task-123"
 
-    monkeypatch.setattr(adjust, "submit_task", fake_submit)
+    monkeypatch.setattr(f"{_ADJUST_MODULE}.submit_task", fake_submit)
 
     result = asyncio.run(
-        adjust.add_poi(
+        add_poi_fn(
             "广州",
             {"name": "珠江夜游", "lon": 113.3, "lat": 23.12, "poi_type": "spot"},
             1,

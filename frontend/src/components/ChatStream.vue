@@ -42,7 +42,7 @@
  * Emits:
  *   tool-result: (payload: PoiItem) — 工具调用结果（tool_result 事件数据）
  */
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, onUnmounted } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
 import { usePlanStore } from '@/stores/plan'
@@ -63,6 +63,14 @@ const inputText = ref('')
 const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
 const { displayText, append, reset } = useTypewriter({ speed: 30 })
+// 当前 SSE 请求的 AbortController：组件卸载（AgentPanel 关闭）时中止流，
+// 避免 fetch 继续运行、闭包写入已卸载组件的 ref
+let abortController: AbortController | null = null
+
+onUnmounted(() => {
+  abortController?.abort()
+  abortController = null
+})
 
 /** 当前时间格式化为 HH:MM，作为消息时间戳。 */
 function formatTime(d: Date): string {
@@ -94,12 +102,14 @@ async function send() {
   loading.value = true
   reset()
   const msgIndex = messages.value.length - 1
+  abortController = new AbortController()
 
   try {
     const resp = await fetch(props.apiPath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text, plan_result: store.planResult ?? null }),
+      signal: abortController.signal,
     })
     if (!resp.ok) {
       messages.value[msgIndex].content = '请求失败，请重试'
@@ -152,10 +162,13 @@ async function send() {
       await nextTick()
       scrollToBottom()
     }
-  } catch {
+  } catch (e) {
+    // 组件卸载主动 abort 时静默退出，不覆盖消息内容
+    if (e instanceof DOMException && e.name === 'AbortError') return
     messages.value[msgIndex].content = '网络错误，请检查连接'
   }
 
+  abortController = null
   loading.value = false
   scrollToBottom()
 }

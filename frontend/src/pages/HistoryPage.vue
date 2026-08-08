@@ -114,6 +114,11 @@ function deleteRecord(r: HistorySummary) {
         await deleteHistory(r.id, getDeviceId())
         items.value = items.value.filter((x) => x.id !== r.id)
         total.value--
+        // 删除当前页最后一条记录后页码回退，避免落到空页
+        if (items.value.length === 0 && page.value > 1) {
+          page.value--
+          await loadList()
+        }
       } catch {
         message.error('删除失败，可能不是你分享的方案。')
       }

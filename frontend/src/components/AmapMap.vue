@@ -1,5 +1,6 @@
 <template>
-  <div ref="container" class="amap-container"></div>
+  <div v-if="mapError" class="map-error">{{ mapError }}</div>
+  <div v-else ref="container" class="amap-container"></div>
 </template>
 
 <script setup lang="ts">
@@ -104,25 +105,27 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const container = ref<HTMLDivElement | null>(null)
+// 地图加载/初始化失败的降级提示（如 key 失效、网络不可达）
+const mapError = ref('')
 let map: any = null
 let overlays: any[] = []
 let markerMap: Record<string, any> = {}
 let infoWindow: any = null
-let amapLoaded = false
 
-/** 动态加载高德 JS API（v2.0），避免重复加载。 */
+/** 动态加载高德 JS API（v2.0），避免重复加载；失败时 reject 供上层降级。 */
 function loadAmapScript() {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((resolve, reject) => {
     if (window.AMap) {
-      amapLoaded = true
       resolve()
       return
     }
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${props.amapKey}`
     script.onload = () => {
-      amapLoaded = true
       resolve()
+    }
+    script.onerror = () => {
+      reject(new Error('高德地图脚本加载失败'))
     }
     document.head.appendChild(script)
   })
@@ -241,44 +244,45 @@ function render() {
 }
 
 onMounted(async () => {
-  console.log('[map] mount start, container:', container.value?.offsetHeight)
-  if (!props.amapKey) return
-  await loadAmapScript()
-  if (!amapLoaded) return
-  await nextTick()
-  if (props.securityCode && window.AMap) {
-    window.AMap.securityCode = props.securityCode
+  if (!props.amapKey) {
+    mapError.value = '未配置高德地图 Key，无法展示地图'
+    return
   }
-  if (container.value?.offsetHeight === 0) {
-    console.log('[map] awaiting resize...')
-    await new Promise<void>((resolve) => {
-      const ro = new ResizeObserver(() => {
-        if (container.value?.offsetHeight) {
-          ro.disconnect()
-          resolve()
-        }
+  try {
+    await loadAmapScript()
+    await nextTick()
+    if (props.securityCode && window.AMap) {
+      window.AMap.securityCode = props.securityCode
+    }
+    if (container.value?.offsetHeight === 0) {
+      await new Promise<void>((resolve) => {
+        const ro = new ResizeObserver(() => {
+          if (container.value?.offsetHeight) {
+            ro.disconnect()
+            resolve()
+          }
+        })
+        ro.observe(container.value!)
       })
-      ro.observe(container.value!)
+    }
+    map = new AMap.Map(container.value, {
+      zoom: 13,
+      resizeEnable: true,
+      zooms: [3, 18],
     })
+    AMap.plugin('AMap.ToolBar', () => {
+      map.addControl(new AMap.ToolBar())
+    })
+    infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) }) // 偏移避免遮挡标记
+    await nextTick()
+    render()
+    map.resize()
+  } catch {
+    mapError.value = '地图加载失败，请检查网络后重试'
   }
-  console.log('[map] init AMap, height=' + container.value?.offsetHeight)
-  map = new AMap.Map(container.value, {
-    zoom: 13,
-    resizeEnable: true,
-    zooms: [3, 18],
-  })
-  AMap.plugin('AMap.ToolBar', () => {
-    map.addControl(new AMap.ToolBar())
-  })
-  infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) }) // 偏移避免遮挡标记
-  console.log('[map] AMap init done, rendering...')
-  await nextTick()
-  render()
-  map.resize()
 })
 
 onBeforeUnmount(() => {
-  console.log('[map] unmount')
   if (map) {
     map.destroy()
     map = null
@@ -312,5 +316,15 @@ watch(
 .amap-container {
   width: 100%;
   height: 100%;
+}
+.map-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--tp-text-2);
+  background: var(--tp-bg);
 }
 </style>

@@ -14,6 +14,9 @@
               <router-link to="/suggest">方案建议</router-link>
               <router-link to="/plan">规划结果</router-link>
               <router-link to="/history">历史记录</router-link>
+              <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
+                🆕 新建规划
+              </n-button>
             </div>
             <!-- 全局 Agent 入口：文字按钮自我解释，首访自动弹 tooltip + bounce 提醒（永久一次），之后 hover 提示 -->
             <n-tooltip placement="bottom-end" :show="attention">
@@ -56,10 +59,23 @@
 <script setup lang="ts">
 /** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧待选栏 + 页面出口 + Agent 下拉面板。导航链接覆盖 4 个页面。 */
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
+import { usePlanStore } from '@/stores/plan'
 import PendingPanel from '@/components/PendingPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
+
+const router = useRouter()
+const store = usePlanStore()
+
+/**
+ * 新建规划：清空全部规划状态并回首页（reset 补全清空待选栏/加载态/惩罚权重）。
+ */
+function startNewPlan() {
+  store.reset()
+  router.push('/')
+}
 
 /** 全局 Agent 面板显隐（导航栏按钮 / 遮罩点击 / Esc 三路控制）。 */
 const agentOpen = ref(false)

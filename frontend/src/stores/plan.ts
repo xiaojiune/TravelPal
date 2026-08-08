@@ -191,6 +191,11 @@ export const usePlanStore = defineStore('plan', () => {
     suggestAlgoTime.value = 0
     amapApiKey.value = ''
     amapSecurityCode.value = ''
+    pendingPois.value = []
+    loading.value = false
+    penaltyWeight.value = 100
+    earlyWaitWeight.value = 0.1
+    lateReturnWeight.value = 50
   }
 
   return {

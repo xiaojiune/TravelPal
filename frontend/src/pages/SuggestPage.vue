@@ -190,7 +190,7 @@ async function runDeep() {
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
   } catch (e: unknown) {
-    message.error('深度规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
+    message.error('深度规划失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }

@@ -1,6 +1,5 @@
 /** POI 搜索 composable：自动确认查询结果，无需用户勾选。 */
 import { ref, computed } from 'vue'
-import { AxiosError } from 'axios'
 import { usePlanStore } from '@/stores/plan'
 import { postPoiLookup } from '@/services/api'
 
@@ -33,10 +32,7 @@ export function usePoiSearch() {
         hotelMsg.value = `⚠️ ${data.failed?.[0] || '未找到该酒店'}`
       }
     } catch (e: unknown) {
-      const msg =
-        e instanceof AxiosError
-          ? (e.response?.data as { detail?: string })?.detail || e.message
-          : '未知错误'
+      const msg = e instanceof Error ? e.message : '未知错误'
       hotelMsg.value = '搜索酒店失败: ' + msg
     } finally {
       loading.value = false
@@ -74,10 +70,7 @@ export function usePoiSearch() {
       spotMsg.value = msgs.join('\n') || '⚠️ 未找到任何景点'
       if (data.items.length) spotText.value = ''
     } catch (e: unknown) {
-      const msg =
-        e instanceof AxiosError
-          ? (e.response?.data as { detail?: string })?.detail || e.message
-          : '未知错误'
+      const msg = e instanceof Error ? e.message : '未知错误'
       spotMsg.value = '搜索景点失败: ' + msg
     } finally {
       loading.value = false

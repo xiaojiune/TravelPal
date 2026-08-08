@@ -290,7 +290,7 @@ async function fetchSuggest() {
     if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
     router.push('/suggest')
   } catch (e: unknown) {
-    message.error('获取建议失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
+    message.error('获取建议失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }

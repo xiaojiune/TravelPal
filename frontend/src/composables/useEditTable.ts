@@ -4,7 +4,6 @@ import { usePlanStore } from '@/stores/plan'
 import { fmtRange } from '@/utils/time'
 
 interface EditRow {
-  isHotel: boolean
   name: string
   address: string
   lon: number
@@ -25,41 +24,23 @@ export function useEditTable() {
 
   rebuildEditRows() // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
 
-  /** 已有确认点位时展示管理表格。 */
-  const showManagement = computed(() => !!(store.hotelName || store.spots.length > 0))
+  /** 已有确认景点时展示管理表格（酒店信息由酒店卡独立管理，不进入表格）。 */
+  const showManagement = computed(() => store.spots.length > 0)
 
   /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
   function rebuildEditRows() {
     _rebuilding = true
-    const rows: EditRow[] = []
-    if (store.hotelName && store.hotelLon) {
-      rows.push({
-        isHotel: true,
-        name: store.hotelName,
-        address: store.hotelAddress,
-        lon: store.hotelLon,
-        lat: store.hotelLat,
-        twStart: store.hotelTwStart,
-        twEnd: store.hotelTwEnd,
-        stay: null,
-        expectedArrival: null,
-        delete: false,
-      })
-    }
-    store.spots.forEach((s) => {
-      rows.push({
-        isHotel: false,
-        name: s.name,
-        address: s.address || '',
-        lon: s.lon,
-        lat: s.lat,
-        twStart: s.twStart,
-        twEnd: s.twEnd,
-        stay: s.stay || null,
-        expectedArrival: s.expectedArrival || null,
-        delete: false,
-      })
-    })
+    const rows: EditRow[] = store.spots.map((s) => ({
+      name: s.name,
+      address: s.address || '',
+      lon: s.lon,
+      lat: s.lat,
+      twStart: s.twStart,
+      twEnd: s.twEnd,
+      stay: s.stay || null,
+      expectedArrival: s.expectedArrival || null,
+      delete: false,
+    }))
     editRows.value = rows
     nextTick(() => {
       _rebuilding = false
@@ -96,22 +77,14 @@ export function useEditTable() {
     return fmtRange(start, end)
   }
 
-  /** 删除勾选行。酒店行被删则清空 store 酒店信息；景点行直接移除。 */
+  /** 删除勾选行。全部为景点行（酒店不在表格中），直接移除并回写 store。 */
   function deleteSelectedRows() {
     const remaining = editRows.value.filter((r) => !r.delete)
     if (remaining.length === editRows.value.length) {
       editHint.value = '没有选中要删除的行'
       return
     }
-    const hotelRow = remaining.find((r) => r.isHotel)
-    if (!hotelRow) {
-      store.hotelName = ''
-      store.hotelLon = 0
-      store.hotelLat = 0
-      store.hotelAddress = ''
-    }
     store.spots = remaining
-      .filter((r) => !r.isHotel)
       .map((r) => ({
         name: r.name,
         lon: r.lon,
@@ -135,19 +108,13 @@ export function useEditTable() {
 
   /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
   function applyEdits() {
-    const hotelRow = editRows.value.find((r) => r.isHotel)
-    if (hotelRow) {
-      store.hotelTwStart = hotelRow.twStart
-      store.hotelTwEnd = hotelRow.twEnd
-    }
-    const spotsOnly = editRows.value.filter((r) => !r.isHotel)
-    if (spotsOnly.length === 0) {
+    if (editRows.value.length === 0) {
       editHint.value = '请先搜索并添加景点'
       return
     }
     _saving = true
     store.isParamsSaved = true
-    store.spots = spotsOnly.map((r) => ({
+    store.spots = editRows.value.map((r) => ({
       name: r.name,
       lon: r.lon,
       lat: r.lat,

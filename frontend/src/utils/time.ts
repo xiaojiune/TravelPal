@@ -8,8 +8,9 @@ export function fmtMinutes(m: number | null | undefined): string {
   return `${h}:${String(min).padStart(2, '0')}`
 }
 
-/** 起止分钟数格式化为 "S:E" 区间（如 (480, 1020) → "8:00-17:00"）。 */
+/** 起止分钟数格式化为 "S:E" 区间（如 (480, 1020) → "8:00-17:00"）。全天（0-1440）映射为 "全天"。 */
 export function fmtRange(start: number, end: number): string {
+  if (start === 0 && end >= 1440) return '全天'
   const s = fmtMinutes(start)
   const e = fmtMinutes(end)
   return `${s}-${e}`

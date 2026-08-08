@@ -66,7 +66,8 @@
               v-model:value="store.dayStart"
               :min="0"
               :max="1440"
-              placeholder="请输入"
+              :show-button="false"
+              :bordered="false"
               style="width: 100%"
             />
           </div>
@@ -117,6 +118,8 @@
             <n-input-number
               v-model:value="store.minDays"
               :min="1"
+              :show-button="false"
+              :bordered="false"
               placeholder="自动"
               style="width: 100%"
             />
@@ -131,25 +134,48 @@
                 v-for="(row, i) in editRows"
                 :key="i"
                 class="poi-card"
-                :class="{ 'poi-hotel': row.isHotel }"
+                :class="{ 'poi-active': activePoiCard === i }"
               >
-                <div class="poi-head">
-                  <span class="poi-name">{{ row.isHotel ? '🏨 ' : spotEmoji(row.name) + ' ' }}{{ row.name }}</span>
-                  <n-button text size="small" class="poi-del" @click="deleteRowAt(i)">✕</n-button>
+                <div class="poi-head" @click="togglePoi(i)">
+                  <span class="poi-name">{{ spotEmoji(row.name) }} {{ row.name }}</span>
+                  <n-button text size="small" class="poi-del" @click.stop="deleteRowAt(i)">✕</n-button>
                 </div>
-                <div class="poi-addr" :title="row.address">{{ row.address || '暂无地址' }}</div>
-                <div class="poi-meta">营业时间 {{ formatBiz(row.twStart, row.twEnd) }}</div>
-                <div class="poi-edit">
-                  <label>停留(分)</label>
-                  <n-input-number v-model:value="row.stay" :min="0" size="tiny" style="width: 90px" />
-                  <label>预计到达</label>
-                  <n-input-number
-                    v-model:value="row.expectedArrival"
-                    :min="0"
-                    :max="1440"
-                    size="tiny"
-                    style="width: 90px"
-                  />
+                <div class="poi-body">
+                  <div class="poi-addr" :title="row.address">{{ row.address || '暂无地址' }}</div>
+                  <div class="poi-meta">营业时间 {{ formatBiz(row.twStart, row.twEnd) }}</div>
+                  <div class="poi-edit">
+                    <div class="poi-edit-row">
+                      <label>停留</label>
+                      <span class="edit-divider" />
+                      <n-input-number
+                        v-if="activePoiCard === i"
+                        v-model:value="row.stay"
+                        :min="0"
+                        size="tiny"
+                        :show-button="false"
+                        :bordered="false"
+                        placeholder=""
+                        style="width: 90px"
+                      />
+                      <span v-else class="poi-value">{{ row.stay ?? '-' }}</span>
+                    </div>
+                    <div class="poi-edit-row">
+                      <label>预计到达</label>
+                      <span class="edit-divider" />
+                      <n-input-number
+                        v-if="activePoiCard === i"
+                        v-model:value="row.expectedArrival"
+                        :min="0"
+                        :max="1440"
+                        size="tiny"
+                        :show-button="false"
+                        :bordered="false"
+                        placeholder=""
+                        style="width: 90px"
+                      />
+                      <span v-else class="poi-value">{{ row.expectedArrival ?? '-' }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -181,7 +207,7 @@
         :loading="store.loading"
         @click="fetchSuggest"
       >
-        🚀 生成最优行程
+        🚀 生成 行程
       </n-button>
     </div>
   </div>
@@ -278,7 +304,7 @@ const folderCards = computed(() => {
   const hotelDone = hotelConfirmed.value
   const departDone = store.dayStartConfirmed
   const spotsDone = store.spots.length > 0
-  const manageDone = showManagement.value
+  const manageDone = store.isParamsSaved
   return [
     {
       key: 'city' as const,
@@ -320,7 +346,12 @@ const folderCards = computed(() => {
       icon: '🗂️',
       title: '规划点管理',
       done: manageDone,
-      summary: manageDone ? `已确认 ${store.spots.length} 个规划点` : '暂无规划点',
+      summary:
+        store.spots.length === 0
+          ? '暂无规划点'
+          : manageDone
+            ? `已确认 ${store.spots.length} 个规划点`
+            : `已添加 ${store.spots.length} 个景点，待确认`,
     },
   ]
 })
@@ -382,6 +413,14 @@ onMounted(() => {
 
 // ====== 管理表格 ======
 const { editRows, editHint, showManagement, formatBiz, deleteRowAt, applyEdits } = useEditTable()
+
+/** 当前展开的景点卡索引（手风琴：一次仅一张），null 表示全部收起。 */
+const activePoiCard = ref<number | null>(null)
+
+/** 点击景点卡头：同卡收起、异卡切换（手风琴）。 */
+function togglePoi(i: number) {
+  activePoiCard.value = activePoiCard.value === i ? null : i
+}
 
 /**
  * 获取方案建议：提交异步 suggest 任务后轮询，完成后跳转 SuggestPage。
@@ -545,30 +584,32 @@ async function fetchSuggest() {
   margin-top: 8px;
 }
 .poi-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 .poi-card {
   border: 1px solid var(--tp-border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 0;
   background: var(--tp-surface);
+  overflow: hidden;
   transition: border-color 0.2s;
 }
-.poi-card.poi-hotel {
-  background: var(--tp-primary-soft);
-  border-color: var(--tp-card-border);
+.poi-card.poi-active {
+  border-color: var(--tp-primary);
 }
 .poi-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--tp-border-light);
 }
 .poi-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -580,6 +621,9 @@ async function fetchSuggest() {
 .poi-del:hover {
   color: var(--tp-error);
 }
+.poi-body {
+  padding: 8px 10px;
+}
 .poi-addr {
   font-size: 12px;
   color: var(--tp-text-3);
@@ -589,18 +633,35 @@ async function fetchSuggest() {
   margin-bottom: 2px;
 }
 .poi-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--tp-text-2);
   margin-bottom: 6px;
 }
 .poi-edit {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.poi-edit-row {
+  display: flex;
   align-items: center;
   gap: 6px;
 }
-.poi-edit label {
+.poi-edit-row label {
   font-size: 12px;
   color: var(--tp-text-2);
+  white-space: nowrap;
+}
+.edit-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--tp-border);
+  flex-shrink: 0;
+}
+.poi-value {
+  font-size: 13px;
+  color: var(--tp-text);
+  min-width: 40px;
 }
 .empty-hint {
   font-size: 13px;
@@ -664,6 +725,6 @@ async function fetchSuggest() {
   display: flex;
   gap: 8px;
   margin-top: 10px;
-  justify-content: flex-end;
+  justify-content: center;
 }
 </style>

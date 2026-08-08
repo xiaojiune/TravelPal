@@ -34,7 +34,6 @@ export const usePlanStore = defineStore('plan', () => {
     hotelAddress.value = poi.address ?? ''
     hotelTwStart.value = poi.twStart ?? 0
     hotelTwEnd.value = poi.twEnd ?? 1440
-    isParamsSaved.value = false
   }
 
   /** 从 Agent 页面添加一个景点到输入列表（重复名称去重）。 */
@@ -49,7 +48,6 @@ export const usePlanStore = defineStore('plan', () => {
       stay: poi.stay ?? 0,
       address: poi.address,
     })
-    isParamsSaved.value = false
   }
 
   // ====== Agent 待选栏状态（全局共享，面板与左侧静态栏共用） ======
@@ -96,9 +94,7 @@ export const usePlanStore = defineStore('plan', () => {
     for (const poi of all) addPoiToForm(poi)
   }
 
-  // ====== 参数确认锁 ======
-  /** 用户是否已确认当前规划点参数。false 时阻止获取方案建议。 */
-  const isParamsSaved = ref(false)
+  // ====== 历史记录与 Agent 状态 ======
   /** 从历史记录加载的记录 ID，非空时 PlanPage 应禁用「分享此方案」。 */
   const historyRecordId = ref<string | null>(null)
   /** 从历史记录加载的原始请求参数，用于 PlanPage 展示。 */
@@ -167,7 +163,6 @@ export const usePlanStore = defineStore('plan', () => {
     dayStart.value = 0
     spots.value = []
     minDays.value = null
-    isParamsSaved.value = false
     historyRecordId.value = null
     historyRequestParams.value = null
     suggestions.value = []
@@ -198,7 +193,6 @@ export const usePlanStore = defineStore('plan', () => {
     earlyWaitWeight,
     lateReturnWeight,
     minDays,
-    isParamsSaved,
     historyRecordId,
     historyRequestParams,
     suggestions,

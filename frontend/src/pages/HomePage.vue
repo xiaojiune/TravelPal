@@ -21,7 +21,9 @@
       >
       <div class="section-head" @click="toggleSection(card.key)">
         <h3>{{ card.icon }} {{ card.title }}</h3>
-        <span v-if="card.done" class="state-badge badge-done">✓</span>
+        <!-- 徽标三态：warning（黄!）> done（绿✓）> 编辑中● / 等待⚪；预留 🤖（Agent 填充点） -->
+        <span v-if="card.warning" class="state-badge badge-warn">!{{ card.warnCount ?? '' }}</span>
+        <span v-else-if="card.done" class="state-badge badge-done">✓</span>
         <span v-else-if="activeSection === card.key" class="state-badge badge-edit">●</span>
         <span v-else class="state-badge badge-wait">⚪</span>
       </div>
@@ -176,6 +178,7 @@
                         {{ row.expectedArrival != null ? `${fmtMinutes(row.expectedArrival)}` : '未输入' }}
                       </span>
                     </div>
+                    <div class="poi-unit">0=午夜, 480=08:00，当前 {{ row.expectedArrival != null ? fmtMinutes(row.expectedArrival) : fmtMinutes(store.dayStart) }}</div>
                   </div>
                   <div v-else :key="'collapsed'" class="poi-body">
                     <div class="poi-info-row">
@@ -201,9 +204,6 @@
                   </div>
                 </Transition>
               </div>
-            </div>
-            <div class="table-actions">
-              <n-button secondary size="small" @click="applyEdits">✅ 确认规划点参数</n-button>
             </div>
             <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
           </div>
@@ -323,19 +323,26 @@ onMounted(() => {
 type CardKey = 'city' | 'hotel' | 'depart' | 'search' | 'minDays' | 'manage'
 const activeSection = ref<CardKey | null>(null)
 
-/** 六张卡片的元数据：图标/标题/完成判定/收起态摘要。 */
+/** 六张卡片的元数据：图标/标题/完成判定/警告态/收起态摘要。
+ * 徽标语义：warning（黄!，优先级最高，用于默认值未改或景点未全编辑）> done（绿✓）。
+ */
 const folderCards = computed(() => {
   const cityDone = cityGreen.value
   const hotelDone = hotelGreen.value
   const departDone = true
   const spotsDone = store.spots.length > 0
-  const manageDone = store.isParamsSaved
+  // 规划点全编辑判定：所有景点行的停留与预计到达均有值
+  const manageFull = editRows.value.length > 0 && editRows.value.every((r) => r.stay != null && r.expectedArrival != null)
+  const manageDone = manageFull
+  // 未完全编辑的景点卡数（个体相加：外层徽标只数卡片，内层看细节）
+  const incompleteCount = editRows.value.filter((r) => r.stay == null || r.expectedArrival == null).length
   return [
     {
       key: 'city' as const,
       icon: '📍',
       title: '城市',
       done: cityDone,
+      warning: false,
       summary: store.city.trim() || '未设置城市',
     },
     {
@@ -343,6 +350,7 @@ const folderCards = computed(() => {
       icon: '🏨',
       title: '酒店',
       done: hotelDone,
+      warning: false,
       summary: hotelDone ? `${store.hotelName} · ${store.hotelAddress}` : '未设置酒店',
     },
     {
@@ -350,6 +358,7 @@ const folderCards = computed(() => {
       icon: '⏰',
       title: '启程时间',
       done: departDone,
+      warning: store.dayStart === 0, // 默认值未改 → 黄!
       summary: store.dayStart === 0 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
     },
     {
@@ -357,6 +366,7 @@ const folderCards = computed(() => {
       icon: '🔍',
       title: '搜索',
       done: spotsDone,
+      warning: false,
       summary: spotsDone ? `已添加 ${store.spots.length} 个景点` : '尚未添加景点',
     },
     {
@@ -364,6 +374,7 @@ const folderCards = computed(() => {
       icon: '📅',
       title: '最小天数',
       done: true,
+      warning: !store.minDays, // 默认自动 → 黄!
       summary: store.minDays ? `最少 ${store.minDays} 天` : `自动（默认 ${minDaysHint.value} 天）`,
     },
     {
@@ -371,12 +382,14 @@ const folderCards = computed(() => {
       icon: '🗂️',
       title: '规划点管理',
       done: manageDone,
+      warning: store.spots.length > 0 && !manageDone,
+      warnCount: incompleteCount,
       summary:
         store.spots.length === 0
           ? '暂无规划点'
           : manageDone
             ? `已确认 ${store.spots.length} 个规划点`
-            : `已添加 ${store.spots.length} 个景点，待确认`,
+            : `已添加 ${store.spots.length} 个景点，待补充`,
     },
   ]
 })
@@ -412,7 +425,7 @@ onMounted(() => {
 })
 
 // ====== 管理表格 ======
-const { editRows, editHint, showManagement, formatBiz, deleteRowAt, applyEdits } = useEditTable()
+const { editRows, editHint, showManagement, formatBiz, deleteRowAt } = useEditTable()
 
 /** 当前展开的景点卡索引（手风琴：一次仅一张），null 表示全部收起。 */
 const activePoiCard = ref<number | null>(null)
@@ -454,10 +467,6 @@ async function fetchSuggest() {
   }
   if (store.spots.length === 0) {
     message.warning('请先添加景点')
-    return
-  }
-  if (!store.isParamsSaved) {
-    message.warning('请先在「规划点管理」中点击「确认规划点参数」')
     return
   }
   store.suggestions = []
@@ -509,7 +518,7 @@ async function fetchSuggest() {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 .cards-grid .form-section {
   margin-bottom: 0;
@@ -564,6 +573,9 @@ async function fetchSuggest() {
 .badge-wait {
   color: var(--tp-text-3);
 }
+.badge-warn {
+  color: var(--tp-warning);
+}
 .section-body {
   padding-bottom: 2px;
 }
@@ -579,10 +591,16 @@ async function fetchSuggest() {
   justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
+  overflow: hidden;
 }
 .summary-text {
   font-size: 13px;
   color: var(--tp-text-2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .added-count {
   font-size: 13px;
@@ -661,9 +679,13 @@ async function fetchSuggest() {
   font-size: 12px;
   color: var(--tp-text-2);
   margin-top: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.poi-unit {
+  font-size: 10px;
+  color: var(--tp-text-3);
+  margin-top: 2px;
 }
 .poi-edit-row {
   display: flex;
@@ -764,11 +786,5 @@ async function fetchSuggest() {
   background-color: var(--tp-error) !important;
   color: #fff !important;
   opacity: 0.55;
-}
-.table-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-  justify-content: center;
 }
 </style>

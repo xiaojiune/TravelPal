@@ -19,15 +19,16 @@ export function useEditTable() {
   const store = usePlanStore()
   const editRows = ref<EditRow[]>([])
   const editHint = ref('')
-  let _rebuilding = false // 重建中标志，阻止 editRows watch 触发解锁
+  let _rebuilding = false // 重建中标志，阻止 editRows watch 触发回写
   let _saving = false // 保存中标志，阻止 store watch 重建
+  let _hintTimer: ReturnType<typeof setTimeout> | null = null // 自动保存提示定时器
 
   rebuildEditRows() // 组件初始化时从 store 重建，确保跨页面导航后数据不为空
 
   /** 已有确认景点时展示管理表格（酒店信息由酒店卡独立管理，不进入表格）。 */
   const showManagement = computed(() => store.spots.length > 0)
 
-  /** 从 store 重建编辑行，与源数据解耦。用户确认前所有修改不影响 store。 */
+  /** 从 store 重建编辑行，与源数据解耦。单行编辑即时回写 store。 */
   function rebuildEditRows() {
     _rebuilding = true
     const rows: EditRow[] = store.spots.map((s) => ({
@@ -47,27 +48,54 @@ export function useEditTable() {
     })
   }
 
-  /** store 数据变化 → 解锁参数锁（applyEdits 自发的写入除外）+ 重建表格。 */
+  /** 短暂提示「已自动保存」，2s 后清除（可被后续 hint 覆盖）。 */
+  function flashSaved() {
+    editHint.value = '✅ 已自动保存'
+    if (_hintTimer) clearTimeout(_hintTimer)
+    _hintTimer = setTimeout(() => {
+      if (editHint.value === '✅ 已自动保存') editHint.value = ''
+    }, 2000)
+  }
+
+  /** store 数据变化（外部添加/删除景点）→ 重建表格。 */
   watch(
     [() => store.spots, () => store.hotelName, () => store.hotelLon, () => store.hotelAddress],
     () => {
       if (!_saving) {
-        store.isParamsSaved = false
-        editHint.value = ''
+        rebuildEditRows()
       }
-      rebuildEditRows()
     },
     { deep: true, flush: 'sync' },
   )
 
-  /** 用户编辑表格单元格时自动解锁，必须再次确认才能获取方案。 */
+  /** 单行编辑即时回写：用户在编辑行改 stay/expectedArrival 时，逐行比对差异写回 store。 */
   watch(
     editRows,
-    () => {
-      if (!_rebuilding) {
-        store.isParamsSaved = false
-        editHint.value = ''
-      }
+    (newRows, oldRows) => {
+      if (_rebuilding) return
+      if (!oldRows) return
+      _saving = true
+      let changed = false
+      newRows.forEach((r, i) => {
+        const prev = oldRows[i]
+        if (!prev) return
+        const prevStay = prev.stay ?? null
+        const prevArr = prev.expectedArrival ?? null
+        const curStay = r.stay ?? null
+        const curArr = r.expectedArrival ?? null
+        if (prevStay !== curStay || prevArr !== curArr) {
+          const s = store.spots[i]
+          if (!s) return
+          store.spots[i] = {
+            ...s,
+            stay: r.stay ?? 0,
+            expectedArrival: r.expectedArrival ?? 0,
+          }
+          changed = true
+        }
+      })
+      _saving = false
+      if (changed) flashSaved()
     },
     { deep: true },
   )
@@ -106,28 +134,6 @@ export function useEditTable() {
     deleteSelectedRows()
   }
 
-  /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
-  function applyEdits() {
-    if (editRows.value.length === 0) {
-      editHint.value = '请先搜索并添加景点'
-      return
-    }
-    _saving = true
-    store.isParamsSaved = true
-    store.spots = editRows.value.map((r) => ({
-      name: r.name,
-      lon: r.lon,
-      lat: r.lat,
-      twStart: r.twStart,
-      twEnd: r.twEnd,
-      stay: r.stay ?? 0,
-      expectedArrival: r.expectedArrival ?? 0,
-      address: r.address,
-    }))
-    _saving = false
-    editHint.value = '参数已保存'
-  }
-
   return {
     editRows,
     editHint,
@@ -136,6 +142,5 @@ export function useEditTable() {
     formatBiz,
     deleteSelectedRows,
     deleteRowAt,
-    applyEdits,
   }
 }

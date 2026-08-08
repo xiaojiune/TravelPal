@@ -7,12 +7,17 @@
       <n-step v-for="(t, i) in steps" :key="t" :title="t" :status="stepStatus[i]" />
     </n-steps>
 
-    <section
-      v-for="card in folderCards"
-      :key="card.key"
-      class="form-section"
-      :class="{ 'section-active': activeSection === card.key, 'section-done': card.done }"
-    >
+    <div class="cards-grid">
+      <section
+        v-for="card in folderCards"
+        :key="card.key"
+        class="form-section"
+        :class="{
+          'section-active': activeSection === card.key,
+          'section-done': card.done,
+          'card-full': card.key === 'manage',
+        }"
+      >
       <div class="section-head" @click="toggleSection(card.key)">
         <h3>{{ card.icon }} {{ card.title }}</h3>
         <span v-if="card.done" class="state-badge badge-done">✓</span>
@@ -34,8 +39,11 @@
         <template v-else-if="card.key === 'hotel'">
           <div class="form-row">
             <n-input v-model:value="store.hotelName" placeholder="如：北京饭店" />
+          </div>
+          <div class="row-actions">
             <n-button
               secondary
+              size="small"
               :disabled="!canSearchHotel || loading"
               :loading="loading"
               @click="searchHotel"
@@ -59,9 +67,11 @@
               :rows="4"
               placeholder="每行一个景点&#10;故宫&#10;颐和园&#10;天坛"
             />
+          </div>
+          <div class="row-actions">
             <n-button
               secondary
-              class="btn-self-start"
+              size="small"
               :disabled="!canSearchSpots || loading"
               :loading="loading"
               @click="searchSpots"
@@ -138,6 +148,8 @@
         </n-button>
       </div>
     </section>
+
+    </div>
 
     <section class="form-section">
       <n-collapse v-model:expanded-names="paramsExpanded">
@@ -448,7 +460,20 @@ async function fetchSuggest() {
   padding: 16px 20px;
   margin-bottom: 16px;
   box-shadow: var(--tp-card-shadow);
-  transition: box-shadow 0.15s, transform 0.15s;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.2s;
+}
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.cards-grid .form-section {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.cards-grid .card-full {
+  grid-column: 1 / -1;
 }
 .form-section:hover {
   box-shadow: var(--tp-card-shadow-hover);
@@ -583,8 +608,11 @@ async function fetchSuggest() {
   color: var(--tp-text-3);
   margin-top: 2px;
 }
-.btn-self-start {
-  align-self: flex-start;
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
 }
 .addr {
   color: var(--tp-text-3);

@@ -8,14 +8,18 @@
     </n-steps>
 
     <section class="form-section">
-      <h3>城市</h3>
+      <div class="section-head">
+        <h3>📍 城市</h3>
+      </div>
       <div class="form-row">
         <n-input v-model:value="store.city" placeholder="如：北京" />
       </div>
     </section>
 
     <section class="form-section">
-      <h3>酒店</h3>
+      <div class="section-head">
+        <h3>🏨 酒店</h3>
+      </div>
       <div class="form-row">
         <n-input v-model:value="store.hotelName" placeholder="如：北京饭店" />
         <n-button
@@ -31,7 +35,9 @@
     </section>
 
     <section class="form-section">
-      <h3>景点名称</h3>
+      <div class="section-head">
+        <h3>🏞️ 景点名称</h3>
+      </div>
       <div class="form-row">
         <n-input
           v-model:value="spotText"
@@ -53,7 +59,9 @@
     </section>
 
     <section v-if="showManagement" class="form-section">
-      <h3>规划点管理</h3>
+      <div class="section-head">
+        <h3>🗂️ 规划点管理</h3>
+      </div>
       <table class="edit-table">
         <thead>
           <tr>
@@ -325,8 +333,17 @@ async function fetchSuggest() {
   transform: translateY(-1px);
 }
 .form-section h3 {
-  margin-bottom: 12px;
   font-size: 15px;
+}
+.section-head {
+  border-bottom: 1px solid var(--tp-border-light);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.section-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
 }
 .form-row {
   display: flex;

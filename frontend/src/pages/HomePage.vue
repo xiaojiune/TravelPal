@@ -7,62 +7,81 @@
       <n-step v-for="(t, i) in steps" :key="t" :title="t" :status="stepStatus[i]" />
     </n-steps>
 
-    <section class="form-section">
-      <div class="section-head">
-        <h3>📍 城市</h3>
+    <section
+      v-for="card in folderCards"
+      :key="card.key"
+      class="form-section"
+      :class="{ 'section-active': activeSection === card.key, 'section-done': card.done }"
+    >
+      <div class="section-head" @click="toggleSection(card.key)">
+        <h3>{{ card.icon }} {{ card.title }}</h3>
+        <span v-if="card.done" class="state-badge badge-done">✓</span>
+        <span v-else-if="activeSection === card.key" class="state-badge badge-edit">●</span>
+        <span v-else class="state-badge badge-wait">⚪</span>
       </div>
-      <div class="form-row">
-        <n-input v-model:value="store.city" placeholder="如：北京" />
-      </div>
-    </section>
 
-    <section class="form-section">
-      <div class="section-head">
-        <h3>🏨 酒店</h3>
-      </div>
-      <div class="form-row">
-        <n-input v-model:value="store.hotelName" placeholder="如：北京饭店" />
-        <n-button
-          secondary
-          :disabled="!canSearchHotel || loading"
-          :loading="loading"
-          @click="searchHotel"
-        >
-          🏨 搜索酒店坐标
-        </n-button>
-      </div>
-      <div v-if="hotelMsg" class="result-row hint">{{ hotelMsg }}</div>
-    </section>
+      <Transition name="folder">
+        <div v-if="activeSection === card.key" class="section-body">
+        <template v-if="card.key === 'city'">
+          <div class="form-row">
+            <n-input v-model:value="store.city" placeholder="如：北京" @keyup.enter="confirmCity" />
+          </div>
+          <div class="body-actions">
+            <n-button size="small" type="primary" @click="confirmCity">✓ 确定城市</n-button>
+          </div>
+        </template>
 
-    <section class="form-section">
-      <div class="section-head">
-        <h3>🏞️ 景点名称</h3>
-      </div>
-      <div class="form-row">
-        <n-input
-          v-model:value="spotText"
-          type="textarea"
-          :rows="6"
-          placeholder="每行一个景点&#10;故宫&#10;颐和园&#10;天坛"
-        />
-        <n-button
-          secondary
-          class="btn-self-start"
-          :disabled="!canSearchSpots || loading"
-          :loading="loading"
-          @click="searchSpots"
-        >
-          🔍 搜索景点坐标
-        </n-button>
-      </div>
-      <div v-if="spotMsg" class="hint" style="white-space: pre-line">{{ spotMsg }}</div>
-    </section>
+        <template v-else-if="card.key === 'hotel'">
+          <div class="form-row">
+            <n-input v-model:value="store.hotelName" placeholder="如：北京饭店" />
+            <n-button
+              secondary
+              :disabled="!canSearchHotel || loading"
+              :loading="loading"
+              @click="searchHotel"
+            >
+              🏨 搜索酒店坐标
+            </n-button>
+          </div>
+          <div v-if="hotelMsg" class="result-row hint">{{ hotelMsg }}</div>
+          <div class="body-actions">
+            <n-button size="small" type="primary" :disabled="!hotelConfirmed" @click="confirmHotel">
+              ✓ 确认酒店
+            </n-button>
+          </div>
+        </template>
 
-    <section v-if="showManagement" class="form-section">
-      <div class="section-head">
-        <h3>🗂️ 规划点管理</h3>
-      </div>
-      <table class="edit-table">
+        <template v-else-if="card.key === 'spots'">
+          <div class="form-row">
+            <n-input
+              v-model:value="spotText"
+              type="textarea"
+              :rows="4"
+              placeholder="每行一个景点&#10;故宫&#10;颐和园&#10;天坛"
+            />
+            <n-button
+              secondary
+              class="btn-self-start"
+              :disabled="!canSearchSpots || loading"
+              :loading="loading"
+              @click="searchSpots"
+            >
+              🔍 搜索景点坐标
+            </n-button>
+          </div>
+          <div v-if="spotMsg" class="hint" style="white-space: pre-line">{{ spotMsg }}</div>
+          <div v-if="store.spots.length" class="spot-grid">
+            <div v-for="s in store.spots" :key="s.name" class="spot-tile">
+              <span class="spot-emoji">{{ spotEmoji(s.name) }}</span>
+              <span class="spot-name">{{ s.name }}</span>
+            </div>
+          </div>
+          <div v-else class="empty-hint">尚未添加景点</div>
+        </template>
+
+        <template v-else-if="card.key === 'manage'">
+          <div v-if="showManagement" class="manage-box">
+            <table class="edit-table">
         <thead>
           <tr>
             <th style="width: 40px">删除</th>
@@ -106,6 +125,18 @@
         <n-button type="error" size="small" @click="deleteSelectedRows">🗑️ 删除选中行</n-button>
       </div>
       <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
+          </div>
+          <div v-else class="empty-hint">暂无规划点，先在上方添加景点</div>
+        </template>
+        </div>
+      </Transition>
+
+      <div v-if="activeSection !== card.key" class="section-summary">
+        <span class="summary-text">{{ card.summary }}</span>
+        <n-button size="small" quaternary @click="toggleSection(card.key)">
+          ✏️ {{ card.done ? '编辑' : '补充' }}
+        </n-button>
+      </div>
     </section>
 
     <section class="form-section">
@@ -179,6 +210,7 @@ defineOptions({ name: 'HomePage' })
 // ====== 状态定义 ======
 // 时间相关字段单位：分钟，取值 0-1440，对应 00:00-24:00
 import { computed, ref } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
@@ -246,6 +278,96 @@ const stepStatus = computed<('finish' | 'process' | 'wait')[]>(() => {
 
 /** 高级设置（算法参数）折叠面板，默认收起。 */
 const paramsExpanded = ref<string[]>([])
+
+// ====== 大文件夹（手风琴） ======
+/** 当前展开的卡片（手风琴：一次仅一张），null 表示全部收起。 */
+const activeSection = ref<'city' | 'hotel' | 'spots' | 'manage' | null>(null)
+
+/** 四张卡片的元数据：图标/标题/完成判定/收起态摘要。 */
+const folderCards = computed(() => {
+  const cityDone = store.city.trim().length > 0
+  const hotelDone = hotelConfirmed.value
+  const spotsDone = store.spots.length > 0
+  const manageDone = showManagement.value
+  return [
+    {
+      key: 'city' as const,
+      icon: '📍',
+      title: '城市',
+      done: cityDone,
+      summary: store.city.trim() || '未设置城市',
+    },
+    {
+      key: 'hotel' as const,
+      icon: '🏨',
+      title: '酒店',
+      done: hotelDone,
+      summary: hotelDone ? store.hotelName : '未设置酒店',
+    },
+    {
+      key: 'spots' as const,
+      icon: '🏞️',
+      title: '景点',
+      done: spotsDone,
+      summary: spotsDone ? `已添加 ${store.spots.length} 个景点` : '尚未添加景点',
+    },
+    {
+      key: 'manage' as const,
+      icon: '🗂️',
+      title: '规划点管理',
+      done: manageDone,
+      summary: manageDone ? `已确认 ${store.spots.length} 个规划点` : '暂无规划点',
+    },
+  ]
+})
+
+/** 点击卡片头：同卡收起、异卡切换（手风琴）。 */
+function toggleSection(key: 'city' | 'hotel' | 'spots' | 'manage') {
+  activeSection.value = activeSection.value === key ? null : key
+}
+
+/** 找到下一个未完成的卡片 key（用于确认后自动推进），无则 null。 */
+function nextUndone(): 'city' | 'hotel' | 'spots' | 'manage' | null {
+  for (const card of folderCards.value) {
+    if (!card.done) return card.key
+  }
+  return null
+}
+
+/** 城市确认：非空后收起本卡并推进到下一未完成。 */
+function confirmCity() {
+  if (!store.city.trim()) {
+    message.warning('请先输入城市')
+    return
+  }
+  activeSection.value = nextUndone()
+}
+
+/** 酒店确认：已确认坐标后收起并推进。 */
+function confirmHotel() {
+  if (!hotelConfirmed.value) {
+    message.warning('请先搜索并确认酒店坐标')
+    return
+  }
+  activeSection.value = nextUndone()
+}
+
+/** 景点名称 → emoji（关键词归类，兜底 🏛️）。 */
+function spotEmoji(name: string): string {
+  if (/山|峰|岭|石林/.test(name)) return '⛰️'
+  if (/海|岛|滩|湖|江|河|泉|湾|池|瀑布/.test(name)) return '🌊'
+  if (/公园|园|森林/.test(name)) return '🌳'
+  if (/寺|庙|祠|塔/.test(name)) return '🏯'
+  if (/馆|博物馆|科技馆/.test(name)) return '🏛️'
+  if (/街|巷|广场|城/.test(name)) return '🏘️'
+  if (/塔|楼|塔楼/.test(name)) return '🗼'
+  return '🏛️'
+}
+
+// 初始展开第一个未完成的卡片（过渡态引导）
+onMounted(() => {
+  activeSection.value = nextUndone()
+})
 
 // ====== 管理表格 ======
 const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } =
@@ -339,11 +461,96 @@ async function fetchSuggest() {
   border-bottom: 1px solid var(--tp-border-light);
   padding-bottom: 10px;
   margin-bottom: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .section-head h3 {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
+}
+.form-section {
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.2s;
+}
+.section-active {
+  border-color: var(--tp-primary);
+}
+.section-done {
+  border-color: var(--tp-success);
+}
+.state-badge {
+  font-size: 12px;
+  line-height: 1;
+}
+.badge-done {
+  color: var(--tp-success);
+}
+.badge-edit {
+  color: var(--tp-primary);
+}
+.badge-wait {
+  color: var(--tp-text-3);
+}
+.section-body {
+  padding-bottom: 2px;
+}
+.body-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.section-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+}
+.summary-text {
+  font-size: 13px;
+  color: var(--tp-text-2);
+}
+.spot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.spot-tile {
+  background: var(--tp-primary-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.spot-emoji {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.spot-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.empty-hint {
+  font-size: 13px;
+  color: var(--tp-text-3);
+  padding: 8px 0;
+}
+.folder-enter-active,
+.folder-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+.folder-enter-from,
+.folder-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 .form-row {
   display: flex;

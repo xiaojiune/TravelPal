@@ -53,6 +53,7 @@
             </n-button>
           </div>
           <div v-if="hotelMsg" class="result-row hint">{{ hotelMsg }}</div>
+          <div v-if="store.hotelAddress" class="hotel-addr">📍 {{ store.hotelAddress }}</div>
           <div class="body-actions">
             <n-button size="small" type="primary" :disabled="!hotelConfirmed" @click="confirmHotel">
               ✓ 确认酒店
@@ -135,48 +136,63 @@
                 :key="i"
                 class="poi-card"
                 :class="{ 'poi-active': activePoiCard === i }"
+                @click="togglePoi(i)"
               >
-                <div class="poi-head" @click="togglePoi(i)">
+                <div class="poi-head">
                   <span class="poi-name">{{ spotEmoji(row.name) }} {{ row.name }}</span>
                   <n-button text size="small" class="poi-del" @click.stop="deleteRowAt(i)">✕</n-button>
                 </div>
                 <div class="poi-body">
-                  <div class="poi-addr" :title="row.address">{{ row.address || '暂无地址' }}</div>
-                  <div class="poi-meta">营业时间 {{ formatBiz(row.twStart, row.twEnd) }}</div>
-                  <div class="poi-edit">
-                    <div class="poi-edit-row">
-                      <label>停留</label>
-                      <span class="edit-divider" />
-                      <n-input-number
-                        v-if="activePoiCard === i"
-                        v-model:value="row.stay"
-                        :min="0"
-                        size="tiny"
-                        :show-button="false"
-                        :bordered="false"
-                        placeholder=""
-                        style="width: 90px"
-                      />
-                      <span v-else class="poi-value">{{ row.stay ?? '-' }}</span>
-                    </div>
-                    <div class="poi-edit-row">
-                      <label>预计到达</label>
-                      <span class="edit-divider" />
-                      <n-input-number
-                        v-if="activePoiCard === i"
-                        v-model:value="row.expectedArrival"
-                        :min="0"
-                        :max="1440"
-                        size="tiny"
-                        :show-button="false"
-                        :bordered="false"
-                        placeholder=""
-                        style="width: 90px"
-                      />
-                      <span v-else class="poi-value">{{ row.expectedArrival ?? '-' }}</span>
+                  <div class="poi-info-row">
+                    <label>地址</label>
+                    <span class="edit-divider" />
+                    <span class="poi-info-text" :title="row.address">{{ row.address || '暂无地址' }}</span>
+                  </div>
+                  <div class="poi-info-row">
+                    <label>营业时间</label>
+                    <span class="edit-divider" />
+                    <span class="poi-info-text">{{ formatBiz(row.twStart, row.twEnd) }}</span>
+                  </div>
+                    <div class="poi-edit" @click="onPoiEditClick(i, $event)">
+                      <div class="poi-edit-row">
+                        <label>停留</label>
+                        <span class="edit-divider" />
+                        <Transition name="poi" mode="out-in">
+                          <n-input-number
+                            v-if="activePoiCard === i"
+                            :key="'input'"
+                            v-model:value="row.stay"
+                            :min="0"
+                            size="tiny"
+                            :show-button="false"
+                            :bordered="false"
+                            placeholder="请输入"
+                            style="width: 90px"
+                          />
+                          <span v-else :key="'value'" class="poi-value">{{ row.stay ?? '-' }}</span>
+                        </Transition>
+                      </div>
+                      <div class="poi-edit-row">
+                        <label>预计到达</label>
+                        <span class="edit-divider" />
+                        <Transition name="poi" mode="out-in">
+                          <n-input-number
+                            v-if="activePoiCard === i"
+                            :key="'input'"
+                            v-model:value="row.expectedArrival"
+                            :min="0"
+                            :max="1440"
+                            size="tiny"
+                            :show-button="false"
+                            :bordered="false"
+                            placeholder="请输入"
+                            style="width: 90px"
+                          />
+                          <span v-else :key="'value'" class="poi-value">{{ row.expectedArrival ?? '-' }}</span>
+                        </Transition>
+                      </div>
                     </div>
                   </div>
-                </div>
               </div>
             </div>
             <div class="table-actions">
@@ -422,6 +438,11 @@ function togglePoi(i: number) {
   activePoiCard.value = activePoiCard.value === i ? null : i
 }
 
+/** 点击编辑区：仅展开态拦截冒泡（点输入框不折叠），收起态放行以触发整卡展开。 */
+function onPoiEditClick(i: number, e: MouseEvent) {
+  if (activePoiCard.value === i) e.stopPropagation()
+}
+
 /**
  * 获取方案建议：提交异步 suggest 任务后轮询，完成后跳转 SuggestPage。
  * buildRequest(null) 中 null 表示让引擎端自动检测天数。
@@ -623,19 +644,34 @@ async function fetchSuggest() {
 }
 .poi-body {
   padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.poi-addr {
+.poi-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.poi-info-row label {
   font-size: 12px;
-  color: var(--tp-text-3);
+  color: var(--tp-text-2);
+  white-space: nowrap;
+}
+.poi-info-text {
+  font-size: 12px;
+  color: var(--tp-text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 2px;
 }
-.poi-meta {
+.hotel-addr {
   font-size: 12px;
   color: var(--tp-text-2);
-  margin-bottom: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .poi-edit {
   display: flex;
@@ -676,6 +712,15 @@ async function fetchSuggest() {
 .folder-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+.poi-enter-active,
+.poi-leave-active {
+  transition: opacity 0.18s, transform 0.18s;
+}
+.poi-enter-from,
+.poi-leave-to {
+  opacity: 0;
+  transform: translateY(-2px);
 }
 .form-row {
   display: flex;

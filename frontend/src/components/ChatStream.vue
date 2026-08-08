@@ -4,13 +4,13 @@
       <div v-if="messages.length === 0" class="welcome">
         我不懂你的全部，但我懂你的旅途。
       </div>
-      <ChatMessage
-        v-for="(msg, i) in messages"
-        :key="i"
-        :role="msg.role"
-        :content="msg.content"
-        :time="msg.time"
-      />
+      <template v-for="(msg, i) in messages" :key="i">
+        <!-- 工具结果富卡片：tool_result 消息内嵌渲染（四型判别见 ToolResultCard） -->
+        <div v-if="msg.role === 'tool'" class="msg-tool-card">
+          <ToolResultCard :data="msg.data" />
+        </div>
+        <ChatMessage v-else :role="msg.role" :content="msg.content" :time="msg.time" />
+      </template>
       <div v-if="messages.length === 0" class="hello-bubble">
         <n-button size="small" secondary @click="sayHello">你好</n-button>
       </div>
@@ -33,17 +33,18 @@
 /**
  * 全局 Agent 对话流组件：SSE 流式对话 + 打字机渲染，自包含、可复用。
  *
- * 从原 AgentPage 抽取，与待选栏解耦——工具查询结果通过 tool-result 事件抛出，
- * 由宿主（AgentDrawer）决定如何消费（如写入待选栏）。对话状态保存在本组件内部，
- * 组件常驻（挂在 App.vue router-view 外）时跨页面不丢失。
+ * 工具结果（tool_result）以富卡片（ToolResultCard 四型判别）内嵌消息流渲染；
+ * POI 型结果同时通过 tool-result 事件抛出，由宿主（AgentPanel）写入待选栏。
+ * 对话状态保存在本组件内部，组件常驻（挂在 App.vue router-view 外）时跨页面不丢失。
  *
  * Props:
  *   apiPath: string   — SSE 接口路径，默认 /api/chat
  * Emits:
- *   tool-result: (payload: PoiItem) — 工具调用结果（tool_result 事件数据）
+ *   tool-result: (payload: PoiItem) — POI 型工具结果（供待选栏消费）
  */
 import { ref, nextTick, onUnmounted } from 'vue'
 import ChatMessage from '@/components/ChatMessage.vue'
+import ToolResultCard from '@/components/ToolResultCard.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
 import { usePlanStore } from '@/stores/plan'
 import type { ChatMessage as ChatMessageType, PoiItem } from '@/types'
@@ -147,12 +148,13 @@ async function send() {
             messages.value[msgIndex].content = displayText.value
           }
           if (parsed.type === 'tool_result' && parsed.data) {
-            if (parsed.data.error) {
-              messages.value[msgIndex].content = '查询失败：' + parsed.data.error
-            } else {
-              messages.value[msgIndex].content = '找到 ' + (parsed.data.name || '') + ' 的信息'
+            // 工具结果以富卡片内嵌消息流（ToolResultCard 四型判别）；
+            // POI 型同时 emit 供宿主写入待选栏
+            messages.value.push({ role: 'tool', content: '', time: now, data: parsed.data })
+            if (!parsed.data.error && parsed.data.name) {
               emit('tool-result', parsed.data)
             }
+            scrollToBottom()
           }
         } catch {
           append(data)
@@ -210,6 +212,12 @@ function scrollToBottom() {
   display: flex;
   justify-content: flex-start;
   padding: 8px 0 12px;
+}
+/* 工具结果富卡片：左对齐靠消息流排布，与聊天气泡区分 */
+.msg-tool-card {
+  align-self: flex-start;
+  max-width: 90%;
+  margin-bottom: 8px;
 }
 .input-bar {
   display: flex;

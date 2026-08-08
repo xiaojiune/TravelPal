@@ -35,7 +35,8 @@
             </n-tooltip>
           </nav>
           <div class="app-body">
-            <PendingPanel />
+            <ToolRail v-model:active="toolPanel" />
+            <ToolPanel :active="toolPanel" />
             <main class="main-content">
               <router-view v-slot="{ Component }">
                 <keep-alive>
@@ -57,17 +58,21 @@
 </template>
 
 <script setup lang="ts">
-/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧待选栏 + 页面出口 + Agent 下拉面板。导航链接覆盖 4 个页面。 */
+/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。导航链接覆盖 4 个页面。 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
 import { usePlanStore } from '@/stores/plan'
-import PendingPanel from '@/components/PendingPanel.vue'
+import ToolRail from '@/components/ToolRail.vue'
+import ToolPanel from '@/components/ToolPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
 
 const router = useRouter()
 const store = usePlanStore()
+
+/** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）。 */
+const toolPanel = ref<'query' | 'ops' | 'tasks'>('query')
 
 /**
  * 新建规划：清空全部规划状态并回首页（reset 补全清空待选栏/加载态/惩罚权重）。

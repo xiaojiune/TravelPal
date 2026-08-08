@@ -42,11 +42,12 @@ export interface SpotFormItem {
   address?: string
 }
 
-/** 聊天消息 */
+/** 聊天消息（tool 形态承载工具结果原始数据，供 ToolResultCard 判别渲染） */
 export interface ChatMessage {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'tool'
   content: string
   time?: string
+  data?: unknown
 }
 
 /** Agent 对话查询到的 POI（待选栏暂存项，tool_result 事件载荷） */

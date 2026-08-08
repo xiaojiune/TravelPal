@@ -1,9 +1,13 @@
-"""规划评语生成器：规则模板 + LLM 润色预留。
+"""规划评语生成器：规则模板 + LLM 润色预留（agent-tool 形态）。
 
-规则注册表 RULES 仅需在列表中添加函数，即可自动参与评语生成。
+评语已从规划/调整流程剥离（规划结果不再自动附评语），generate_commentary
+转为 Agent 工具形态待接入（@placeholder）。规则注册表 RULES 仅需在列表中
+添加函数，即可自动参与评语生成。
 """
 
 import numpy as np
+
+from backend.utils.decorators import placeholder
 
 # ================== 规则模板 ==================
 
@@ -123,8 +127,13 @@ def polish_with_llm(text: str, enabled: bool = False) -> str:
     return text
 
 
+@placeholder
 def generate_commentary(solution: dict, spots: dict, cost_mat: np.ndarray) -> str:
     """遍历规则注册表生成评语，取前两条非空结果拼接。
+
+    TODO(重构方向)：评语已从 run_planning / adjust_plan 流程剥离（返回
+    commentary=None），本函数转为 Agent 工具形态——后期经 orchestrator 注册
+    为工具（TOOL_REGISTRY），由 Agent 决定是否生成评语，并接入 LLM 润色。
 
     Args:
         solution: solve_groups 返回的结果，含 routes/total_cost/wait/late 等。

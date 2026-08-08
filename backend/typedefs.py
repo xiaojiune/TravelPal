@@ -90,7 +90,7 @@ class PlanResult(TypedDict):
     cost_matrix: list[list[float]]
     dist_matrix: list[list[float]]
     polylines: dict[str, str]
-    commentary: str
+    commentary: str | None
     amap_api_key: NotRequired[str]
     amap_security_code: NotRequired[str]
 

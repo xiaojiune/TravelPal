@@ -10,7 +10,6 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.agent.planning import generate_commentary  # noqa: E402
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
@@ -190,8 +189,6 @@ def run_planning(
     print(f"  plan 阶段总耗时 ({mode}): {algo_time:.2f}s")
     print("所有任务完成。\n")
 
-    commentary = generate_commentary(solution, spots, dist_matrix)
-
     return {
         "solution": solution,
         "mode": mode,
@@ -204,7 +201,7 @@ def run_planning(
         "cost_matrix": cost_matrix.tolist(),
         "dist_matrix": dist_matrix.tolist(),
         "polylines": polylines_serial,
-        "commentary": commentary,
+        "commentary": None,
     }
 
 
@@ -316,16 +313,17 @@ def adjust_plan(
     city: str = "",
 ) -> PlanResult:
     """
-    对已有方案执行调整（移除景点、改天数、添加景点）。
+    对已有方案执行调整（移除景点、添加景点）。
 
     从 routes 重构分组 → 按 adjustments 类型分发 → 重新求解 → 生成新每日行程。
+    纯调度：不含评语（generate_commentary 已剥离为 agent-tool，返回 commentary=None）。
 
-     Args:
+    Args:
         spots_dict: 景点字典（与 run_planning 返回的 spots 格式一致）。
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"adjust_days": <int>}、{"remove_poi": "<poi_name>", "day": <int>}、\
+        adjustments: 调整指令 dict，支持 {"remove_poi": "<poi_name>", "day": <int>}、\
             {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>?} 之一。\
             remove_poi 为单日重排（day 必填）；add_poi 带 day 为单日重排，\
             day 缺失（用户意图未定）时走全局重排（add_poi_to_plan，@placeholder 兜底）。
@@ -335,30 +333,15 @@ def adjust_plan(
         dict: 与 run_planning 相同格式的完整规划结果。
 
     Raises:
-        ValueError: adjustments 中未识别的指令类型。
+        ValueError: adjustments 中未识别的指令类型 / 必要字段缺失。
+        RuntimeError: 分支未能产出结果（理论不可达，防御性兜底）。
     """
     cost_matrix = np.array(cost_matrix_list)
     dist_matrix = np.array(dist_matrix_list)
 
-    result = None
-    best_days = None
-    best_m = None
-    daily_schedules = None
+    plan: dict | None = None
 
-    if "adjust_days" in adjustments:
-        from backend.agent.planning import adjust_plan_days
-
-        plan = adjust_plan_days(
-            spots_dict,
-            cost_matrix,
-            dist_matrix,
-            adjustments["adjust_days"],
-        )
-        daily_schedules = plan["daily_schedules"]
-        result = plan["solution"]
-        best_days = plan["best_days"]
-        best_m = plan["best_m"]
-    elif "remove_poi" in adjustments:
+    if "remove_poi" in adjustments:
         from backend.agent.planning import remove_poi_from_day
 
         day = adjustments.get("day")
@@ -372,10 +355,6 @@ def adjust_plan(
             adjustments["remove_poi"],
             day,
         )
-        daily_schedules = plan["daily_schedules"]
-        result = plan["solution"]
-        best_days = plan["best_days"]
-        best_m = plan["best_m"]
     elif "add_poi" in adjustments:
         from backend.agent.planning import add_poi_to_day
         from backend.data.amap_loader import _get_driving_data
@@ -385,7 +364,9 @@ def adjust_plan(
         day = adjustments.get("day")
         poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
         new_idx = max(spots_dict.keys()) + 1
-        spots_dict[new_idx] = {  # pyright: ignore[reportArgumentType]
+        # 局部副本：不原地污染调用方传入的 spots_dict
+        working_spots = dict(spots_dict)
+        working_spots[new_idx] = {  # pyright: ignore[reportArgumentType]
             "name": poi["name"],
             "x": poi["lon"],
             "y": poi["lat"],
@@ -393,13 +374,13 @@ def adjust_plan(
             "stay": poi["stay"],
         }
 
-        new_n = len(spots_dict)
+        new_n = len(working_spots)
         new_cost = np.full((new_n, new_n), -1, dtype=np.float64)
         new_cost[: new_n - 1, : new_n - 1] = cost_matrix
         new_dist = np.full((new_n, new_n), -1, dtype=np.float64)
         new_dist[: new_n - 1, : new_n - 1] = dist_matrix
 
-        for i, spot in spots_dict.items():
+        for i, spot in working_spots.items():
             if i == new_idx:
                 new_cost[i][i] = 0
                 new_dist[i][i] = 0
@@ -426,24 +407,22 @@ def adjust_plan(
             time.sleep(0.4)
 
         if day is not None:
-            plan = add_poi_to_day(spots_dict, new_cost, new_dist, routes, new_idx, day)
+            plan = add_poi_to_day(working_spots, new_cost, new_dist, routes, new_idx, day)
         else:
             # 用户意图未定（未指定天）→ 全局重排兜底
             from backend.agent.planning import add_poi_to_plan
 
-            plan = add_poi_to_plan(spots_dict, new_cost, new_dist, routes)
-        daily_schedules = plan["daily_schedules"]
-        result = plan["solution"]
-        best_days = plan["best_days"]
-        best_m = "add_poi"
+            plan = add_poi_to_plan(working_spots, new_cost, new_dist, routes)
     else:
         raise ValueError(f"未识别的调整指令: {list(adjustments.keys())}")
 
-    assert result is not None
-    assert best_days is not None
-    assert best_m is not None
-    assert daily_schedules is not None
-    commentary = generate_commentary(result, spots_dict, dist_matrix)  # pyright: ignore[reportArgumentType]
+    if plan is None:
+        raise RuntimeError(f"调整指令 {list(adjustments.keys())} 未产出任何结果")
+
+    result = plan["solution"]
+    best_days = plan["best_days"]
+    best_m = plan["best_m"]
+    daily_schedules = plan["daily_schedules"]
 
     return {  # type: ignore[return-type]
         "solution": result,
@@ -456,5 +435,5 @@ def adjust_plan(
         "daily_schedules": daily_schedules,
         "cost_matrix": cost_matrix.tolist(),
         "dist_matrix": dist_matrix.tolist(),
-        "commentary": commentary,
+        "commentary": None,
     }

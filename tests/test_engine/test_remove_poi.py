@@ -37,7 +37,8 @@ class TestRemovePoi:
         all_names = {item["name"] for day in plan["daily_schedules"] for item in day}
         assert target_name not in all_names
         assert plan["solution"]["valid"] is True
-        assert plan["commentary"]
+        # 评语已从调整流程剥离（agent-tool 形态，返回 None）
+        assert plan["commentary"] is None
 
     def test_remove_poi_missing_day_raises(self, base_adjust_plan):
         """remove_poi：未指定 day（用户意图未定前）抛 ValueError 驱动追问。"""

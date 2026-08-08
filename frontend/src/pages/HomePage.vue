@@ -30,10 +30,7 @@
         <div v-if="activeSection === card.key" class="section-body">
         <template v-if="card.key === 'city'">
           <div class="form-row">
-            <n-input v-model:value="store.city" placeholder="如：北京" @keyup.enter="confirmCity" />
-          </div>
-          <div class="body-actions">
-            <n-button size="small" type="primary" @click="confirmCity">✓ 确定城市</n-button>
+            <n-input v-model:value="store.city" placeholder="如：北京" />
           </div>
         </template>
 
@@ -53,12 +50,7 @@
             </n-button>
           </div>
           <div v-if="hotelMsg" class="result-row hint">{{ hotelMsg }}</div>
-          <div v-if="store.hotelAddress" class="hotel-addr">📍 {{ store.hotelAddress }}</div>
-          <div class="body-actions">
-            <n-button size="small" type="primary" :disabled="!hotelConfirmed" @click="confirmHotel">
-              ✓ 确认酒店
-            </n-button>
-          </div>
+          <div v-if="store.hotelAddress" class="hotel-addr">{{ store.hotelAddress }}</div>
         </template>
 
         <template v-else-if="card.key === 'depart'">
@@ -73,16 +65,6 @@
             />
           </div>
           <div class="unit-info">0=午夜, 480=08:00，当前 {{ fmtMinutes(store.dayStart) }}</div>
-          <div class="body-actions">
-            <n-button
-              size="small"
-              type="primary"
-              :disabled="store.dayStartConfirmed"
-              @click="confirmDepart"
-            >
-              ✓ 确认启程时间
-            </n-button>
-          </div>
         </template>
 
         <template v-else-if="card.key === 'search'">
@@ -142,57 +124,82 @@
                   <span class="poi-name">{{ spotEmoji(row.name) }} {{ row.name }}</span>
                   <n-button text size="small" class="poi-del" @click.stop="deleteRowAt(i)">✕</n-button>
                 </div>
-                <div class="poi-body">
-                  <div class="poi-info-row">
-                    <label>地址</label>
-                    <span class="edit-divider" />
-                    <span class="poi-info-text" :title="row.address">{{ row.address || '暂无地址' }}</span>
-                  </div>
-                  <div class="poi-info-row">
-                    <label>营业时间</label>
-                    <span class="edit-divider" />
-                    <span class="poi-info-text">{{ formatBiz(row.twStart, row.twEnd) }}</span>
-                  </div>
-                    <div class="poi-edit" @click="onPoiEditClick(i, $event)">
-                      <div class="poi-edit-row">
-                        <label>停留</label>
-                        <span class="edit-divider" />
-                        <Transition name="poi" mode="out-in">
-                          <n-input-number
-                            v-if="activePoiCard === i"
-                            :key="'input'"
-                            v-model:value="row.stay"
-                            :min="0"
-                            size="tiny"
-                            :show-button="false"
-                            :bordered="false"
-                            placeholder="请输入"
-                            style="width: 90px"
-                          />
-                          <span v-else :key="'value'" class="poi-value">{{ row.stay ?? '-' }}</span>
-                        </Transition>
-                      </div>
-                      <div class="poi-edit-row">
-                        <label>预计到达</label>
-                        <span class="edit-divider" />
-                        <Transition name="poi" mode="out-in">
-                          <n-input-number
-                            v-if="activePoiCard === i"
-                            :key="'input'"
-                            v-model:value="row.expectedArrival"
-                            :min="0"
-                            :max="1440"
-                            size="tiny"
-                            :show-button="false"
-                            :bordered="false"
-                            placeholder="请输入"
-                            style="width: 90px"
-                          />
-                          <span v-else :key="'value'" class="poi-value">{{ row.expectedArrival ?? '-' }}</span>
-                        </Transition>
-                      </div>
+                <Transition name="poi" mode="out-in">
+                  <div
+                    v-if="activePoiCard === i"
+                    :key="'expanded'"
+                    class="poi-body"
+                    @click="onPoiEditClick(i, $event)"
+                  >
+                    <div class="poi-info-row">
+                      <label>地址</label>
+                      <span class="edit-divider" />
+                      <span class="poi-info-text" :title="row.address">{{ row.address || '暂无地址' }}</span>
+                    </div>
+                    <div class="poi-info-row">
+                      <label>营业时间</label>
+                      <span class="edit-divider" />
+                      <span class="poi-info-text">{{ formatBiz(row.twStart, row.twEnd) }}</span>
+                    </div>
+                    <div class="poi-edit-row">
+                      <label>停留</label>
+                      <span class="edit-divider" />
+                      <n-input-number
+                        v-if="isEditing(i, 'stay')"
+                        v-model:value="row.stay"
+                        :min="0"
+                        size="tiny"
+                        :show-button="false"
+                        :bordered="false"
+                        placeholder="请输入"
+                        style="width: 90px"
+                      />
+                      <span v-else class="poi-value poi-field" @click="startEdit(i, 'stay')">
+                        {{ row.stay != null ? `${row.stay} 分钟` : '未输入' }}
+                      </span>
+                    </div>
+                    <div class="poi-edit-row">
+                      <label>预计到达</label>
+                      <span class="edit-divider" />
+                      <n-input-number
+                        v-if="isEditing(i, 'expectedArrival')"
+                        v-model:value="row.expectedArrival"
+                        :min="0"
+                        :max="1440"
+                        size="tiny"
+                        :show-button="false"
+                        :bordered="false"
+                        placeholder="请输入"
+                        style="width: 90px"
+                      />
+                      <span v-else class="poi-value poi-field" @click="startEdit(i, 'expectedArrival')">
+                        {{ row.expectedArrival != null ? `${fmtMinutes(row.expectedArrival)}` : '未输入' }}
+                      </span>
                     </div>
                   </div>
+                  <div v-else :key="'collapsed'" class="poi-body">
+                    <div class="poi-info-row">
+                      <label>地址</label>
+                      <span class="edit-divider" />
+                      <span class="poi-info-text" :title="row.address">{{ row.address || '暂无地址' }}</span>
+                    </div>
+                    <div class="poi-info-row">
+                      <label>营业时间</label>
+                      <span class="edit-divider" />
+                      <span class="poi-info-text">{{ formatBiz(row.twStart, row.twEnd) }}</span>
+                    </div>
+                    <div class="poi-edit-row">
+                      <label>停留</label>
+                      <span class="edit-divider" />
+                      <span class="poi-value">{{ row.stay != null ? `${row.stay} 分钟` : '-' }}</span>
+                    </div>
+                    <div class="poi-edit-row">
+                      <label>预计到达</label>
+                      <span class="edit-divider" />
+                      <span class="poi-value">{{ row.expectedArrival != null ? fmtMinutes(row.expectedArrival) : '-' }}</span>
+                    </div>
+                  </div>
+                </Transition>
               </div>
             </div>
             <div class="table-actions">
@@ -217,9 +224,9 @@
 
     <div class="form-actions">
       <n-button
-        type="primary"
+        :type="allGreen ? 'primary' : 'error'"
         size="large"
-        :disabled="!canSuggest || store.loading"
+        :disabled="!allGreen || store.loading"
         :loading="store.loading"
         @click="fetchSuggest"
       >
@@ -240,7 +247,7 @@ defineOptions({ name: 'HomePage' })
 import { computed, ref } from 'vue'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, useDialog } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
 import type { SuggestResult } from '@/services/api'
@@ -253,7 +260,6 @@ const store = usePlanStore()
 const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
-const dialog = useDialog()
 
 const { startPolling } = useTaskPolling()
 
@@ -269,11 +275,14 @@ const {
 } = usePoiSearch()
 
 // ====== 计算属性 ======
-const hotelConfirmed = computed(() => store.hotelName.trim().length > 0 && store.hotelLon !== 0)
-const canSuggest = computed(() => store.spots.length > 0 && hotelConfirmed.value)
+/** 三绿判定：城市有值 / 酒店名+地址拉取成功 / 已添加景点。 */
+const cityGreen = computed(() => store.city.trim().length > 0)
+const hotelGreen = computed(() => store.hotelName.trim().length > 0 && store.hotelAddress.trim().length > 0)
+const spotsGreen = computed(() => store.spots.length > 0)
+const allGreen = computed(() => cityGreen.value && hotelGreen.value && spotsGreen.value)
 const minDaysHint = computed(() => Math.max(1, Math.floor(store.spots.length / 8) + 1))
 
-/** 分钟 → HH:MM（用于展示启程时间确认提示）。 */
+/** 分钟 → HH:MM（用于展示启程时间）。 */
 function fmtMinutes(m: number): string {
   const hh = String(Math.floor(m / 60)).padStart(2, '0')
   const mm = String(m % 60).padStart(2, '0')
@@ -285,17 +294,17 @@ function fmtMinutes(m: number): string {
 const steps = ['选择城市', '设置酒店', '添加景点', '生成方案']
 const stepStatus = computed<('finish' | 'process' | 'wait')[]>(() => {
   const s: ('finish' | 'process' | 'wait')[] = ['wait', 'wait', 'wait', 'wait']
-  if (!store.city.trim()) {
+  if (!cityGreen.value) {
     s[0] = 'process'
     return s
   }
   s[0] = 'finish'
-  if (!hotelConfirmed.value) {
+  if (!hotelGreen.value) {
     s[1] = 'process'
     return s
   }
   s[1] = 'finish'
-  if (store.spots.length === 0) {
+  if (!spotsGreen.value) {
     s[2] = 'process'
     return s
   }
@@ -316,9 +325,9 @@ const activeSection = ref<CardKey | null>(null)
 
 /** 六张卡片的元数据：图标/标题/完成判定/收起态摘要。 */
 const folderCards = computed(() => {
-  const cityDone = store.city.trim().length > 0
-  const hotelDone = hotelConfirmed.value
-  const departDone = store.dayStartConfirmed
+  const cityDone = cityGreen.value
+  const hotelDone = hotelGreen.value
+  const departDone = true
   const spotsDone = store.spots.length > 0
   const manageDone = store.isParamsSaved
   return [
@@ -334,14 +343,14 @@ const folderCards = computed(() => {
       icon: '🏨',
       title: '酒店',
       done: hotelDone,
-      summary: hotelDone ? store.hotelName : '未设置酒店',
+      summary: hotelDone ? `${store.hotelName} · ${store.hotelAddress}` : '未设置酒店',
     },
     {
       key: 'depart' as const,
       icon: '⏰',
       title: '启程时间',
       done: departDone,
-      summary: departDone ? `已确认 ${fmtMinutes(store.dayStart)}` : '未确认（默认 08:00）',
+      summary: store.dayStart === 0 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
     },
     {
       key: 'search' as const,
@@ -377,37 +386,12 @@ function toggleSection(key: CardKey) {
   activeSection.value = activeSection.value === key ? null : key
 }
 
-/** 找到下一个未完成的卡片 key（用于确认后自动推进），无则 null。 */
+/** 找到下一个未完成的卡片 key（用于初始展开引导），无则 null。 */
 function nextUndone(): CardKey | null {
   for (const card of folderCards.value) {
     if (!card.done) return card.key
   }
   return null
-}
-
-/** 城市确认：非空后收起本卡并推进到下一未完成。 */
-function confirmCity() {
-  if (!store.city.trim()) {
-    message.warning('请先输入城市')
-    return
-  }
-  activeSection.value = nextUndone()
-}
-
-/** 酒店确认：已确认坐标后收起并推进。 */
-function confirmHotel() {
-  if (!hotelConfirmed.value) {
-    message.warning('请先搜索并确认酒店坐标')
-    return
-  }
-  activeSection.value = nextUndone()
-}
-
-/** 启程时间确认：记录已确认标记并推进到下一未完成。 */
-function confirmDepart() {
-  store.dayStartConfirmed = true
-  message.success(`启程时间已确认：${fmtMinutes(store.dayStart)}`)
-  activeSection.value = nextUndone()
 }
 
 /** 景点名称 → emoji（关键词归类，兜底 🏛️）。 */
@@ -433,9 +417,23 @@ const { editRows, editHint, showManagement, formatBiz, deleteRowAt, applyEdits }
 /** 当前展开的景点卡索引（手风琴：一次仅一张），null 表示全部收起。 */
 const activePoiCard = ref<number | null>(null)
 
+/** 展开态中正在编辑的字段（点击状态行才出输入框），null 表示均显示状态文案。 */
+const activeEditField = ref<{ row: number; field: 'stay' | 'expectedArrival' } | null>(null)
+
 /** 点击景点卡头：同卡收起、异卡切换（手风琴）。 */
 function togglePoi(i: number) {
   activePoiCard.value = activePoiCard.value === i ? null : i
+}
+
+/** 判断某字段当前是否处于编辑态。 */
+function isEditing(i: number, field: 'stay' | 'expectedArrival'): boolean {
+  const f = activeEditField.value
+  return f !== null && f.row === i && f.field === field
+}
+
+/** 点击状态行：进入字段编辑态（出输入框）。 */
+function startEdit(i: number, field: 'stay' | 'expectedArrival') {
+  activeEditField.value = { row: i, field }
 }
 
 /** 点击编辑区：仅展开态拦截冒泡（点输入框不折叠），收起态放行以触发整卡展开。 */
@@ -450,7 +448,7 @@ function onPoiEditClick(i: number, e: MouseEvent) {
  * 供深度规划（SuggestPage）复用以跳过驾车 API。
  */
 async function fetchSuggest() {
-  if (!hotelConfirmed.value) {
+  if (!hotelGreen.value) {
     message.warning('请先搜索并确认酒店')
     return
   }
@@ -460,19 +458,6 @@ async function fetchSuggest() {
   }
   if (!store.isParamsSaved) {
     message.warning('请先在「规划点管理」中点击「确认规划点参数」')
-    return
-  }
-  if (!store.dayStartConfirmed) {
-    dialog.warning({
-      title: '确认启程时间',
-      content: `你未确定启程时间，当前启程时间为 ${fmtMinutes(store.dayStart)}。是否继续？`,
-      positiveText: '我已知晓，继续',
-      negativeText: '取消',
-      onPositiveClick: () => {
-        store.dayStartConfirmed = true
-        fetchSuggest()
-      },
-    })
     return
   }
   store.suggestions = []
@@ -615,10 +600,14 @@ async function fetchSuggest() {
   padding: 0;
   background: var(--tp-surface);
   overflow: hidden;
-  transition: border-color 0.2s;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.poi-card:hover {
+  border-color: var(--tp-info);
 }
 .poi-card.poi-active {
-  border-color: var(--tp-primary);
+  border-color: var(--tp-info);
 }
 .poi-head {
   display: flex;
@@ -628,6 +617,9 @@ async function fetchSuggest() {
   padding: 8px 10px;
   cursor: pointer;
   border-bottom: 1px solid var(--tp-border-light);
+}
+.poi-card.poi-active .poi-name {
+  color: var(--tp-info);
 }
 .poi-name {
   font-size: 14px;
@@ -673,11 +665,6 @@ async function fetchSuggest() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.poi-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .poi-edit-row {
   display: flex;
   align-items: center;
@@ -698,6 +685,12 @@ async function fetchSuggest() {
   font-size: 13px;
   color: var(--tp-text);
   min-width: 40px;
+}
+.poi-field {
+  cursor: pointer;
+}
+.poi-field:hover {
+  color: var(--tp-primary);
 }
 .empty-hint {
   font-size: 13px;
@@ -720,7 +713,7 @@ async function fetchSuggest() {
 .poi-enter-from,
 .poi-leave-to {
   opacity: 0;
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 .form-row {
   display: flex;
@@ -765,6 +758,12 @@ async function fetchSuggest() {
   justify-content: center;
   gap: 12px;
   margin-top: 12px;
+}
+/* 生成按钮三绿未就绪：disabled + error 色覆盖，让未通过态真实可见 */
+.form-actions .n-button--error.n-button--disabled {
+  background-color: var(--tp-error) !important;
+  color: #fff !important;
+  opacity: 0.55;
 }
 .table-actions {
   display: flex;

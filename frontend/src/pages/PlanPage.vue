@@ -52,7 +52,7 @@
             </div>
             <div class="param-row">
               <span class="param-label">启程时间</span
-              ><span>{{ fmtParamTime(store.historyRequestParams.day_start as number) }}</span>
+              ><span>{{ fmtMinutes(store.historyRequestParams.day_start as number) }}</span>
             </div>
             <div class="param-row">
               <span class="param-label">迟到惩罚</span
@@ -74,7 +74,7 @@
             >
               <span class="param-spot-name">{{ i + 1 }}. {{ s.name }}</span>
               <span class="param-spot-detail">停留 {{ s.stay }}分</span>
-              <span class="param-spot-detail">预计 {{ fmtParamTime(s.expected_arrival) }}</span>
+              <span class="param-spot-detail">预计 {{ fmtMinutes(s.expected_arrival) }}</span>
             </div>
           </div>
         </n-collapse-item>
@@ -124,6 +124,7 @@ import { usePlanStore } from '@/stores/plan'
 import AmapMap from '@/components/AmapMap.vue'
 import SchedulePanel from '@/components/SchedulePanel.vue'
 import type { PlanResultSolution } from '@/types'
+import { fmtMinutes } from '@/utils/time'
 import { postHistory, getDeviceId } from '@/services/api'
 
 const store = usePlanStore()
@@ -161,13 +162,6 @@ const highlightSpot = ref('')
 const sharing = ref(false)
 /** 原始请求参数面板是否展开（n-collapse 展开名列表） */
 const paramsExpanded = ref<string[]>([])
-
-/** 将分钟数转换为 HH:MM 格式，用于参数面板展示。 */
-function fmtParamTime(m: number) {
-  if (m == null || m <= 0) return '-'
-  const h = Math.floor(m / 60)
-  return `${h}:${String(m % 60).padStart(2, '0')}`
-}
 
 /** 分享确认弹窗：收集分享意图，确认后执行分享。 */
 function sharePlan() {

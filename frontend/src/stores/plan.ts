@@ -1,12 +1,12 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import type {
   SpotFormItem,
   PlanRequestPayload,
   SuggestionItem,
   PlanResult,
-  SpotDictItem,
   PoiItem,
 } from '@/types'
 
@@ -31,27 +31,29 @@ export const usePlanStore = defineStore('plan', () => {
   const lateReturnWeight = ref(50)
   const minDays = ref<number | null>(null)
 
-  /** 从 Agent 页面添加一个 POI 到输入列表。自动识别酒店或景点。 */
-  function addSpot(poi: SpotFormItem & { poi_type?: string }) {
-    if (poi.poi_type === 'hotel') {
-      hotelName.value = poi.name
-      hotelLon.value = poi.lon
-      hotelLat.value = poi.lat
-      hotelAddress.value = poi.address ?? ''
-      hotelTwStart.value = poi.twStart ?? 0
-      hotelTwEnd.value = poi.twEnd ?? 1440
-    } else {
-      if (spots.value.some((s) => s.name === poi.name)) return
-      spots.value.push({
-        name: poi.name,
-        lon: poi.lon,
-        lat: poi.lat,
-        twStart: poi.twStart ?? 480,
-        twEnd: poi.twEnd ?? 1020,
-        stay: poi.stay ?? 0,
-        address: poi.address,
-      })
-    }
+  /** 从 Agent 页面添加一个酒店到输入表单。 */
+  function addHotel(poi: SpotFormItem) {
+    hotelName.value = poi.name
+    hotelLon.value = poi.lon
+    hotelLat.value = poi.lat
+    hotelAddress.value = poi.address ?? ''
+    hotelTwStart.value = poi.twStart ?? 0
+    hotelTwEnd.value = poi.twEnd ?? 1440
+    isParamsSaved.value = false
+  }
+
+  /** 从 Agent 页面添加一个景点到输入列表（重复名称去重）。 */
+  function addSpot(poi: SpotFormItem) {
+    if (spots.value.some((s) => s.name === poi.name)) return
+    spots.value.push({
+      name: poi.name,
+      lon: poi.lon,
+      lat: poi.lat,
+      twStart: poi.twStart ?? 480,
+      twEnd: poi.twEnd ?? 1020,
+      stay: poi.stay ?? 0,
+      address: poi.address,
+    })
     isParamsSaved.value = false
   }
 
@@ -75,7 +77,7 @@ export const usePlanStore = defineStore('plan', () => {
   /** 将待选 POI 添加到首页输入列表，然后从待选栏移除。 */
   function addPoiToForm(poi: PoiItem) {
     if (!poi.name || poi.lon == null || poi.lat == null) return
-    addSpot({
+    const base: SpotFormItem = {
       name: poi.name,
       lon: poi.lon,
       lat: poi.lat,
@@ -83,8 +85,12 @@ export const usePlanStore = defineStore('plan', () => {
       twEnd: poi.tw_end ?? 1020,
       stay: 0,
       address: poi.address,
-      poi_type: poi.poi_type,
-    })
+    }
+    if (poi.poi_type === 'hotel') {
+      addHotel(base)
+    } else {
+      addSpot(base)
+    }
     const idx = pendingPois.value.findIndex((p) => p.name === poi.name)
     if (idx !== -1) pendingPois.value.splice(idx, 1)
   }
@@ -105,8 +111,6 @@ export const usePlanStore = defineStore('plan', () => {
 
   // ====== 方案状态 ======
   const suggestions = ref<SuggestionItem[]>([])
-  /** suggest 响应带回来的 spots 字典（含 original_tw），fast 模式构建 PlanResult 时使用。 */
-  const suggestSpots = ref<Record<string, SpotDictItem>>({})
   const selectedNDays = ref<number | null>(null)
   const selectedMethod = ref('')
 
@@ -118,14 +122,6 @@ export const usePlanStore = defineStore('plan', () => {
   const loading = ref(false)
   /** 高德 JS API 安全密钥 */
   const amapSecurityCode = ref('')
-  /** suggest 响应中的成本矩阵，deep 模式复用。 */
-  const suggestCostMatrix = ref<number[][]>([])
-  /** suggest 响应中的距离矩阵。 */
-  const suggestDistMatrix = ref<number[][]>([])
-  /** suggest 响应中的真实路径坐标字典。 */
-  const suggestPolylines = ref<Record<string, string>>({})
-  /** suggest 搜索总耗时（秒）。 */
-  const suggestAlgoTime = ref(0)
 
   // ====== 方法 ======
 
@@ -165,6 +161,7 @@ export const usePlanStore = defineStore('plan', () => {
 
   /** 重置全部状态至初始值。用于开始新规划或清空当前会话。 */
   function reset() {
+    useSuggestCache().clear()
     city.value = ''
     hotelName.value = ''
     hotelLon.value = 0
@@ -180,15 +177,10 @@ export const usePlanStore = defineStore('plan', () => {
     historyRecordId.value = null
     historyRequestParams.value = null
     suggestions.value = []
-    suggestSpots.value = {}
     selectedNDays.value = null
     selectedMethod.value = ''
     planResult.value = null
     deepResults.value = []
-    suggestCostMatrix.value = []
-    suggestDistMatrix.value = []
-    suggestPolylines.value = {}
-    suggestAlgoTime.value = 0
     amapApiKey.value = ''
     amapSecurityCode.value = ''
     pendingPois.value = []
@@ -217,15 +209,10 @@ export const usePlanStore = defineStore('plan', () => {
     historyRecordId,
     historyRequestParams,
     suggestions,
-    suggestSpots,
     selectedNDays,
     selectedMethod,
     planResult,
     deepResults,
-    suggestCostMatrix,
-    suggestDistMatrix,
-    suggestPolylines,
-    suggestAlgoTime,
     amapApiKey,
     amapSecurityCode,
     loading,
@@ -236,6 +223,7 @@ export const usePlanStore = defineStore('plan', () => {
     addAllPendingPois,
     buildRequest,
     reset,
+    addHotel,
     addSpot,
   }
 })

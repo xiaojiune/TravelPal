@@ -102,7 +102,7 @@ const collapsed = ref(false)
 }
 .pending-count {
   background: var(--tp-primary);
-  color: #fff;
+  color: var(--tp-on-primary);
   border-radius: 8px;
   font-size: 11px;
   padding: 0 6px;

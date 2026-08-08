@@ -6,9 +6,6 @@ import type { components } from '@/api/types.generated'
 /** 发送给后端的 PlanRequest（cost_matrix/dist_matrix 已由后端 schema 覆盖，不再重复扩展） */
 export type PlanRequestPayload = components['schemas']['PlanRequest']
 
-/** POI 查找结果 */
-export type POILookupItem = components['schemas']['POILookupItem']
-
 /** POI 查找响应 */
 export type POILookupResponse = components['schemas']['POILookupResponse']
 

@@ -1,6 +1,7 @@
 /** 规划点管理表格 composable：维护编辑行数据，提供确认/删除操作，与 store 数据解耦。 */
 import { ref, computed, watch, nextTick } from 'vue'
 import { usePlanStore } from '@/stores/plan'
+import { fmtRange } from '@/utils/time'
 
 interface EditRow {
   isHotel: boolean
@@ -92,9 +93,7 @@ export function useEditTable() {
 
   /** 将分钟数转换为 HH:MM 格式，用于表格显示营业时间列。 */
   function formatBiz(start: number, end: number) {
-    const s = `${Math.floor(start / 60)}:${String(start % 60).padStart(2, '0')}`
-    const e = `${Math.floor(end / 60)}:${String(end % 60).padStart(2, '0')}`
-    return `${s}-${e}`
+    return fmtRange(start, end)
   }
 
   /** 删除勾选行。酒店行被删则清空 store 酒店信息；景点行直接移除。 */

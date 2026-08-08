@@ -179,8 +179,10 @@ import type { SuggestResult } from '@/services/api'
 import { usePoiSearch } from '@/composables/usePoiSearch'
 import { useEditTable } from '@/composables/useEditTable'
 import { useTaskPolling } from '@/composables/useTaskPolling'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 
 const store = usePlanStore()
+const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
@@ -281,11 +283,11 @@ async function fetchSuggest() {
     const { task_id } = await submitTask('suggest', store.buildRequest(null))
     const data = (await startPolling(task_id)) as unknown as SuggestResult
     store.suggestions = data.suggestions || []
-    if (data.spots) store.suggestSpots = data.spots
-    if (data.cost_matrix) store.suggestCostMatrix = data.cost_matrix // 缓存成本矩阵，deep 模式复用跳过驾车 API
-    if (data.dist_matrix) store.suggestDistMatrix = data.dist_matrix // 缓存距离矩阵
-    if (data.algo_time) store.suggestAlgoTime = data.algo_time // 搜索总耗时
-    if (data.polylines) store.suggestPolylines = data.polylines // 真实轨迹
+    if (data.spots) cache.suggestSpots.value = data.spots
+    if (data.cost_matrix) cache.suggestCostMatrix.value = data.cost_matrix // 缓存成本矩阵，deep 模式复用跳过驾车 API
+    if (data.dist_matrix) cache.suggestDistMatrix.value = data.dist_matrix // 缓存距离矩阵
+    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time // 搜索总耗时
+    if (data.polylines) cache.suggestPolylines.value = data.polylines // 真实轨迹
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
     if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
     router.push('/suggest')

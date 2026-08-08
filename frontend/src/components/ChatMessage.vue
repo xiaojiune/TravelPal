@@ -59,7 +59,7 @@ defineProps<Props>()
 }
 .chat-message.user .bubble {
   background: var(--tp-primary);
-  color: #fff;
+  color: var(--tp-on-primary);
 }
 .msg-body {
   display: flex;

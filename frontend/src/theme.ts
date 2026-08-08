@@ -11,6 +11,8 @@ export const brandColors = {
   primarySoft: '#E6F7F2',
   // 主色上的小字号文字（WCAG AA：白底对比度≥4.5，#20C997 本身仅 2.8:1）
   primaryText: '#0D8A68',
+  // 主色底上的反色文字（按钮/徽章白字）
+  onPrimary: '#FFFFFF',
 
   // 语义色
   success: '#10B981',
@@ -68,6 +70,7 @@ export function applyThemeVars() {
   root.setProperty('--tp-primary-pressed', brandColors.primaryPressed)
   root.setProperty('--tp-primary-soft', brandColors.primarySoft)
   root.setProperty('--tp-primary-text', brandColors.primaryText)
+  root.setProperty('--tp-on-primary', brandColors.onPrimary)
   root.setProperty('--tp-success', brandColors.success)
   root.setProperty('--tp-success-soft', brandColors.successSoft)
   root.setProperty('--tp-warning', brandColors.warning)

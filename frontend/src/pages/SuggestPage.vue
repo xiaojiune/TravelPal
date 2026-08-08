@@ -53,8 +53,8 @@
           </n-button>
         </div>
         <div v-if="mode === 'fast'" class="mode-hint">💡 点击上方方案卡片直接查看规划结果</div>
-        <div v-if="mode === 'fast' && store.suggestAlgoTime" class="algo-time">
-          ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(3) }}s
+        <div v-if="mode === 'fast' && cache.suggestAlgoTime.value" class="algo-time">
+          ⏱ 搜索耗时 {{ cache.suggestAlgoTime.value.toFixed(3) }}s
         </div>
         <div v-if="mode === 'deep' && deepAlgoTime" class="algo-time">
           ⏱ 深度规划耗时 {{ deepAlgoTime.toFixed(3) }}s
@@ -91,9 +91,11 @@ import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
 import { useTaskPolling } from '@/composables/useTaskPolling'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import type { SuggestionItem, PlanResult } from '@/types'
 
 const store = usePlanStore()
+const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
 
@@ -150,12 +152,12 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     },
     best_days: s.n_days,
     best_m: s.method,
-    spots: store.suggestSpots,
+    spots: cache.suggestSpots.value,
     daily_schedules: s.daily_schedules || [],
     amap_api_key: store.amapApiKey,
     amap_security_code: store.amapSecurityCode,
-    algo_time: store.suggestAlgoTime,
-    polylines: store.suggestPolylines,
+    algo_time: cache.suggestAlgoTime.value,
+    polylines: cache.suggestPolylines.value,
   }
 }
 
@@ -178,14 +180,14 @@ async function runDeep() {
   store.deepResults = []
   try {
     const req = store.buildRequest(deepNDays.value, {
-      cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined, // 复用成本矩阵，避免 re-fetch
-      dist_matrix: store.suggestDistMatrix.length ? store.suggestDistMatrix : undefined,
+      cost_matrix: cache.suggestCostMatrix.value.length ? cache.suggestCostMatrix.value : undefined, // 复用成本矩阵，避免 re-fetch
+      dist_matrix: cache.suggestDistMatrix.value.length ? cache.suggestDistMatrix.value : undefined,
     })
     req.mode = 'deep'
     const { task_id } = await submitTask('plan', req)
     const data = (await startPolling(task_id)) as unknown as PlanResult
     // 深度模式复用 suggest 阶段缓存的真实路径坐标（后端因跳过驾车 API 返回空 polylines）
-    if (Object.keys(store.suggestPolylines).length) data.polylines = store.suggestPolylines
+    if (Object.keys(cache.suggestPolylines.value).length) data.polylines = cache.suggestPolylines.value
     store.deepResults.push(data)
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
@@ -213,11 +215,6 @@ function viewDeepResult(r: PlanResult) {
   text-align: center;
   padding: 60px 0;
   color: var(--tp-text-3);
-}
-.empty-state .btn {
-  display: inline-block;
-  margin-top: 16px;
-  text-decoration: none;
 }
 .suggest-section {
   margin-bottom: 24px;

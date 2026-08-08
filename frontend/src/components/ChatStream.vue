@@ -62,7 +62,7 @@ const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
 const loading = ref(false)
 const messages = ref<ChatMessageType[]>([])
-const { displayText, append, reset } = useTypewriter({ speed: 30 })
+const { displayText, append, reset } = useTypewriter()
 // 当前 SSE 请求的 AbortController：组件卸载（AgentPanel 关闭）时中止流，
 // 避免 fetch 继续运行、闭包写入已卸载组件的 ref
 let abortController: AbortController | null = null

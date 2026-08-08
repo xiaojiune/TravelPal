@@ -43,15 +43,15 @@
             "
           >
             <td>{{ item.name }}</td>
-            <td>{{ fmt(item.arrival) }}</td>
-            <td>{{ fmt(item.departure) }}</td>
+            <td>{{ fmtMinutes(item.arrival) }}</td>
+            <td>{{ fmtMinutes(item.departure) }}</td>
             <td>{{ item.tw || '-' }}</td>
             <td>{{ item.stay ?? '-' }}</td>
             <td :class="statusColor(item.arrival_status)">
-              {{ statusClass(item.arrival_status) }}
+              {{ item.arrival_status || '-' }}
             </td>
             <td :class="statusColor(item.departure_status)">
-              {{ statusClass(item.departure_status) }}
+              {{ item.departure_status || '-' }}
             </td>
             <td v-if="onRemovePoi && item.name !== '酒店（返回）'">
               <button class="btn-remove" title="移除景点" @click="onRemovePoi(item.name)">✕</button>
@@ -80,6 +80,7 @@
  *   select-spot(spotName): 景点行点击，选中某景点
  */
 import type { ScheduleItem } from '@/types'
+import { fmtMinutes } from '@/utils/time'
 
 // ====== 工具函数 ======
 
@@ -96,29 +97,6 @@ const emit = defineEmits<{
   (e: 'toggle-day', dayIndex: number): void
   (e: 'select-spot', spotName: string): void
 }>()
-
-/**
- * 将分钟数转换为 HH:MM 格式。
- * @param {number} m - 距午夜分钟数
- * @returns {string} 格式如 "8:30"
- */
-function fmt(m: number | null | undefined) {
-  if (m == null || m <= 0) return '-'
-  const h = Math.floor(m / 60)
-  const min = Math.floor(m % 60)
-  return `${h}:${String(min).padStart(2, '0')}`
-}
-
-/**
- * 将到达/离开状态文本加上违规标记。
- * 准时/等待直接返回，违规行为加 ⚠️ 前缀。
- * @param {string} s - 状态文本
- * @returns {string}
- */
-function statusClass(s: string | null | undefined) {
-  if (!s) return '-'
-  return s
-}
 
 function statusColor(s: string | null | undefined) {
   if (!s) return ''

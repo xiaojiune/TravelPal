@@ -165,7 +165,7 @@ async def chat(req: ChatRequest):
                     if event_type == "content":
                         yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"
                     elif event_type == "tool_status":
-                        yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在查询{data}...'})}\n\n"
+                        yield f"data: {json.dumps({'type': 'tool_status', 'data': f'正在执行 {data}...'})}\n\n"
                     elif event_type == "tool_result":
                         yield f"data: {json.dumps({'type': 'tool_result', 'data': data})}\n\n"
             except Exception:

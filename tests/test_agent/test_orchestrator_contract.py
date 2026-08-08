@@ -93,7 +93,9 @@ class TestOrchestratorContract:
         events = asyncio.run(run())
         assert events[0] == ("tool_status", "poi_lookup")
         assert events[1][0] == "tool_result"
-        assert events[1][1] == [{"name": "广州塔", "lon": 113.3, "lat": 23.1, "poi_type": "spot"}]
+        # 结构化协议：携带工具名 + 结果本体
+        assert events[1][1]["tool"] == "poi_lookup"
+        assert events[1][1]["result"] == [{"name": "广州塔", "lon": 113.3, "lat": 23.1, "poi_type": "spot"}]
         assert all(k == "content" for k, _ in events[2:])
         assert "".join(d for _, d in events[2:]) == "你好呀"
 

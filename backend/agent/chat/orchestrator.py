@@ -100,7 +100,9 @@ async def _tools_node(state: OrchestratorState) -> dict:
             tool_result = await tool_fn(**kwargs)
         else:
             tool_result = tool_fn(**kwargs)
-        writer(("tool_result", tool_result))
+        # SSE tool_result 事件携带工具名 + 结果（前端据此精确判别卡片类型）；
+        # 回填 LLM 的 tool 消息仅用结果本体（保持消息协议纯净）
+        writer(("tool_result", {"tool": tc.name, "result": tool_result}))
         messages.append(
             {
                 "role": "tool",

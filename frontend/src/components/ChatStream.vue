@@ -148,11 +148,12 @@ async function send() {
             messages.value[msgIndex].content = displayText.value
           }
           if (parsed.type === 'tool_result' && parsed.data) {
-            // 工具结果以富卡片内嵌消息流（ToolResultCard 四型判别）；
-            // POI 型同时 emit 供宿主写入待选栏
-            messages.value.push({ role: 'tool', content: '', time: now, data: parsed.data })
-            if (!parsed.data.error && parsed.data.name) {
-              emit('tool-result', parsed.data)
+            // 结构化 tool_result：{ tool, result }。卡片渲染结果本体，
+            // POI 型（poi_lookup）结果同时 emit 供宿主写入待选栏
+            const result = parsed.data.result ?? parsed.data
+            messages.value.push({ role: 'tool', content: '', time: now, data: result })
+            if (parsed.data.tool === 'poi_lookup' && !Array.isArray(result)) {
+              emit('tool-result', result)
             }
             scrollToBottom()
           }

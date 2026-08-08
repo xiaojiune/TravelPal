@@ -37,6 +37,7 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SchedulePanel: typeof import('./src/components/SchedulePanel.vue')['default']
+    SchemaFormCard: typeof import('./src/components/SchemaFormCard.vue')['default']
     ToolPanel: typeof import('./src/components/ToolPanel.vue')['default']
     ToolRail: typeof import('./src/components/ToolRail.vue')['default']
     ToolResultCard: typeof import('./src/components/ToolResultCard.vue')['default']

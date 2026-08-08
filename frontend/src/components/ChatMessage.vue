@@ -50,16 +50,33 @@ defineProps<Props>()
   flex-shrink: 0;
 }
 .bubble {
+  position: relative;
   background: var(--tp-border-light);
   padding: 10px 14px;
   border-radius: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  /* 助手气泡：浅色底 + 左侧尖角尾巴 */
+}
+.bubble::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
 }
 .chat-message.user .bubble {
   background: var(--tp-primary);
   color: var(--tp-on-primary);
+  /* 用户气泡：主色底 + 右侧尖角尾巴 */
+}
+.chat-message.user .bubble::before {
+  left: auto;
+  right: -5px;
 }
 .msg-body {
   display: flex;

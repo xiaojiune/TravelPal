@@ -220,13 +220,28 @@ function scrollToBottom() {
   margin-bottom: 8px;
 }
 .input-bar {
+  position: relative;
   display: flex;
   gap: 8px;
-  /* 聊天框上抬：不贴面板底缘，留一个字左右空白 */
+  /* 输入框气泡化：圆角卡片 + 柔和阴影 + 左下尖角尾巴 */
   padding: 10px 12px;
-  margin: 0 8px 12px;
+  margin: 0 12px 16px;
   border: 1px solid var(--tp-border);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--tp-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+/* 气泡尖角尾巴：指向聊天区（上缘），纯 CSS 三角 */
+.input-bar::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 22px;
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border-left: 1px solid var(--tp-border);
+  border-top: 1px solid var(--tp-border);
+  transform: rotate(45deg);
 }
 </style>

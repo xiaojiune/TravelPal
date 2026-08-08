@@ -15,6 +15,7 @@
         :class="{
           'section-active': activeSection === card.key,
           'section-done': card.done,
+          'card-span2': card.key === 'search',
           'card-full': card.key === 'manage',
         }"
       >
@@ -59,7 +60,30 @@
           </div>
         </template>
 
-        <template v-else-if="card.key === 'spots'">
+        <template v-else-if="card.key === 'depart'">
+          <div class="form-row">
+            <n-input-number
+              v-model:value="store.dayStart"
+              :min="0"
+              :max="1440"
+              placeholder="请输入"
+              style="width: 100%"
+            />
+          </div>
+          <div class="unit-info">0=午夜, 480=08:00，当前 {{ fmtMinutes(store.dayStart) }}</div>
+          <div class="body-actions">
+            <n-button
+              size="small"
+              type="primary"
+              :disabled="store.dayStartConfirmed"
+              @click="confirmDepart"
+            >
+              ✓ 确认启程时间
+            </n-button>
+          </div>
+        </template>
+
+        <template v-else-if="card.key === 'search'">
           <div class="form-row">
             <n-input
               v-model:value="spotText"
@@ -80,63 +104,61 @@
             </n-button>
           </div>
           <div v-if="spotMsg" class="hint" style="white-space: pre-line">{{ spotMsg }}</div>
-          <div v-if="store.spots.length" class="spot-grid">
-            <div v-for="s in store.spots" :key="s.name" class="spot-tile">
-              <span class="spot-emoji">{{ spotEmoji(s.name) }}</span>
-              <span class="spot-name">{{ s.name }}</span>
-            </div>
+          <div class="added-count">
+            <template v-if="store.spots.length">
+              ✅ 已添加 {{ store.spots.length }} 个景点（前往「规划点管理」调整参数）
+            </template>
+            <template v-else>尚未添加景点</template>
           </div>
-          <div v-else class="empty-hint">尚未添加景点</div>
+        </template>
+
+        <template v-else-if="card.key === 'minDays'">
+          <div class="form-row">
+            <n-input-number
+              v-model:value="store.minDays"
+              :min="1"
+              placeholder="自动"
+              style="width: 100%"
+            />
+          </div>
+          <div class="unit-info">不填则自动推断，默认 n_spots//8+1={{ minDaysHint }}</div>
         </template>
 
         <template v-else-if="card.key === 'manage'">
           <div v-if="showManagement" class="manage-box">
-            <table class="edit-table">
-        <thead>
-          <tr>
-            <th style="width: 40px">删除</th>
-            <th>名称</th>
-            <th>地址</th>
-            <th>营业时间</th>
-            <th style="width: 90px">停留(分)</th>
-            <th style="width: 90px">预计到达</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, i) in editRows" :key="i" :class="{ 'row-hotel': row.isHotel }">
-            <td style="text-align: center"><n-checkbox v-model:checked="row.delete" /></td>
-            <td>{{ row.isHotel ? '🏨 ' : '' }}{{ row.name }}</td>
-            <td class="addr">{{ row.address }}</td>
-            <td class="biz-hours">{{ formatBiz(row.twStart, row.twEnd) }}</td>
-            <td>
-              <n-input-number
-                v-model:value="row.stay"
-                :min="0"
-                size="tiny"
-                placeholder="请输入"
-                style="width: 100%"
-              />
-            </td>
-            <td>
-              <n-input-number
-                v-model:value="row.expectedArrival"
-                :min="0"
-                :max="1440"
-                size="tiny"
-                placeholder="请输入"
-                style="width: 100%"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="table-actions">
-        <n-button secondary size="small" @click="applyEdits">✅ 确认规划点参数</n-button>
-        <n-button type="error" size="small" @click="deleteSelectedRows">🗑️ 删除选中行</n-button>
-      </div>
-      <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
+            <div class="poi-list">
+              <div
+                v-for="(row, i) in editRows"
+                :key="i"
+                class="poi-card"
+                :class="{ 'poi-hotel': row.isHotel }"
+              >
+                <div class="poi-head">
+                  <span class="poi-name">{{ row.isHotel ? '🏨 ' : spotEmoji(row.name) + ' ' }}{{ row.name }}</span>
+                  <n-button text size="small" class="poi-del" @click="deleteRowAt(i)">✕</n-button>
+                </div>
+                <div class="poi-addr" :title="row.address">{{ row.address || '暂无地址' }}</div>
+                <div class="poi-meta">营业时间 {{ formatBiz(row.twStart, row.twEnd) }}</div>
+                <div class="poi-edit">
+                  <label>停留(分)</label>
+                  <n-input-number v-model:value="row.stay" :min="0" size="tiny" style="width: 90px" />
+                  <label>预计到达</label>
+                  <n-input-number
+                    v-model:value="row.expectedArrival"
+                    :min="0"
+                    :max="1440"
+                    size="tiny"
+                    style="width: 90px"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="table-actions">
+              <n-button secondary size="small" @click="applyEdits">✅ 确认规划点参数</n-button>
+            </div>
+            <div v-if="editHint" class="hint">💡 {{ editHint }}</div>
           </div>
-          <div v-else class="empty-hint">暂无规划点，先在上方添加景点</div>
+          <div v-else class="empty-hint">暂无规划点，先在上方搜索景点</div>
         </template>
         </div>
       </Transition>
@@ -150,54 +172,6 @@
     </section>
 
     </div>
-
-    <section class="form-section">
-      <n-collapse v-model:expanded-names="paramsExpanded">
-        <n-collapse-item name="params" title="⚙️ 高级设置（算法参数）">
-          <div class="form-grid-3">
-            <div>
-              <label>启程时间</label
-              ><n-input-number
-                v-model:value="store.dayStart"
-                :min="0"
-                :max="1440"
-                placeholder="请输入"
-                style="width: 100%"
-              /><span class="unit-info">0=午夜, 480=08:00</span>
-            </div>
-            <div>
-              <label>最小天数</label
-              ><n-input-number
-                v-model:value="store.minDays"
-                :min="1"
-                placeholder="自动"
-                style="width: 100%"
-              /><span class="unit-info">默认 n_spots//8+1={{ minDaysHint }}</span>
-            </div>
-            <div>
-              <label>迟到惩罚</label
-              ><n-input-number v-model:value="store.penaltyWeight" :step="10" style="width: 100%" />
-            </div>
-            <div>
-              <label>等待惩罚</label
-              ><n-input-number
-                v-model:value="store.earlyWaitWeight"
-                :step="0.1"
-                style="width: 100%"
-              />
-            </div>
-            <div>
-              <label>晚归惩罚</label
-              ><n-input-number
-                v-model:value="store.lateReturnWeight"
-                :step="10"
-                style="width: 100%"
-              />
-            </div>
-          </div>
-        </n-collapse-item>
-      </n-collapse>
-    </section>
 
     <div class="form-actions">
       <n-button
@@ -288,17 +262,21 @@ const stepStatus = computed<('finish' | 'process' | 'wait')[]>(() => {
   return s
 })
 
-/** 高级设置（算法参数）折叠面板，默认收起。 */
-const paramsExpanded = ref<string[]>([])
+// 初始展开第一个未完成的卡片（过渡态引导）
+onMounted(() => {
+  activeSection.value = nextUndone()
+})
 
 // ====== 大文件夹（手风琴） ======
 /** 当前展开的卡片（手风琴：一次仅一张），null 表示全部收起。 */
-const activeSection = ref<'city' | 'hotel' | 'spots' | 'manage' | null>(null)
+type CardKey = 'city' | 'hotel' | 'depart' | 'search' | 'minDays' | 'manage'
+const activeSection = ref<CardKey | null>(null)
 
-/** 四张卡片的元数据：图标/标题/完成判定/收起态摘要。 */
+/** 六张卡片的元数据：图标/标题/完成判定/收起态摘要。 */
 const folderCards = computed(() => {
   const cityDone = store.city.trim().length > 0
   const hotelDone = hotelConfirmed.value
+  const departDone = store.dayStartConfirmed
   const spotsDone = store.spots.length > 0
   const manageDone = showManagement.value
   return [
@@ -317,11 +295,25 @@ const folderCards = computed(() => {
       summary: hotelDone ? store.hotelName : '未设置酒店',
     },
     {
-      key: 'spots' as const,
-      icon: '🏞️',
-      title: '景点',
+      key: 'depart' as const,
+      icon: '⏰',
+      title: '启程时间',
+      done: departDone,
+      summary: departDone ? `已确认 ${fmtMinutes(store.dayStart)}` : '未确认（默认 08:00）',
+    },
+    {
+      key: 'search' as const,
+      icon: '🔍',
+      title: '搜索',
       done: spotsDone,
       summary: spotsDone ? `已添加 ${store.spots.length} 个景点` : '尚未添加景点',
+    },
+    {
+      key: 'minDays' as const,
+      icon: '📅',
+      title: '最小天数',
+      done: true,
+      summary: store.minDays ? `最少 ${store.minDays} 天` : `自动（默认 ${minDaysHint.value} 天）`,
     },
     {
       key: 'manage' as const,
@@ -334,12 +326,12 @@ const folderCards = computed(() => {
 })
 
 /** 点击卡片头：同卡收起、异卡切换（手风琴）。 */
-function toggleSection(key: 'city' | 'hotel' | 'spots' | 'manage') {
+function toggleSection(key: CardKey) {
   activeSection.value = activeSection.value === key ? null : key
 }
 
 /** 找到下一个未完成的卡片 key（用于确认后自动推进），无则 null。 */
-function nextUndone(): 'city' | 'hotel' | 'spots' | 'manage' | null {
+function nextUndone(): CardKey | null {
   for (const card of folderCards.value) {
     if (!card.done) return card.key
   }
@@ -364,6 +356,13 @@ function confirmHotel() {
   activeSection.value = nextUndone()
 }
 
+/** 启程时间确认：记录已确认标记并推进到下一未完成。 */
+function confirmDepart() {
+  store.dayStartConfirmed = true
+  message.success(`启程时间已确认：${fmtMinutes(store.dayStart)}`)
+  activeSection.value = nextUndone()
+}
+
 /** 景点名称 → emoji（关键词归类，兜底 🏛️）。 */
 function spotEmoji(name: string): string {
   if (/山|峰|岭|石林/.test(name)) return '⛰️'
@@ -382,8 +381,7 @@ onMounted(() => {
 })
 
 // ====== 管理表格 ======
-const { editRows, editHint, showManagement, formatBiz, deleteSelectedRows, applyEdits } =
-  useEditTable()
+const { editRows, editHint, showManagement, formatBiz, deleteRowAt, applyEdits } = useEditTable()
 
 /**
  * 获取方案建议：提交异步 suggest 任务后轮询，完成后跳转 SuggestPage。
@@ -472,6 +470,9 @@ async function fetchSuggest() {
   margin-bottom: 0;
   min-width: 0;
 }
+.cards-grid .card-span2 {
+  grid-column: span 2;
+}
 .cards-grid .card-full {
   grid-column: 1 / -1;
 }
@@ -538,30 +539,68 @@ async function fetchSuggest() {
   font-size: 13px;
   color: var(--tp-text-2);
 }
-.spot-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
+.added-count {
+  font-size: 13px;
+  color: var(--tp-text-2);
   margin-top: 8px;
 }
-.spot-tile {
-  background: var(--tp-primary-soft);
+.poi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.poi-card {
+  border: 1px solid var(--tp-border);
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
+  background: var(--tp-surface);
+  transition: border-color 0.2s;
+}
+.poi-card.poi-hotel {
+  background: var(--tp-primary-soft);
+  border-color: var(--tp-card-border);
+}
+.poi-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
 }
-.spot-emoji {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-.spot-name {
+.poi-name {
   font-size: 13px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.poi-del {
+  color: var(--tp-text-3);
+}
+.poi-del:hover {
+  color: var(--tp-error);
+}
+.poi-addr {
+  font-size: 12px;
+  color: var(--tp-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+.poi-meta {
+  font-size: 11px;
+  color: var(--tp-text-2);
+  margin-bottom: 6px;
+}
+.poi-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.poi-edit label {
+  font-size: 12px;
+  color: var(--tp-text-2);
 }
 .empty-hint {
   font-size: 13px;
@@ -588,21 +627,7 @@ async function fetchSuggest() {
   font-size: 13px;
   color: var(--tp-text-2);
 }
-.form-grid-3 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-}
-.form-grid-3 > div {
-  min-width: 0;
-}
-.form-grid-3 label {
-  display: block;
-  font-size: 13px;
-  color: var(--tp-text-2);
-  margin-bottom: 4px;
-}
-.form-grid-3 .unit-info {
+.unit-info {
   display: block;
   font-size: 10px;
   color: var(--tp-text-3);
@@ -613,10 +638,6 @@ async function fetchSuggest() {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 6px;
-}
-.addr {
-  color: var(--tp-text-3);
-  font-size: 12px;
 }
 .result-row {
   font-size: 13px;
@@ -644,32 +665,5 @@ async function fetchSuggest() {
   gap: 8px;
   margin-top: 10px;
   justify-content: flex-end;
-}
-.edit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-.edit-table th {
-  text-align: left;
-  padding: 4px 6px;
-  border-bottom: 2px solid var(--tp-border);
-  font-weight: 600;
-  color: var(--tp-text-2);
-  font-size: 12px;
-}
-.edit-table td {
-  padding: 3px 4px;
-  border-bottom: 1px solid var(--tp-border-light);
-  vertical-align: middle;
-}
-.row-hotel {
-  background: var(--tp-primary-soft);
-}
-.biz-hours {
-  font-size: 11px;
-  color: var(--tp-text-2);
-  white-space: nowrap;
 }
 </style>

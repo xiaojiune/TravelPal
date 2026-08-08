@@ -125,6 +125,14 @@ export function useEditTable() {
     editHint.value = ''
   }
 
+  /** 单删一行（景点卡右上角 ✕）：标记该行删除后复用批量删除逻辑。 */
+  function deleteRowAt(index: number) {
+    if (index >= 0 && index < editRows.value.length) {
+      editRows.value[index].delete = true
+    }
+    deleteSelectedRows()
+  }
+
   /** 将编辑行数据回写 store（时间窗/停留/预计到达）。watch 自动重建表格。 */
   function applyEdits() {
     const hotelRow = editRows.value.find((r) => r.isHotel)
@@ -160,6 +168,7 @@ export function useEditTable() {
     rebuildEditRows,
     formatBiz,
     deleteSelectedRows,
+    deleteRowAt,
     applyEdits,
   }
 }

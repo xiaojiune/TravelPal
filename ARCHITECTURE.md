@@ -119,7 +119,7 @@ flowchart TB
 | 目的 | 文档 |
 |------|------|
 | 项目结构（全局/后端/前端/Agent/数据字典/工具清单） | `structure/`（7 篇，下无索引按此表） |
-| ADR 写作规范 + 12 篇完整索引 | `ADR/README.md` |
+| ADR 写作规范 + 13 篇完整索引 | `ADR/README.md` |
 | 编码规范（P0-P3 注释体系） | `runbooks/coding.md` |
 | 部署指引 | `runbooks/deploy.md` |
 | Git 分支/提交规范 | `runbooks/git.md` |

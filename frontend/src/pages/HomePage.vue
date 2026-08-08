@@ -21,11 +21,11 @@
       >
       <div class="section-head" @click="toggleSection(card.key)">
         <h3>{{ card.icon }} {{ card.title }}</h3>
-        <!-- 徽标三态：warning（黄!）> done（绿✓）> 编辑中● / 等待⚪；预留 🤖（Agent 填充点） -->
-        <span v-if="card.warning" class="state-badge badge-warn">!{{ card.warnCount ?? '' }}</span>
-        <span v-else-if="card.done" class="state-badge badge-done">✓</span>
-        <span v-else-if="activeSection === card.key" class="state-badge badge-edit">●</span>
-        <span v-else class="state-badge badge-wait">⚪</span>
+        <!-- 徽标三态：warning（黄!）> done（绿✓）> 编辑中● / 等待⚪；预留 🤖（Agent 填充点）；showBadge=false 卡不渲染 -->
+        <span v-if="card.showBadge && card.warning" class="state-badge badge-warn">!{{ card.warnCount ?? '' }}</span>
+        <span v-else-if="card.showBadge && card.done" class="state-badge badge-done">✓</span>
+        <span v-else-if="card.showBadge && activeSection === card.key" class="state-badge badge-edit">●</span>
+        <span v-else-if="card.showBadge" class="state-badge badge-wait">⚪</span>
       </div>
 
       <Transition name="folder">
@@ -124,7 +124,18 @@
               >
                 <div class="poi-head">
                   <span class="poi-name">{{ spotEmoji(row.name) }} {{ row.name }}</span>
-                  <n-button text size="small" class="poi-del" @click.stop="deleteRowAt(i)">✕</n-button>
+                  <div class="poi-head-right">
+                    <span
+                      v-if="poiIncompleteCount(row) === 0"
+                      class="poi-state poi-state-ok"
+                      title="停留与预计到达均已填写"
+                      >✓</span
+                    >
+                    <span v-else class="poi-state poi-state-warn" title="停留或预计到达未填写"
+                      >!{{ poiIncompleteCount(row) }}</span
+                    >
+                    <n-button text size="small" class="poi-del" @click.stop="deleteRowAt(i)">✕</n-button>
+                  </div>
                 </div>
                 <Transition name="poi" mode="out-in">
                   <div
@@ -343,6 +354,7 @@ const folderCards = computed(() => {
       title: '城市',
       done: cityDone,
       warning: false,
+      showBadge: true,
       summary: store.city.trim() || '未设置城市',
     },
     {
@@ -351,6 +363,7 @@ const folderCards = computed(() => {
       title: '酒店',
       done: hotelDone,
       warning: false,
+      showBadge: true,
       summary: hotelDone ? `${store.hotelName} · ${store.hotelAddress}` : '未设置酒店',
     },
     {
@@ -359,6 +372,7 @@ const folderCards = computed(() => {
       title: '启程时间',
       done: departDone,
       warning: store.dayStart === 0, // 默认值未改 → 黄!
+      showBadge: true,
       summary: store.dayStart === 0 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
     },
     {
@@ -367,6 +381,7 @@ const folderCards = computed(() => {
       title: '搜索',
       done: spotsDone,
       warning: false,
+      showBadge: false, // 搜索框不显示状态徽标，已添加状态由下方 added-count 回执说明
       summary: spotsDone ? `已添加 ${store.spots.length} 个景点` : '尚未添加景点',
     },
     {
@@ -375,6 +390,7 @@ const folderCards = computed(() => {
       title: '最小天数',
       done: true,
       warning: !store.minDays, // 默认自动 → 黄!
+      showBadge: true,
       summary: store.minDays ? `最少 ${store.minDays} 天` : `自动（默认 ${minDaysHint.value} 天）`,
     },
     {
@@ -384,6 +400,7 @@ const folderCards = computed(() => {
       done: manageDone,
       warning: store.spots.length > 0 && !manageDone,
       warnCount: incompleteCount,
+      showBadge: true,
       summary:
         store.spots.length === 0
           ? '暂无规划点'
@@ -436,6 +453,11 @@ const activeEditField = ref<{ row: number; field: 'stay' | 'expectedArrival' } |
 /** 点击景点卡头：同卡收起、异卡切换（手风琴）。 */
 function togglePoi(i: number) {
   activePoiCard.value = activePoiCard.value === i ? null : i
+}
+
+/** 单个景点未填字段数（停留/预计到达各算一个，0~2），驱动小卡 ✓ / !N 状态标识。 */
+function poiIncompleteCount(row: { stay: number | null; expectedArrival: number | null }): number {
+  return (row.stay == null ? 1 : 0) + (row.expectedArrival == null ? 1 : 0)
 }
 
 /** 判断某字段当前是否处于编辑态。 */
@@ -645,6 +667,23 @@ async function fetchSuggest() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.poi-head-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.poi-state {
+  font-size: 12px;
+  line-height: 1;
+  margin-right: 2px;
+}
+.poi-state-ok {
+  color: var(--tp-success);
+}
+.poi-state-warn {
+  color: var(--tp-warning);
 }
 .poi-del {
   color: var(--tp-text-3);

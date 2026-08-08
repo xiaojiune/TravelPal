@@ -16,9 +16,13 @@
     "axios": "^1.7.0",
     "naive-ui": "^2.44.1",
     "pinia": "^2.2.0",
-    "vfonts": "^0.0.3",
     "vue": "^3.5.0",
     "vue-router": "^4.4.0"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

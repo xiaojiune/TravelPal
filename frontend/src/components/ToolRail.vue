@@ -1,11 +1,11 @@
 <template>
   <div class="tool-rail">
-    <!-- 查询面板（默认激活） -->
+    <!-- 查询面板（默认激活）：点击图标 toggle 展开/收起 -->
     <button
       class="rail-btn"
       :class="{ active: active === 'query' }"
       title="查询结果"
-      @click="active = 'query'"
+      @click="toggle('query')"
     >
       🔍
     </button>
@@ -14,7 +14,7 @@
       class="rail-btn"
       :class="{ active: active === 'ops' }"
       title="方案操作（v1.1 接入）"
-      @click="active = 'ops'"
+      @click="toggle('ops')"
     >
       🛠️
     </button>
@@ -23,7 +23,7 @@
       class="rail-btn"
       :class="{ active: active === 'tasks' }"
       title="异步任务（v1.1 接入）"
-      @click="active = 'tasks'"
+      @click="toggle('tasks')"
     >
       📋
     </button>
@@ -32,7 +32,7 @@
 
 <script setup lang="ts">
 /**
- * 左侧工具栏竖条：面板切换骨架。
+ * 左侧工具栏竖条：面板切换骨架（点击图标 toggle 展开/收起）。
  *
  * 当前仅「查询」面板可用（Agent 对话查询结果暂存区）；
  * 「操作 / 任务」面板为占位（v1.1 接入 add_poi/remove_poi 历史与 Celery 任务列表），
@@ -43,7 +43,12 @@ defineOptions({ name: 'ToolRail' })
 /** 工具栏面板类型：查询（可用）/ 操作、任务（v1.1 占位）。 */
 type ToolPanelKind = 'query' | 'ops' | 'tasks'
 
-const active = defineModel<ToolPanelKind>('active', { default: 'query' })
+const active = defineModel<ToolPanelKind | null>('active', { default: 'query' })
+
+/** 点击图标切换：同项再点收起（null 隐藏面板），异项切换。 */
+function toggle(k: ToolPanelKind) {
+  active.value = active.value === k ? null : k
+}
 </script>
 
 <style scoped>

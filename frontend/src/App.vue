@@ -36,7 +36,7 @@
           </nav>
           <div class="app-body">
             <ToolRail v-model:active="toolPanel" />
-            <ToolPanel :active="toolPanel" />
+            <ToolPanel v-if="toolPanel" :active="toolPanel" />
             <main class="main-content">
               <router-view v-slot="{ Component }">
                 <keep-alive>
@@ -71,8 +71,8 @@ import AgentPanel from '@/components/AgentPanel.vue'
 const router = useRouter()
 const store = usePlanStore()
 
-/** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）。 */
-const toolPanel = ref<'query' | 'ops' | 'tasks'>('query')
+/** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）；null 表示全部收起。 */
+const toolPanel = ref<'query' | 'ops' | 'tasks' | null>('query')
 
 /**
  * 新建规划：清空全部规划状态并回首页（reset 补全清空待选栏/加载态/惩罚权重）。

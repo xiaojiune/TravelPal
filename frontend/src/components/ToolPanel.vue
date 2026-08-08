@@ -1,41 +1,38 @@
 <template>
-  <aside class="tool-panel" :class="{ collapsed }">
+  <aside v-if="active" class="tool-panel">
     <!-- 查询面板：Agent 查询结果暂存（POI 待选 + 收编自原 PendingPanel） -->
     <template v-if="active === 'query'">
-      <div class="panel-head" @click="collapsed = !collapsed">
+      <div class="panel-head">
         <span class="panel-title">🔍 查询结果</span>
         <span v-if="store.pendingPois.length" class="panel-count">{{
           store.pendingPois.length
         }}</span>
-        <span class="panel-fold">{{ collapsed ? '▶' : '◀' }}</span>
       </div>
-      <template v-if="!collapsed">
-        <n-button
-          v-if="store.pendingPois.length > 0"
-          size="small"
-          type="primary"
-          block
-          class="panel-add-all"
-          @click="store.addAllPendingPois()"
-        >
-          ➕ 全部加入行程
-        </n-button>
-        <div v-if="store.pendingPois.length === 0" class="panel-empty">
-          对话中查询的 POI 将出现在这里
+      <n-button
+        v-if="store.pendingPois.length > 0"
+        size="small"
+        type="primary"
+        block
+        class="panel-add-all"
+        @click="store.addAllPendingPois()"
+      >
+        ➕ 全部加入行程
+      </n-button>
+      <div v-if="store.pendingPois.length === 0" class="panel-empty">
+        对话中查询的 POI 将出现在这里
+      </div>
+      <!-- 卡片复用 ToolResultCard 渲染 POI 型 -->
+      <div v-for="(poi, i) in store.pendingPois" :key="i" class="panel-card">
+        <ToolResultCard :data="poi" />
+        <div class="panel-actions">
+          <n-button size="tiny" type="primary" @click="store.addPoiToForm(poi)">
+            {{ poi.poi_type === 'hotel' ? '🏨 设为酒店' : '➕ 添加' }}
+          </n-button>
+          <n-button size="tiny" quaternary @click="store.removePendingPoi(i)">
+            ✕ 取消
+          </n-button>
         </div>
-        <!-- 卡片复用 ToolResultCard 渲染 POI 型 -->
-        <div v-for="(poi, i) in store.pendingPois" :key="i" class="panel-card">
-          <ToolResultCard :data="poi" />
-          <div class="panel-actions">
-            <n-button size="tiny" type="primary" @click="store.addPoiToForm(poi)">
-              {{ poi.poi_type === 'hotel' ? '🏨 设为酒店' : '➕ 添加' }}
-            </n-button>
-            <n-button size="tiny" quaternary @click="store.removePendingPoi(i)">
-              ✕ 取消
-            </n-button>
-          </div>
-        </div>
-      </template>
+      </div>
     </template>
 
     <!-- 操作 / 任务面板：v1.1 占位 -->
@@ -58,22 +55,22 @@
 /**
  * 左侧工具面板容器：随 ToolRail 激活的面板切换内容。
  *
+ * 收起交互：active 为 null 时整个面板不渲染（v-if），由 ToolRail 图标
+ * 点击 toggle 控制展开/收起（同项再点收起）。面板头标题下方带浅色分割线。
+ *
  * - 查询面板：Agent 对话查询结果暂存区（POI 待选栏，收编自原 PendingPanel），
  *   卡片复用 ToolResultCard 渲染，加入行程/全部加入/取消逻辑保留。
  * - 操作/任务面板：v1.1 占位，点击显示「未实现，v1.1 接入」（页面占位即记忆，不写文档）。
  */
-import { ref } from 'vue'
 import { usePlanStore } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
 defineOptions({ name: 'ToolPanel' })
 
 type ToolPanelKind = 'query' | 'ops' | 'tasks'
-const props = defineProps<{ active: ToolPanelKind }>()
+const props = defineProps<{ active: ToolPanelKind | null }>()
 
 const store = usePlanStore()
-/** 折叠状态：true 时只显示窄条标题（查询面板）。 */
-const collapsed = ref(false)
 </script>
 
 <style scoped>
@@ -89,25 +86,16 @@ const collapsed = ref(false)
     width 0.2s ease,
     min-width 0.2s ease;
 }
-.tool-panel.collapsed {
-  width: 44px;
-  min-width: 44px;
-  overflow: hidden;
-}
 .panel-head {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 10px 12px;
-  cursor: pointer;
+  border-bottom: 1px solid var(--tp-border-light);
   color: var(--tp-text);
   font-weight: 600;
   font-size: 14px;
   user-select: none;
-}
-.tool-panel.collapsed .panel-head {
-  justify-content: center;
-  padding: 10px 0;
 }
 .panel-count {
   background: var(--tp-primary);
@@ -117,16 +105,8 @@ const collapsed = ref(false)
   padding: 0 6px;
   line-height: 16px;
 }
-.panel-fold {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--tp-text-3);
-}
-.tool-panel.collapsed .panel-fold {
-  margin-left: 0;
-}
 .panel-add-all {
-  margin: 0 12px 10px;
+  margin: 10px 12px;
 }
 .panel-empty {
   font-size: 13px;

@@ -24,6 +24,9 @@ export function isPoiQuery(tool: string): boolean {
   return tool === 'poi_lookup'
 }
 
+/** 左侧面板其它查询结果（非 POI 型）最多保留条数，超出自动裁剪最旧。 */
+const MAX_OTHER_RESULTS = 5
+
 /** 时间 → HH:MM（工具查询结果时间戳展示用）。 */
 function formatClock(d: Date): string {
   const hh = String(d.getHours()).padStart(2, '0')
@@ -86,6 +89,12 @@ export const usePlanStore = defineStore('plan', () => {
     // 城市基于工具参数自动填充一次（store.city 空才填）
     if (cityFromTool && !city.value) {
       city.value = cityFromTool
+    }
+    // 数据层裁剪：非 POI 型结果只保留最新 N 条（单次 push 最多超 1 条），POI 待选不受影响
+    const others = queryResults.value.filter((q) => !isPoiQuery(q.tool))
+    if (others.length > MAX_OTHER_RESULTS) {
+      const oldest = others[0]
+      queryResults.value = queryResults.value.filter((q) => isPoiQuery(q.tool) || q !== oldest)
     }
   }
 

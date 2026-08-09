@@ -67,7 +67,7 @@ const store = usePlanStore()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
-const { displayText, append, reset, stop } = useTypewriter()
+const { displayText, append, reset, stop, finish } = useTypewriter()
 // 当前 SSE 请求的 AbortController：组件卸载（AgentPanel 关闭）时中止流，
 // 避免 fetch 继续运行、闭包写入已卸载组件的 ref
 let abortController: AbortController | null = null
@@ -81,6 +81,9 @@ const { chatMessages: messages, chatLoading: loading } = storeToRefs(store)
 // 打字机 displayText 是独立 ref，定时器弹出不会自动同步到 messages[].content，
 // 必须 watch 到最新值再写回气泡，否则气泡一直为空。
 let streamingIndex = -1
+// 是否已进入「优雅收尾」（done 分支走 finish 异步收尾），此时末尾不复位 loading，
+// 交由打字机缓冲弹空后的 finish 回调复位，避免提前解锁。
+let gracefulDone = false
 watch(displayText, (v) => {
   if (streamingIndex !== -1) {
     messages.value[streamingIndex].content = v
@@ -94,6 +97,7 @@ onUnmounted(() => {
   abortController = null
   stop() // 停止打字机定时器，避免卸载后残留计时器
   streamingIndex = -1
+  gracefulDone = false
   // 收起面板中断 SSE 后：复位 loading，并移除未完成的 assistant 空气泡
   store.chatLoading = false
   const last = messages.value[messages.value.length - 1]
@@ -171,11 +175,16 @@ async function send() {
         try {
           const parsed = JSON.parse(data)
           if (parsed.type === 'done') {
-            stop() // 流结束：刷出剩余缓冲，补全打字机输出
-            // stop() 触发 displayText 更新，但其 watch 回调是异步（微任务）执行的；
-            // 此刻同步复位 streamingIndex 会让微任务回写被跳过，故必须同步写回一次
-            messages.value[msgIndex].content = displayText.value
-            streamingIndex = -1
+            // 优雅收尾：不调用 stop()（否则剩余缓冲一次性蹦出，打字机效果丢失），
+            // 让打字机按节奏弹完剩余缓冲后复位 streamingIndex 并解锁 loading。
+            // 注意此回调异步触发（缓冲弹空后），期间不能提前复位 streamingIndex
+            gracefulDone = true
+            finish(() => {
+              messages.value[msgIndex].content = displayText.value
+              streamingIndex = -1
+              loading.value = false
+              forceScrollBottom()
+            })
             streamDone = true
             break
           }
@@ -216,8 +225,11 @@ async function send() {
   }
 
   abortController = null
-  streamingIndex = -1
-  loading.value = false
+  if (!gracefulDone) {
+    // done 分支已交 finish 异步收尾（打字机弹空后复位）；其余路径在此同步复位
+    streamingIndex = -1
+    loading.value = false
+  }
   scrollToBottom()
 }
 

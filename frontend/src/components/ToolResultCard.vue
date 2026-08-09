@@ -34,6 +34,9 @@
     <!-- 路程型：get_driving 两点间驾车距离/耗时 -->
     <div v-else-if="isDriving" class="trc-driving">
       <div class="trc-title">🚗 驾车路线</div>
+      <div v-if="data.origin_name && data.destination_name" class="trc-row trc-route">
+        {{ data.origin_name }} → {{ data.destination_name }}
+      </div>
       <div class="trc-row">
         距离 {{ data.distance_km }} km · 耗时约 {{ data.duration_min }} 分钟
       </div>
@@ -118,6 +121,11 @@ const rawJson = computed(() => JSON.stringify(props.data, null, 2))
 }
 .trc-row {
   color: var(--tp-text-2);
+}
+.trc-route {
+  font-weight: 500;
+  color: var(--tp-text);
+  margin-bottom: 2px;
 }
 .trc-poi-item + .trc-poi-item {
   margin-top: 8px;

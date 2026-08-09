@@ -16,11 +16,19 @@ export interface QueryResult {
   tool: string
   result: unknown
   city?: string
+  time?: string
 }
 
 /** 判定工具是否为 POI 查询（其结果数组可加入待选栏）。 */
 export function isPoiQuery(tool: string): boolean {
   return tool === 'poi_lookup'
+}
+
+/** 时间 → HH:MM（工具查询结果时间戳展示用）。 */
+function formatClock(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
 }
 
 export const usePlanStore = defineStore('plan', () => {
@@ -74,20 +82,34 @@ export const usePlanStore = defineStore('plan', () => {
 
   /** 接收 Agent 工具查询结果：入队 queryResults；并尝试自动填充城市（仅一次）。 */
   function addQueryResult(tool: string, result: unknown, cityFromTool?: string) {
-    queryResults.value.push({ tool, result, city: cityFromTool })
+    queryResults.value.push({ tool, result, city: cityFromTool, time: formatClock(new Date()) })
     // 城市基于工具参数自动填充一次（store.city 空才填）
     if (cityFromTool && !city.value) {
       city.value = cityFromTool
     }
   }
 
-  /** 从待选栏移除指定 POI（从 queryResults 中剔除对应条目）。 */
+  /** 从待选栏移除指定 POI（元素级删除：只从所属数组剔除该 name，其余项保留）。 */
   function removePendingPoi(poi: PoiItem) {
-    const idx = queryResults.value.findIndex((q) => {
+    for (const q of queryResults.value) {
+      if (!isPoiQuery(q.tool)) continue
       const arr = q.result as PoiItem[]
-      return Array.isArray(arr) && arr.some((p) => p.name === poi.name)
-    })
-    if (idx !== -1) queryResults.value.splice(idx, 1)
+      if (!Array.isArray(arr)) continue
+      const kept = arr.filter((p) => p.name !== poi.name)
+      if (kept.length === arr.length) continue // 本条不含目标，跳过
+      if (kept.length === 0) {
+        // 数组删空 → 移除整条
+        queryResults.value = queryResults.value.filter((x) => x !== q)
+      } else {
+        q.result = kept
+      }
+      return
+    }
+  }
+
+  /** 从 queryResults 按索引移除一条（左侧其它结果卡删除按钮用）。 */
+  function removeQueryResult(index: number) {
+    queryResults.value.splice(index, 1)
   }
 
   // ====== Agent 对话状态（上提 store，面板 v-if 卸载后会话仍保留） ======
@@ -240,6 +262,7 @@ export const usePlanStore = defineStore('plan', () => {
     chatLoading,
     addQueryResult,
     removePendingPoi,
+    removeQueryResult,
     addPoiToForm,
     addAllPendingPois,
     buildRequest,

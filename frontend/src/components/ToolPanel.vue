@@ -35,10 +35,17 @@
         </div>
       </div>
 
-      <!-- 第二节：其它查询结果（仅展示，不可添加） -->
+      <!-- 第二节：其它查询结果（仅展示，可删除） -->
       <template v-if="otherResults.length">
         <div class="panel-section-title">其它查询结果</div>
         <div v-for="(q, i) in otherResults" :key="`other-${i}`" class="panel-card">
+          <div class="panel-card-head">
+            <span class="panel-card-tool">{{ q.tool }}</span>
+            <span class="panel-card-time">{{ q.time }}</span>
+            <n-button size="tiny" quaternary class="panel-card-del" @click="store.removeQueryResult(i)">
+              ✕
+            </n-button>
+          </div>
           <ToolResultCard :data="q.result" />
         </div>
       </template>
@@ -146,6 +153,25 @@ const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery
 .panel-card:hover {
   box-shadow: var(--tp-card-shadow-hover);
   transform: translateY(-1px);
+}
+.panel-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.panel-card-tool {
+  font-size: 11px;
+  color: var(--tp-primary);
+  font-weight: 600;
+}
+.panel-card-time {
+  font-size: 11px;
+  color: var(--tp-text-3);
+  margin-right: auto;
+}
+.panel-card-del {
+  color: var(--tp-text-3);
 }
 .panel-actions {
   display: flex;

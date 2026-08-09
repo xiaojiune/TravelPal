@@ -17,20 +17,26 @@ def get_driving(origin: dict, destination: dict) -> dict:
         destination: {"name": str, "lon": float, "lat": float} 终点。
 
     Returns:
-        {"distance_km": float, "duration_min": float}；
+        {"origin_name": str, "destination_name": str, "distance_km": float, "duration_min": float}；
         失败返回 {"error": str}。折线待以后扩展，当前不返回。
     """
     try:
+        origin_name = origin.get("name", "起点")
+        destination_name = destination.get("name", "终点")
         result = _get_driving_data(
             (origin["lon"], origin["lat"]),
             (destination["lon"], destination["lat"]),
         )
         d_km, dur_s, _ = result if result else (None, None, None)
         if d_km is None or dur_s is None:
-            return {"error": f"'{origin['name']}' 到 '{destination['name']}' 驾车查询失败"}
+            return {"error": f"'{origin_name}' 到 '{destination_name}' 驾车查询失败"}
         return {
+            "origin_name": origin_name,
+            "destination_name": destination_name,
             "distance_km": round(d_km, 2),
             "duration_min": round(dur_s / 60.0, 1),
         }
     except Exception as e:
-        return {"error": f"'{origin['name']}' 到 '{destination['name']}' 驾车查询失败: {e}"}
+        origin_name = origin.get("name", "起点")
+        destination_name = destination.get("name", "终点")
+        return {"error": f"'{origin_name}' 到 '{destination_name}' 驾车查询失败: {e}"}

@@ -31,7 +31,7 @@ class TestMCPRegistryContract:
         tools = _list_tools()
         names = {t.name for t in tools}
         assert names == set(TOOL_REGISTRY.keys())
-        assert len(names) == 7
+        assert len(names) == 6
 
     def test_every_tool_has_schema_and_description(self):
         tools = _list_tools()

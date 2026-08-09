@@ -2,7 +2,8 @@
 
 扫描 docs/*.md + README.md，按 ## 标题切块后建立 BM25 索引。
 分词策略：中文用 jieba 分词，英文按空白拆分。
-工具形态的全局接口见 agent/tools/rag.py（search_rag）。
+search_rag 工具已于 2026-08-08 移除，本引擎保留供未来 raw_data 清洗后复用
+（外部调用方用 get_engine() 获取单例）。
 """
 
 import math

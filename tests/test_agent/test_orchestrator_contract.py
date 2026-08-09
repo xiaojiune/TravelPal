@@ -155,12 +155,11 @@ class TestOrchestratorContract:
                 pass
             return fake
 
-        # 默认全量 7 个工具
+        # 默认全量 6 个工具
         fake_all = asyncio.run(run(None))
         all_names = {d["function"]["name"] for d in fake_all.seen_tools[0]}
         assert all_names == {
             "poi_lookup",
-            "search_rag",
             "get_plan",
             "get_plan_result",
             "get_driving",

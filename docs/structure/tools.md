@@ -6,6 +6,7 @@
 |------|------|
 | 2026-08-03 | 初稿 |
 | 2026-08-04 | 新增 travelpal_get_driving；修正 travelpal_poi_lookup 参数为批量 names |
+| 2026-08-08 | 移除 travelpal_search_rag（RAG 工具已删，BM25 引擎保留供未来复用） |
 
 ## 概述
 
@@ -27,16 +28,6 @@
 - **返回**：`list[dict]`，每项 `{ name, lon, lat, address, tw_start, tw_end, poi_type }`
   - `poi_type`: `"hotel"` | `"spot"` | `"unknown"`
   - 单个查询失败时该项为 `{ name, error: str }`
-
-## travelpal_search_rag
-
-- **描述**：全局接口：检索 RAG 文档库，惰性初始化。
-- **参数**：
-  | 参数 | 类型 | 必填 | 说明 |
-  |------|------|------|------|
-  | query | string | 是 | 用户查询文本 |
-  | k | integer | 否 | 返回 top-k 条结果，默认 3 |
-- **返回**：`list[dict]`，每项含 `score` / `source` / `heading` / `text`，按 BM25 分数降序。
 
 ## travelpal_get_driving
 

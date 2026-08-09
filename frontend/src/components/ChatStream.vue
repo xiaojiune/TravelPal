@@ -45,9 +45,13 @@
  */
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
+import { useTaskPolling } from '@/composables/useTaskPolling'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
+import type { SuggestResult } from '@/services/api'
 
 interface Props {
   apiPath?: string
@@ -64,6 +68,9 @@ defineOptions({ name: 'ChatStream' })
 const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
 const emit = defineEmits<{ (e: 'tool-result', payload: ToolResultPayload): void }>()
 const store = usePlanStore()
+const cache = useSuggestCache()
+const router = useRouter()
+const { startPolling } = useTaskPolling()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
@@ -137,7 +144,9 @@ async function send() {
   messages.value.push({ role: 'assistant', content: '', time: now })
   loading.value = true
   reset()
-  forceScrollBottom() // 发新消息强制滚底（用户可能在阅读历史）
+  // 发新消息强制滚底（用户可能在阅读历史）；nextTick 等 DOM 渲染新消息后再滚，
+  // 否则 scrollHeight 还是旧值，滚不到新消息位置
+  nextTick(() => forceScrollBottom())
   const msgIndex = messages.value.length - 1
   streamingIndex = msgIndex // 打字机弹出期间持续回写此气泡
   abortController = new AbortController()
@@ -214,7 +223,13 @@ async function send() {
             const tool = String(parsed.data.tool ?? 'tool')
             const result = parsed.data.result ?? parsed.data
             messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
-            emit('tool-result', { tool, result, city: parsed.data.city })
+            // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
+            // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
+            if (tool === 'submit_plan_form' && typeof result === 'object' && result !== null && 'task_id' in result) {
+              void handlePlanTask(String((result as { task_id: string }).task_id))
+            } else {
+              emit('tool-result', { tool, result, city: parsed.data.city })
+            }
             scrollToBottom()
           }
         } catch {
@@ -239,6 +254,27 @@ async function send() {
     loading.value = false
   }
   scrollToBottom()
+}
+
+/**
+ * 处理规划任务工具（submit_plan_form）的异步轮询：
+ * 轮询任务到 done → 把 SuggestResult 写入 store.suggestions + 缓存 → 跳转 /suggest。
+ * 与 HomePage.fetchSuggest 的写入/跳转行为保持一致（done 即跳转）。
+ */
+async function handlePlanTask(taskId: string) {
+  try {
+    const data = (await startPolling(taskId)) as unknown as SuggestResult
+    store.suggestions = data.suggestions || []
+    if (data.spots) cache.suggestSpots.value = data.spots
+    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time
+    if (data.polylines) cache.suggestPolylines.value = data.polylines
+    if (data.amap_api_key) store.amapApiKey = data.amap_api_key
+    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
+    router.push('/suggest')
+  } catch {
+    // 任务失败：通过打字机追加一条提示（不打断当前对话流）
+    append('（规划失败，请检查首页表单内容后重试）')
+  }
 }
 
 /**

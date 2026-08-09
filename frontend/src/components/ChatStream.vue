@@ -43,7 +43,7 @@
  *   tool-result: (payload: { tool: string; result: unknown; city?: string })
  *     — 工具结果整包（供宿主写入左侧查询面板 store.queryResults）
  */
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
@@ -77,10 +77,23 @@ let abortController: AbortController | null = null
 // 存 store 后「同一次规划内收起/重开会话保留，新建规划 reset 清空」
 const { chatMessages: messages, chatLoading: loading } = storeToRefs(store)
 
+// 当前正在流式输出的 assistant 消息索引（打字机逐字弹出时回写目标）。
+// 打字机 displayText 是独立 ref，定时器弹出不会自动同步到 messages[].content，
+// 必须 watch 到最新值再写回气泡，否则气泡一直为空。
+let streamingIndex = -1
+watch(displayText, (v) => {
+  if (streamingIndex !== -1) {
+    messages.value[streamingIndex].content = v
+    // 打字机弹出期间也跟随滚动（距底 <40px 才滚，用户上划暂停）
+    scrollToBottom()
+  }
+})
+
 onUnmounted(() => {
   abortController?.abort()
   abortController = null
   stop() // 停止打字机定时器，避免卸载后残留计时器
+  streamingIndex = -1
   // 收起面板中断 SSE 后：复位 loading，并移除未完成的 assistant 空气泡
   store.chatLoading = false
   const last = messages.value[messages.value.length - 1]
@@ -120,6 +133,7 @@ async function send() {
   reset()
   forceScrollBottom() // 发新消息强制滚底（用户可能在阅读历史）
   const msgIndex = messages.value.length - 1
+  streamingIndex = msgIndex // 打字机弹出期间持续回写此气泡
   abortController = new AbortController()
 
   try {
@@ -158,12 +172,17 @@ async function send() {
           const parsed = JSON.parse(data)
           if (parsed.type === 'done') {
             stop() // 流结束：刷出剩余缓冲，补全打字机输出
+            // stop() 触发 displayText 更新，但其 watch 回调是异步（微任务）执行的；
+            // 此刻同步复位 streamingIndex 会让微任务回写被跳过，故必须同步写回一次
+            messages.value[msgIndex].content = displayText.value
+            streamingIndex = -1
             streamDone = true
             break
           }
           if (parsed.type === 'error' && parsed.data) {
             stop()
             messages.value[msgIndex].content = String(parsed.data)
+            streamingIndex = -1
             streamDone = true
             break
           }
@@ -197,6 +216,7 @@ async function send() {
   }
 
   abortController = null
+  streamingIndex = -1
   loading.value = false
   scrollToBottom()
 }

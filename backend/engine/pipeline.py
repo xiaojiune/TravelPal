@@ -364,6 +364,9 @@ def adjust_plan(
         spots_dict = {int(k): v for k, v in spots_dict.items()}
 
     plan: dict | None = None
+    # 返回给前端的矩阵：默认用输入矩阵；add_poi 分支覆盖为含新点的扩展矩阵
+    result_cost = cost_matrix
+    result_dist = dist_matrix
 
     if "remove_poi" in adjustments:
         from backend.agent.planning import remove_poi_from_day
@@ -438,6 +441,8 @@ def adjust_plan(
             from backend.agent.planning import add_poi_to_plan
 
             plan = add_poi_to_plan(working_spots, new_cost, new_dist, routes)
+        result_cost = new_cost
+        result_dist = new_dist
     else:
         raise ValueError(f"未识别的调整指令: {list(adjustments.keys())}")
 
@@ -458,7 +463,7 @@ def adjust_plan(
         "dataset_name": "调整方案",
         "algo_time": 0,
         "daily_schedules": daily_schedules,
-        "cost_matrix": cost_matrix.tolist(),
-        "dist_matrix": dist_matrix.tolist(),
+        "cost_matrix": result_cost.tolist(),
+        "dist_matrix": result_dist.tolist(),
         "commentary": None,
     }

@@ -1,7 +1,9 @@
-"""对话消息构建：注入 RAG 文档上下文与 README 项目自述。
+"""对话消息构建：注入 README 项目自述与规划概要。
 
 编排（LLM 调用 + 工具分发 + SSE 事件流）已由 orchestrator.py（LangGraph）接管，
 本模块仅保留消息组装职责。
+
+RAG 文档检索注入已移除（2026-08-08，用户决定暂缓重构，待后续再议）。
 """
 
 import json
@@ -26,7 +28,7 @@ def _readme_core() -> str:
 
 
 def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
-    """构建对话消息列表，自动注入 RAG 文档上下文。
+    """构建对话消息列表。
 
     Args:
         message: 用户输入的消息。
@@ -46,18 +48,6 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
         system += f"\n\n当前规划概要（供参考）：\n{json.dumps(summary, ensure_ascii=False)}"
 
     system += _readme_core()
-    try:
-        from backend.agent.tools.rag import search_rag
-
-        results = search_rag(message, k=3)
-        if results and results[0]["score"] > 5.0:
-            ctx = "\n\n".join(f"[{r['source']}#{r['heading']}]\n{r['text']}" for r in results)
-            system += (
-                "\n\n以下片段来自项目文档，请优先使用这些信息回答用户关于项目本身的问题。"
-                f"引用时标注来源，如 [来源: 技术栈总览]。\n{ctx}"
-            )
-    except Exception:
-        pass
 
     return [
         {"role": "system", "content": system},

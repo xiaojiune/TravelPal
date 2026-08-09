@@ -74,6 +74,7 @@ ADR 本身有生命周期，与决策内组件的实施状态是**两套体系**
 | ADR-011 | 前端架构评估与技术债清单 | Accepted | 前端技术债基线 + 处理优先级 |
 | ADR-012 | 采用手写轻量级架构替代 LangChain 全栈框架 | Accepted | LangChain 九层生态对照 + 边界判断 |
 | ADR-013 | 前端 UI/UX 设计模式与方案取舍 | Accepted | 首页大文件夹模式 + 15 条方案评估 |
+| ADR-014 | LLM 编排层选型——LangGraph 维持，PydanticAI 不引入 | Accepted | 编排层对照 + 结构化解析收敛方向 |
 
 ## 六、交叉引用
 

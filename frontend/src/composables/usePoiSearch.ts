@@ -40,6 +40,12 @@ export function usePoiSearch() {
   }
 
   /** 批量搜索景点坐标，成功则自动确认到 store。 */
+  /**
+   * 批量搜索并添加景点到 store.spots（按名称去重）。
+   *
+   * Returns:
+   *     boolean: 是否有成功添加的景点（调用方据此决定是否跳转/弹开下一步）。
+   */
   async function searchSpots() {
     loading.value = true
     spotMsg.value = ''
@@ -69,9 +75,11 @@ export function usePoiSearch() {
       if (data.failed?.length) msgs.push(`⚠️ ${data.failed.join('；')}`)
       spotMsg.value = msgs.join('\n') || '⚠️ 未找到任何景点'
       if (data.items.length) spotText.value = ''
+      return data.items.length > 0
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '未知错误'
       spotMsg.value = '搜索景点失败: ' + msg
+      return false
     } finally {
       loading.value = false
     }

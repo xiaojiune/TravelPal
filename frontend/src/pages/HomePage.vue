@@ -18,8 +18,9 @@
           'card-span2': card.key === 'search',
           'card-full': card.key === 'manage',
         }"
+        @click="onSectionClick(card)"
       >
-      <div class="section-head" @click="toggleSection(card.key)">
+      <div class="section-head" @click.stop="toggleSection(card.key)">
         <h3>{{ card.icon }} {{ card.title }}</h3>
         <!-- 徽标三态：warning（黄!）> done（绿✓）> 编辑中● / 等待⚪；预留 🤖（Agent 填充点）；showBadge=false 卡不渲染 -->
         <span v-if="card.showBadge && card.warning" class="state-badge badge-warn">!{{ card.warnCount ?? '' }}</span>
@@ -84,7 +85,7 @@
               size="small"
               :disabled="!canSearchSpots || loading"
               :loading="loading"
-              @click="searchSpots"
+              @click="onSearchSpots"
             >
               🔍 搜索景点坐标
             </n-button>
@@ -225,7 +226,7 @@
 
       <div v-if="activeSection !== card.key" class="section-summary">
         <span class="summary-text">{{ card.summary }}</span>
-        <n-button size="small" quaternary @click="toggleSection(card.key)">
+        <n-button v-if="card.key === 'manage'" size="small" quaternary @click="toggleSection(card.key)">
           ✏️ {{ card.done ? '编辑' : '补充' }}
         </n-button>
       </div>
@@ -414,6 +415,19 @@ const folderCards = computed(() => {
 /** 点击卡片头：同卡收起、异卡切换（手风琴）。 */
 function toggleSection(key: CardKey) {
   activeSection.value = activeSection.value === key ? null : key
+}
+
+/** 点击卡片任意处（除规划点管理卡）：收起态展开该卡；展开态点内容不收起。 */
+function onSectionClick(card: { key: CardKey }) {
+  if (card.key !== 'manage' && activeSection.value !== card.key) {
+    activeSection.value = card.key
+  }
+}
+
+/** 搜索景点：成功后自动弹开规划点管理卡（失败/无结果不弹）。 */
+async function onSearchSpots() {
+  const ok = await searchSpots()
+  if (ok) activeSection.value = 'manage'
 }
 
 /** 找到下一个未完成的卡片 key（用于初始展开引导），无则 null。 */

@@ -358,6 +358,11 @@ def adjust_plan(
     cost_matrix = np.array(cost_matrix_list)
     dist_matrix = np.array(dist_matrix_list)
 
+    # 键归一化：前端 JSON 快照的 spots 键为字符串（"0"/"1"），统一转 int 键，
+    # 保证 add_poi 分支的 max(keys)+1 与后续索引运算契约一致。
+    if spots_dict and all(isinstance(k, str) for k in spots_dict.keys()):
+        spots_dict = {int(k): v for k, v in spots_dict.items()}
+
     plan: dict | None = None
 
     if "remove_poi" in adjustments:
@@ -390,6 +395,7 @@ def adjust_plan(
             "x": poi["lon"],
             "y": poi["lat"],
             "tw": (poi["tw_start"], poi["tw_end"]),
+            "original_tw": (poi["tw_start"], poi["tw_end"]),
             "stay": poi["stay"],
         }
 

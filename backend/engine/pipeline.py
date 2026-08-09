@@ -11,6 +11,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
+from backend.data.driving_cache import get_driving_matrix, set_driving_matrix  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
 
@@ -105,9 +106,27 @@ def run_planning(
         polylines = {}
         print("已复用 suggest 阶段成本矩阵，跳过驾车API调用。\n")
     else:
-        print("正在调用驾车API计算成本矩阵...")
-        cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
-        print("成本矩阵构建完成。\n")
+        # 矩阵快照优先：整矩阵 + polylines 同批绑定缓存，命中直接复用（读加速）
+        snapshot = get_driving_matrix(city, poi_names, coords)
+        if snapshot is not None:
+            cost_matrix = np.array(snapshot["cost"], dtype=np.float64)
+            dist_matrix = np.array(snapshot["dist"], dtype=np.float64)
+            polylines = {(int(k.split("_")[0]), int(k.split("_")[1])): v for k, v in snapshot["polylines"].items()}
+            print("已命中驾车矩阵快照缓存，跳过驾车API调用。\n")
+        else:
+            print("正在调用驾车API计算成本矩阵...")
+            cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
+            set_driving_matrix(
+                city,
+                poi_names,
+                coords,
+                {
+                    "cost": cost_matrix.tolist(),
+                    "dist": dist_matrix.tolist(),
+                    "polylines": {f"{k[0]}_{k[1]}": v for k, v in polylines.items()},
+                },
+            )
+            print("成本矩阵构建完成，已写入快照缓存。\n")
 
     hotel_tw = poi_cache["hotel"]["tw"]
     effective_hotel_start = max(hotel_tw[0], day_start)

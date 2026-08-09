@@ -500,8 +500,6 @@ async function fetchSuggest() {
     const data = (await startPolling(task_id)) as unknown as SuggestResult
     store.suggestions = data.suggestions || []
     if (data.spots) cache.suggestSpots.value = data.spots
-    if (data.cost_matrix) cache.suggestCostMatrix.value = data.cost_matrix // 缓存成本矩阵，deep 模式复用跳过驾车 API
-    if (data.dist_matrix) cache.suggestDistMatrix.value = data.dist_matrix // 缓存距离矩阵
     if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time // 搜索总耗时
     if (data.polylines) cache.suggestPolylines.value = data.polylines // 真实轨迹
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key

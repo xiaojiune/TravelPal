@@ -755,6 +755,8 @@ export interface components {
          * @description suggest 任务完成时的完整响应（TaskDetail.result）。
          *
          *     对应 run_planning 建议分支 + celery_app 注入的高德 JS Key。
+         *     不含 cost_matrix/dist_matrix：矩阵已由后端驾车快照缓存托管
+         *     （ADR-008 轴 4 缓存策略），前端不再持有/复用矩阵。
          */
         SuggestResult: {
             /**
@@ -770,10 +772,6 @@ export interface components {
             spots: {
                 [key: string]: components["schemas"]["SpotDictItem"];
             };
-            /** Cost Matrix */
-            cost_matrix: number[][];
-            /** Dist Matrix */
-            dist_matrix: number[][];
             /** Polylines */
             polylines: {
                 [key: string]: string;

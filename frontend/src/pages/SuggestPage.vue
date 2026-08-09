@@ -170,19 +170,15 @@ function onCardClick(s: SuggestionItem) {
 }
 
 /**
- * 深度规划：复用 suggest 阶段缓存的成本/距离矩阵，
- * 使后端 run_planning 跳过驾车 AMap API 调用。
- * 提交异步 plan 任务后轮询，完成后追加到深度结果卡片。
+ * 深度规划：提交异步 plan 任务后轮询，完成后追加到深度结果卡片。
+ * 成本矩阵由后端驾车快照缓存托管（同一城市同一批点自动命中，跳过驾车 API）。
  */
 async function runDeep() {
   if (!deepNDays.value) return
   store.loading = true
   store.deepResults = []
   try {
-    const req = store.buildRequest(deepNDays.value, {
-      cost_matrix: cache.suggestCostMatrix.value.length ? cache.suggestCostMatrix.value : undefined, // 复用成本矩阵，避免 re-fetch
-      dist_matrix: cache.suggestDistMatrix.value.length ? cache.suggestDistMatrix.value : undefined,
-    })
+    const req = store.buildRequest(deepNDays.value)
     req.mode = 'deep'
     const { task_id } = await submitTask('plan', req)
     const data = (await startPolling(task_id)) as unknown as PlanResult

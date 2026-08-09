@@ -342,10 +342,10 @@ def adjust_plan(
         cost_matrix_list: 成本矩阵（2D list，前端传回）。
         dist_matrix_list: 距离矩阵（2D list，前端传回）。
         routes: 当前方案路径列表，每组含首尾 depot。
-        adjustments: 调整指令 dict，支持 {"remove_poi": "<poi_name>", "day": <int>}、\
+        adjustments: 调整指令 dict，支持 {"remove_poi": "<poi_name>", "day": <int>?}、\
             {"add_poi": {name, lon, lat, tw_start, tw_end, stay}, "day": <int>?} 之一。\
-            remove_poi 为单日重排（day 必填）；add_poi 带 day 为单日重排，\
-            day 缺失（用户意图未定）时走全局重排（add_poi_to_plan，@placeholder 兜底）。
+            remove_poi / add_poi 带 day 为单日重排；day 缺失（用户意图未定）时走全局重排\
+            （remove_poi_from_plan / add_poi_to_plan 兜底）。
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
 
     Returns:
@@ -369,19 +369,29 @@ def adjust_plan(
     result_dist = dist_matrix
 
     if "remove_poi" in adjustments:
-        from backend.agent.planning import remove_poi_from_day
-
         day = adjustments.get("day")
         if day is None:
-            raise ValueError("remove_poi 调整必须指定目标天 day（0-indexed）")
-        plan = remove_poi_from_day(
-            spots_dict,
-            cost_matrix,
-            dist_matrix,
-            routes,
-            adjustments["remove_poi"],
-            day,
-        )
+            # 用户意图未定（未指定天）→ 全局重排兜底（与 add_poi 分支对称）
+            from backend.agent.planning import remove_poi_from_plan
+
+            plan = remove_poi_from_plan(
+                spots_dict,
+                cost_matrix,
+                dist_matrix,
+                routes,
+                adjustments["remove_poi"],
+            )
+        else:
+            from backend.agent.planning import remove_poi_from_day
+
+            plan = remove_poi_from_day(
+                spots_dict,
+                cost_matrix,
+                dist_matrix,
+                routes,
+                adjustments["remove_poi"],
+                day,
+            )
     elif "add_poi" in adjustments:
         from backend.agent.planning import add_poi_to_day
         from backend.data.amap_loader import _get_driving_data

@@ -4,8 +4,8 @@
 
 - remove_poi_from_day：单日重排——只对目标天重新求解，其余天路线原样
   保留。删除导致目标天空时废弃该天（best_days 减 1）并发出警告。
-- remove_poi_from_plan：全局重排（@placeholder 未启用）——保持分组结构
-  对全部天做组内重排，供未来「用户意图未定 → 全局兜底」需求接线。
+- remove_poi_from_plan：全局重排——保持分组结构对全部天做组内重排。
+  day 缺失（用户意图未定）时由 pipeline 兜底调用（与 add_poi_to_plan 对称）。
 """
 
 import warnings
@@ -14,7 +14,6 @@ import numpy as np
 
 from backend.agent.planning._core import extract_cores, reorder_from_cores
 from backend.typedefs import SpotDict
-from backend.utils.decorators import placeholder
 
 __all__ = ["remove_poi_from_day", "remove_poi_from_plan"]
 
@@ -132,7 +131,6 @@ def remove_poi_from_day(
     return plan
 
 
-@placeholder
 def remove_poi_from_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
@@ -140,11 +138,10 @@ def remove_poi_from_plan(
     routes: list,
     poi_name: str,
 ) -> dict:
-    """从方案移除景点并保持分组全方案重排（@placeholder 未启用）。
+    """从方案移除景点并保持分组全方案重排。
 
-    删除景点并重映射后，对全部天做组内重排（组结构不变）。供未来
-    「用户意图未定 → 全局兜底」需求接线；当前 remove 工具单日路径
-    （remove_poi_from_day）优先。
+    删除景点并重映射后，对全部天做组内重排（组结构不变）。day 缺失
+    （用户意图未定）时由 pipeline adjust_plan 兜底调用。
 
     Args:
         spots_dict: 景点字典。

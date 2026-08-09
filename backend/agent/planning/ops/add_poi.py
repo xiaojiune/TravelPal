@@ -3,16 +3,15 @@
 被 engine/pipeline.adjust_plan 分发调用（方案调整编排入口）。
 
 - add_poi_to_day：单日重排——只对目标天重新求解，其余天路线原样保留。
-  day 由编排层从对话明确提取；day 缺失时走全局（见 adjust 工具）。
-- add_poi_to_plan：全局重排（@placeholder 未启用）——遍历 6 种聚类全量
-  重分组，保留供未来「Agent 自判断 + CA 多解缓存」扩展，当前工具不触达。
+  day 由编排层从对话明确提取。
+- add_poi_to_plan：全局重排——遍历 6 种聚类全量重分组。
+  day 缺失（用户意图未定）时由 pipeline 兜底调用（与 remove_poi_from_plan 对称）。
 """
 
 import numpy as np
 
 from backend.agent.planning._core import extract_cores, reorder_from_cores
 from backend.typedefs import SpotDict
-from backend.utils.decorators import placeholder
 
 
 def add_poi_to_day(
@@ -54,19 +53,17 @@ def add_poi_to_day(
     return plan
 
 
-@placeholder
 def add_poi_to_plan(
     spots_dict: dict[int, SpotDict],
     cost_matrix: np.ndarray,
     dist_matrix: np.ndarray,
     routes: list,
 ) -> dict:
-    """向方案添加新景点并全局重新求解（@placeholder 未启用）。
+    """向方案添加新景点并全局重新求解。
 
     与 add_poi_to_day 不同：遍历 6 种聚类方法对全部景点重新分组求解，
-    所有天的组合都可能变化。保留供未来「Agent 自判断 + CA 多解缓存」
-    扩展，当前 add_poi 工具单日路径（add_poi_to_day）优先，全局路径
-    待「用户意图未定 → 全局兜底」需求接线后启用。
+    所有天的组合都可能变化。day 缺失（用户意图未定）时由 pipeline
+    adjust_plan 兜底调用。
 
     Args:
         spots_dict: 景点字典（含新 POI，矩阵已对应展开）。

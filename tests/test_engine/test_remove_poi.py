@@ -40,13 +40,16 @@ class TestRemovePoi:
         # 评语已从调整流程剥离（agent-tool 形态，返回 None）
         assert plan["commentary"] is None
 
-    def test_remove_poi_missing_day_raises(self, base_adjust_plan):
-        """remove_poi：未指定 day（用户意图未定前）抛 ValueError 驱动追问。"""
+    def test_remove_poi_missing_day_global(self, base_adjust_plan):
+        """remove_poi：未指定 day（用户意图未定）→ 全局重排兜底。"""
         spots, cost_mat, routes = base_adjust_plan
         target_name = next(spots[i]["name"] for i in spots if i != 0)
 
-        with pytest.raises(ValueError, match="remove_poi 调整必须指定目标天"):
-            adjust_plan(spots, cost_mat.tolist(), cost_mat.tolist(), routes, {"remove_poi": target_name})
+        plan = adjust_plan(spots, cost_mat.tolist(), cost_mat.tolist(), routes, {"remove_poi": target_name})
+
+        assert plan["solution"]["valid"] is True
+        all_names = {item["name"] for day in plan["daily_schedules"] for item in day}
+        assert target_name not in all_names
 
     def test_remove_poi_unknown_raises(self, base_adjust_plan):
         """remove_poi：目标景点不存在时抛出 ValueError。"""

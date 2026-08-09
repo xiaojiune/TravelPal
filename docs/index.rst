@@ -21,6 +21,7 @@
    ADR/012
    ADR/013
    ADR/014
+   ADR/015
    ADR/README
 
 .. toctree::

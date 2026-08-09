@@ -72,7 +72,7 @@ def add_poi_to_plan(
         routes: 当前方案的路径列表（仅用于获取天数）。
 
     Returns:
-        dict: 与 adjust_plan_days 格式一致的新方案。
+        dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
     """
     from backend.engine.pipeline import _rebuild_schedule
     from backend.engine.search import cluster_and_solve

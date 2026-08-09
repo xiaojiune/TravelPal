@@ -151,7 +151,7 @@ def remove_poi_from_plan(
         poi_name: 要移除的景点名称。
 
     Returns:
-        dict: 与 adjust_plan_days 格式一致的新方案。
+        dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
 
     Raises:
         ValueError: 未找到景点 / 目标为酒店。

@@ -43,11 +43,12 @@
  *   tool-result: (payload: PoiItem) — POI 型工具结果（供待选栏消费）
  */
 import { ref, nextTick, onUnmounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import ChatMessage from '@/components/ChatMessage.vue'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
 import { usePlanStore } from '@/stores/plan'
-import type { ChatMessage as ChatMessageType, PoiItem } from '@/types'
+import type { PoiItem } from '@/types'
 
 interface Props {
   apiPath?: string
@@ -61,16 +62,25 @@ const store = usePlanStore()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
-const loading = ref(false)
-const messages = ref<ChatMessageType[]>([])
 const { displayText, append, reset } = useTypewriter()
 // 当前 SSE 请求的 AbortController：组件卸载（AgentPanel 关闭）时中止流，
 // 避免 fetch 继续运行、闭包写入已卸载组件的 ref
 let abortController: AbortController | null = null
 
+// 对话状态（messages/loading）上提 plan store（方案 A）：
+// AgentPanel 用 v-if 控制显隐，收起会卸载组件，组件局部 ref 状态会丢失；
+// 存 store 后「同一次规划内收起/重开会话保留，新建规划 reset 清空」
+const { chatMessages: messages, chatLoading: loading } = storeToRefs(store)
+
 onUnmounted(() => {
   abortController?.abort()
   abortController = null
+  // 收起面板中断 SSE 后：复位 loading，并移除未完成的 assistant 空气泡
+  store.chatLoading = false
+  const last = messages.value[messages.value.length - 1]
+  if (last && last.role === 'assistant' && last.content === '') {
+    messages.value.pop()
+  }
 })
 
 /** 当前时间格式化为 HH:MM，作为消息时间戳。 */

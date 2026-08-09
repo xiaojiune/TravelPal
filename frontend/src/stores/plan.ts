@@ -1,4 +1,4 @@
-/** 核心全局状态：管理输入参数、方案建议、规划结果。Pinia setup 语法。 */
+/** 核心全局状态：管理输入参数、方案建议、规划结果、Agent 对话。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useSuggestCache } from '@/composables/useSuggestCache'
@@ -8,6 +8,7 @@ import type {
   SuggestionItem,
   PlanResult,
   PoiItem,
+  ChatMessage as ChatMessageType,
 } from '@/types'
 
 export const usePlanStore = defineStore('plan', () => {
@@ -66,6 +67,13 @@ export const usePlanStore = defineStore('plan', () => {
   function removePendingPoi(index: number) {
     pendingPois.value.splice(index, 1)
   }
+
+  // ====== Agent 对话状态（上提 store，面板 v-if 卸载后会话仍保留） ======
+  /** 对话消息列表（user/assistant/tool 富卡片形态）。 */
+  const chatMessages = ref<ChatMessageType[]>([])
+
+  /** 是否处于 SSE 流式响应中（驱动输入禁用/发送按钮 loading）。 */
+  const chatLoading = ref(false)
 
   /** 将待选 POI 添加到首页输入列表，然后从待选栏移除。 */
   function addPoiToForm(poi: PoiItem) {
@@ -173,6 +181,8 @@ export const usePlanStore = defineStore('plan', () => {
     amapApiKey.value = ''
     amapSecurityCode.value = ''
     pendingPois.value = []
+    chatMessages.value = []
+    chatLoading.value = false
     loading.value = false
     penaltyWeight.value = 100
     earlyWaitWeight.value = 0.1
@@ -204,6 +214,8 @@ export const usePlanStore = defineStore('plan', () => {
     amapSecurityCode,
     loading,
     pendingPois,
+    chatMessages,
+    chatLoading,
     addPendingPoi,
     removePendingPoi,
     addPoiToForm,

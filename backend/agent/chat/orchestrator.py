@@ -109,8 +109,13 @@ async def _tools_node(state: OrchestratorState) -> dict:
             # 参数缺失/类型错误等：回填错误让 LLM 看到后修正重调，不中断整轮
             tool_result = {"error": f"工具 {tc.name} 执行失败: {e}"}
         # SSE tool_result 事件携带工具名 + 结果（前端据此精确判别卡片类型）；
+        # 附带 city（取自工具参数），前端据此自动填充首页城市（仅一次）。
         # 回填 LLM 的 tool 消息仅用结果本体（保持消息协议纯净）
-        writer(("tool_result", {"tool": tc.name, "result": tool_result}))
+        city = kwargs.get("city")
+        payload: dict = {"tool": tc.name, "result": tool_result}
+        if city:
+            payload["city"] = city
+        writer(("tool_result", payload))
         messages.append(
             {
                 "role": "tool",

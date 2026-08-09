@@ -5,9 +5,9 @@
         我不懂你的全部，但我懂你的旅途。
       </div>
       <template v-for="(msg, i) in messages" :key="i">
-        <!-- 工具结果富卡片：tool_result 消息内嵌渲染（四型判别见 ToolResultCard） -->
-        <div v-if="msg.role === 'tool'" class="msg-tool-card">
-          <ToolResultCard :data="msg.data" />
+        <!-- 工具调用状态行：详情富卡片由左侧查询面板渲染，对话内仅回显工具名 -->
+        <div v-if="msg.role === 'tool'" class="msg-tool-line">
+          🛠️ 已查询 {{ (msg.data as { tool?: string })?.tool ?? '工具' }}
         </div>
         <ChatMessage v-else :role="msg.role" :content="msg.content" :time="msg.time" />
       </template>
@@ -40,29 +40,34 @@
  * Props:
  *   apiPath: string   — SSE 接口路径，默认 /api/chat
  * Emits:
- *   tool-result: (payload: PoiItem) — POI 型工具结果（供待选栏消费）
+ *   tool-result: (payload: { tool: string; result: unknown; city?: string })
+ *     — 工具结果整包（供宿主写入左侧查询面板 store.queryResults）
  */
-import { ref, nextTick, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import ChatMessage from '@/components/ChatMessage.vue'
-import ToolResultCard from '@/components/ToolResultCard.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
 import { usePlanStore } from '@/stores/plan'
-import type { PoiItem } from '@/types'
 
 interface Props {
   apiPath?: string
 }
 
+interface ToolResultPayload {
+  tool: string
+  result: unknown
+  city?: string
+}
+
 defineOptions({ name: 'ChatStream' })
 
 const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
-const emit = defineEmits<{ (e: 'tool-result', payload: PoiItem): void }>()
+const emit = defineEmits<{ (e: 'tool-result', payload: ToolResultPayload): void }>()
 const store = usePlanStore()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
-const { displayText, append, reset } = useTypewriter()
+const { displayText, append, reset, stop } = useTypewriter()
 // 当前 SSE 请求的 AbortController：组件卸载（AgentPanel 关闭）时中止流，
 // 避免 fetch 继续运行、闭包写入已卸载组件的 ref
 let abortController: AbortController | null = null
@@ -75,6 +80,7 @@ const { chatMessages: messages, chatLoading: loading } = storeToRefs(store)
 onUnmounted(() => {
   abortController?.abort()
   abortController = null
+  stop() // 停止打字机定时器，避免卸载后残留计时器
   // 收起面板中断 SSE 后：复位 loading，并移除未完成的 assistant 空气泡
   store.chatLoading = false
   const last = messages.value[messages.value.length - 1]
@@ -112,6 +118,7 @@ async function send() {
   messages.value.push({ role: 'assistant', content: '', time: now })
   loading.value = true
   reset()
+  forceScrollBottom() // 发新消息强制滚底（用户可能在阅读历史）
   const msgIndex = messages.value.length - 1
   abortController = new AbortController()
 
@@ -137,7 +144,8 @@ async function send() {
     const reader = body.getReader()
     const decoder = new TextDecoder()
     let partial = ''
-    while (true) {
+    let streamDone = false
+    while (!streamDone) {
       const { done, value } = await reader.read()
       if (done) break
       partial += decoder.decode(value, { stream: true })
@@ -148,9 +156,15 @@ async function send() {
         const data = line.slice(6)
         try {
           const parsed = JSON.parse(data)
-          if (parsed.type === 'done') break
+          if (parsed.type === 'done') {
+            stop() // 流结束：刷出剩余缓冲，补全打字机输出
+            streamDone = true
+            break
+          }
           if (parsed.type === 'error' && parsed.data) {
+            stop()
             messages.value[msgIndex].content = String(parsed.data)
+            streamDone = true
             break
           }
           if (parsed.type === 'content' && parsed.data) {
@@ -158,13 +172,13 @@ async function send() {
             messages.value[msgIndex].content = displayText.value
           }
           if (parsed.type === 'tool_result' && parsed.data) {
-            // 结构化 tool_result：{ tool, result }。卡片渲染结果本体，
-            // POI 型（poi_lookup）结果同时 emit 供宿主写入待选栏
+            // 结构化 tool_result：{ tool, result, city? }。富卡片交由左侧查询面板
+            // （store.queryResults）渲染，对话内仅回显「🛠️ 已查询 {tool}」状态行，
+            // 同时整包 emit 供宿主（AgentPanel）写入查询结果区
+            const tool = String(parsed.data.tool ?? 'tool')
             const result = parsed.data.result ?? parsed.data
-            messages.value.push({ role: 'tool', content: '', time: now, data: result })
-            if (parsed.data.tool === 'poi_lookup' && !Array.isArray(result)) {
-              emit('tool-result', result)
-            }
+            messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
+            emit('tool-result', { tool, result, city: parsed.data.city })
             scrollToBottom()
           }
         } catch {
@@ -178,6 +192,7 @@ async function send() {
   } catch (e) {
     // 组件卸载主动 abort 时静默退出，不覆盖消息内容
     if (e instanceof DOMException && e.name === 'AbortError') return
+    stop()
     messages.value[msgIndex].content = '网络错误，请检查连接'
   }
 
@@ -186,12 +201,29 @@ async function send() {
   scrollToBottom()
 }
 
-/** 将聊天历史容器滚动到底部，确保最新消息可见。 */
+/**
+ * 聊天历史容器滚动控制。
+ * - 距底部 < 40px（视为贴底）时跟随自动滚底；
+ * - 用户上划离开底部后暂停自动滚（保留阅读位置），仅 send() 发新消息时强制滚底。
+ */
 function scrollToBottom() {
-  if (historyRef.value) {
-    historyRef.value.scrollTop = historyRef.value.scrollHeight
+  const el = historyRef.value
+  if (!el) return
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+  if (nearBottom) {
+    el.scrollTop = el.scrollHeight
   }
 }
+
+/** 强制滚动到底部（发新消息时无视阅读位置）。 */
+function forceScrollBottom() {
+  const el = historyRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+onMounted(() => {
+  forceScrollBottom()
+})
 </script>
 
 <style scoped>
@@ -224,10 +256,11 @@ function scrollToBottom() {
   justify-content: flex-start;
   padding: 8px 0 12px;
 }
-/* 工具结果富卡片：左对齐靠消息流排布，与聊天气泡区分 */
-.msg-tool-card {
+/* 工具调用状态行：左对齐浅色小字，与聊天气泡区分 */
+.msg-tool-line {
   align-self: flex-start;
-  max-width: 90%;
+  font-size: 12px;
+  color: var(--tp-text-3);
   margin-bottom: 8px;
 }
 .input-bar {

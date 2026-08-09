@@ -19,7 +19,7 @@
           <div class="context-title">TravelPal</div>
           <div class="context-status">{{ sessionStatus.dot }} {{ sessionStatus.text }}</div>
         </div>
-        <ChatStream class="chat-stream-area" @tool-result="store.addPendingPoi" />
+        <ChatStream class="chat-stream-area" @tool-result="onToolResult" />
       </div>
     </Transition>
   </teleport>
@@ -47,6 +47,11 @@ defineOptions({ name: 'AgentPanel' })
 const show = defineModel<boolean>('show', { default: false })
 
 const store = usePlanStore()
+
+/** 接收 ChatStream 抛出的工具结果（{ tool, result, city }），写入 store 查询结果区。 */
+function onToolResult(payload: { tool: string; result: unknown; city?: string }) {
+  store.addQueryResult(payload.tool, payload.result, payload.city)
+}
 
 // ====== 会话上下文状态栏 ======
 /** 顶部上下文栏状态三态：根据表单景点与规划结果判定 Agent 当前能做什么。 */

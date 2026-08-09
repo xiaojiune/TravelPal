@@ -1,6 +1,6 @@
 /** 核心全局状态：管理输入参数、方案建议、规划结果、Agent 对话。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import type {
   SpotFormItem,
@@ -10,6 +10,18 @@ import type {
   PoiItem,
   ChatMessage as ChatMessageType,
 } from '@/types'
+
+/** 单次工具查询结果（供左侧查询面板分节展示）。 */
+export interface QueryResult {
+  tool: string
+  result: unknown
+  city?: string
+}
+
+/** 判定工具是否为 POI 查询（其结果数组可加入待选栏）。 */
+export function isPoiQuery(tool: string): boolean {
+  return tool === 'poi_lookup'
+}
 
 export const usePlanStore = defineStore('plan', () => {
   // ====== 输入状态 ======
@@ -52,20 +64,30 @@ export const usePlanStore = defineStore('plan', () => {
   }
 
   // ====== Agent 待选栏状态（全局共享，面板与左侧静态栏共用） ======
-  /** 对话中查询到的 POI 暂存列表（去重，供加入首页表单）。 */
-  const pendingPois = ref<PoiItem[]>([])
+  /** 工具查询结果暂存列表（含工具名/结果/城市，供左侧查询面板分节展示）。 */
+  const queryResults = ref<QueryResult[]>([])
 
-  /** 接收 Agent 工具查询结果，去重后加入待选栏。 */
-  function addPendingPoi(poi: PoiItem) {
-    if (!poi.name) return
-    if (!pendingPois.value.some((p) => p.name === poi.name)) {
-      pendingPois.value.push(poi)
+  /** 对话中暂存的 POI 待选列表（由 poi 型查询结果派生，供加入首页表单）。 */
+  const pendingPois = computed(() =>
+    queryResults.value.filter((q) => isPoiQuery(q.tool)).flatMap((q) => q.result as PoiItem[]),
+  )
+
+  /** 接收 Agent 工具查询结果：入队 queryResults；并尝试自动填充城市（仅一次）。 */
+  function addQueryResult(tool: string, result: unknown, cityFromTool?: string) {
+    queryResults.value.push({ tool, result, city: cityFromTool })
+    // 城市基于工具参数自动填充一次（store.city 空才填）
+    if (cityFromTool && !city.value) {
+      city.value = cityFromTool
     }
   }
 
-  /** 从待选栏移除指定下标项（不做其他操作）。 */
-  function removePendingPoi(index: number) {
-    pendingPois.value.splice(index, 1)
+  /** 从待选栏移除指定 POI（从 queryResults 中剔除对应条目）。 */
+  function removePendingPoi(poi: PoiItem) {
+    const idx = queryResults.value.findIndex((q) => {
+      const arr = q.result as PoiItem[]
+      return Array.isArray(arr) && arr.some((p) => p.name === poi.name)
+    })
+    if (idx !== -1) queryResults.value.splice(idx, 1)
   }
 
   // ====== Agent 对话状态（上提 store，面板 v-if 卸载后会话仍保留） ======
@@ -92,8 +114,7 @@ export const usePlanStore = defineStore('plan', () => {
     } else {
       addSpot(base)
     }
-    const idx = pendingPois.value.findIndex((p) => p.name === poi.name)
-    if (idx !== -1) pendingPois.value.splice(idx, 1)
+    removePendingPoi(poi)
   }
 
   /** 一键将全部待选 POI 加入首页表单（addPoiToForm 会逐个 splice，需遍历副本）。 */
@@ -180,7 +201,7 @@ export const usePlanStore = defineStore('plan', () => {
     deepResults.value = []
     amapApiKey.value = ''
     amapSecurityCode.value = ''
-    pendingPois.value = []
+    queryResults.value = []
     chatMessages.value = []
     chatLoading.value = false
     loading.value = false
@@ -214,9 +235,10 @@ export const usePlanStore = defineStore('plan', () => {
     amapSecurityCode,
     loading,
     pendingPois,
+    queryResults,
     chatMessages,
     chatLoading,
-    addPendingPoi,
+    addQueryResult,
     removePendingPoi,
     addPoiToForm,
     addAllPendingPois,

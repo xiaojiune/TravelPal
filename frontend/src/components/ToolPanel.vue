@@ -1,6 +1,6 @@
 <template>
   <aside v-if="active" class="tool-panel">
-    <!-- 查询面板：Agent 查询结果暂存（POI 待选 + 收编自原 PendingPanel） -->
+    <!-- 查询面板：Agent 查询结果暂存（POI 待选 + 其它结果仅展示） -->
     <template v-if="active === 'query'">
       <div class="panel-head">
         <span class="panel-title">🔍 查询结果</span>
@@ -8,6 +8,8 @@
           store.pendingPois.length
         }}</span>
       </div>
+
+      <!-- 第一节：POI 待选（可添加 / 全部加入 / 取消） -->
       <n-button
         v-if="store.pendingPois.length > 0"
         size="small"
@@ -21,18 +23,25 @@
       <div v-if="store.pendingPois.length === 0" class="panel-empty">
         对话中查询的 POI 将出现在这里
       </div>
-      <!-- 卡片复用 ToolResultCard 渲染 POI 型 -->
-      <div v-for="(poi, i) in store.pendingPois" :key="i" class="panel-card">
+      <div v-for="(poi, i) in store.pendingPois" :key="`poi-${i}`" class="panel-card">
         <ToolResultCard :data="poi" />
         <div class="panel-actions">
           <n-button size="tiny" type="primary" @click="store.addPoiToForm(poi)">
             {{ poi.poi_type === 'hotel' ? '🏨 设为酒店' : '➕ 添加' }}
           </n-button>
-          <n-button size="tiny" quaternary @click="store.removePendingPoi(i)">
+          <n-button size="tiny" quaternary @click="store.removePendingPoi(poi)">
             ✕ 取消
           </n-button>
         </div>
       </div>
+
+      <!-- 第二节：其它查询结果（仅展示，不可添加） -->
+      <template v-if="otherResults.length">
+        <div class="panel-section-title">其它查询结果</div>
+        <div v-for="(q, i) in otherResults" :key="`other-${i}`" class="panel-card">
+          <ToolResultCard :data="q.result" />
+        </div>
+      </template>
     </template>
 
     <!-- 操作 / 任务面板：v1.1 占位 -->
@@ -58,11 +67,12 @@
  * 收起交互：active 为 null 时整个面板不渲染（v-if），由 ToolRail 图标
  * 点击 toggle 控制展开/收起（同项再点收起）。面板头标题下方带浅色分割线。
  *
- * - 查询面板：Agent 对话查询结果暂存区（POI 待选栏，收编自原 PendingPanel），
- *   卡片复用 ToolResultCard 渲染，加入行程/全部加入/取消逻辑保留。
+ * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
+ *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
  * - 操作/任务面板：v1.1 占位，点击显示「未实现，v1.1 接入」（页面占位即记忆，不写文档）。
  */
-import { usePlanStore } from '@/stores/plan'
+import { computed } from 'vue'
+import { usePlanStore, isPoiQuery } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
 defineOptions({ name: 'ToolPanel' })
@@ -71,6 +81,9 @@ type ToolPanelKind = 'query' | 'ops' | 'tasks'
 const props = defineProps<{ active: ToolPanelKind | null }>()
 
 const store = usePlanStore()
+
+/** 非 POI 型查询结果（仅展示，不可添加行程）。 */
+const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery(q.tool)))
 </script>
 
 <style scoped>
@@ -107,6 +120,12 @@ const store = usePlanStore()
 }
 .panel-add-all {
   margin: 10px 12px;
+}
+.panel-section-title {
+  font-size: 12px;
+  color: var(--tp-text-3);
+  padding: 6px 12px 2px;
+  border-top: 1px solid var(--tp-border-light);
 }
 .panel-empty {
   font-size: 13px;

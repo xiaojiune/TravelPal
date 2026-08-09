@@ -99,6 +99,50 @@ class TestOrchestratorContract:
         assert all(k == "content" for k, _ in events[2:])
         assert "".join(d for _, d in events[2:]) == "你好呀"
 
+    def test_tool_exception_does_not_abort(self, monkeypatch):
+        """容错：工具执行抛异常时回填 error 让 LLM 修正重调，不中断整轮对话。
+
+        ADR-014 场景二（PydanticAI re-prompt 手写等价）契约：_tools_node
+        对工具调用包 try/except，异常转为 {"error": ...} 回填 tool 消息。
+        """
+
+        async def _broken_poi_lookup(city: str, names: list[str]) -> list[dict]:
+            raise TypeError("参数类型错误")
+
+        async def run():
+            fake = _FakeLLM(
+                [
+                    (
+                        "tool",
+                        [
+                            ToolCallResult(
+                                id="call_1",
+                                name="poi_lookup",
+                                arguments={"city": "广州", "names": "广州塔"},  # names 应为 list → 工具抛 TypeError
+                            )
+                        ],
+                    ),
+                    ("text",),
+                ]
+            )
+            monkeypatch.setattr(orchestrator, "_llm", fake)
+            monkeypatch.setattr(orchestrator, "TOOL_REGISTRY", {"poi_lookup": _broken_poi_lookup})
+            events = []
+            async for ev in orchestrator.stream_orchestrator([{"role": "user", "content": "广州塔在哪"}]):
+                events.append(ev)
+            return events
+
+        events = asyncio.run(run())
+        # 工具调用仍产出 tool_status → tool_result（含 error），不抛异常中断
+        assert events[0] == ("tool_status", "poi_lookup")
+        assert events[1][0] == "tool_result"
+        assert events[1][1]["tool"] == "poi_lookup"
+        assert "error" in events[1][1]["result"]
+        assert "参数类型错误" in events[1][1]["result"]["error"]
+        # 错误回填后仍进入 LLM 决策阶段 → content 正常产出，整轮未中断
+        assert all(k == "content" for k, _ in events[2:])
+        assert "".join(d for _, d in events[2:]) == "你好呀"
+
     def test_category_pruning(self, monkeypatch):
         """category 裁剪：注入 LLM 的 tools schema 只含指定分类的工具。"""
 

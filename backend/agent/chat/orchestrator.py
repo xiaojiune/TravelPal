@@ -83,6 +83,10 @@ async def _tools_node(state: OrchestratorState) -> dict:
     Returns:
         回填工具结果后的 messages 与清空的 pending_tool_calls；
         执行过程通过 StreamWriter 推送 tool_status / tool_result 事件。
+
+    容错：工具调用包 try/except，参数错误等异常不回传传播（不中断整轮对话），
+    而是回填 {"error": ...} 让 LLM 看到错误后 ReAct 自我修正重调——
+    这是 PydanticAI re-prompt 重试的手写等价实现（ADR-014 场景二）。
     """
     writer = get_stream_writer()
     messages = list(state["messages"])
@@ -96,10 +100,14 @@ async def _tools_node(state: OrchestratorState) -> dict:
         plan = state.get("plan_result")
         if plan and "plan" in inspect.signature(tool_fn).parameters and "plan" not in kwargs:
             kwargs["plan"] = plan
-        if inspect.iscoroutinefunction(tool_fn):
-            tool_result = await tool_fn(**kwargs)
-        else:
-            tool_result = tool_fn(**kwargs)
+        try:
+            if inspect.iscoroutinefunction(tool_fn):
+                tool_result = await tool_fn(**kwargs)
+            else:
+                tool_result = tool_fn(**kwargs)
+        except Exception as e:
+            # 参数缺失/类型错误等：回填错误让 LLM 看到后修正重调，不中断整轮
+            tool_result = {"error": f"工具 {tc.name} 执行失败: {e}"}
         # SSE tool_result 事件携带工具名 + 结果（前端据此精确判别卡片类型）；
         # 回填 LLM 的 tool 消息仅用结果本体（保持消息协议纯净）
         writer(("tool_result", {"tool": tc.name, "result": tool_result}))

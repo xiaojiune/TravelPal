@@ -87,8 +87,10 @@ let gracefulDone = false
 watch(displayText, (v) => {
   if (streamingIndex !== -1) {
     messages.value[streamingIndex].content = v
-    // 打字机弹出期间也跟随滚动（距底 <40px 才滚，用户上划暂停）
-    scrollToBottom()
+    // 打字机弹出期间跟随滚动：nextTick 等 DOM 高度更新后再判断，
+    // 避免弹字过快时 nearBottom 基于旧高度误判而卡在底部上方；
+    // 用户上划（距底 >=40px）时暂停自动滚，保留阅读位置
+    nextTick(() => scrollToBottom())
   }
 })
 
@@ -141,10 +143,16 @@ async function send() {
   abortController = new AbortController()
 
   try {
+    // form_context：首页表单当前输入快照（供 submit_plan_form 等工具感知用户已填内容）
+    const formContext = store.buildRequest(null)
     const resp = await fetch(props.apiPath, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, plan_result: store.planResult ?? null }),
+      body: JSON.stringify({
+        message: text,
+        plan_result: store.planResult ?? null,
+        form_context: formContext,
+      }),
       signal: abortController.signal,
     })
     if (!resp.ok) {

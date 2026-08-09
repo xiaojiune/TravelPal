@@ -99,6 +99,47 @@ class TestOrchestratorContract:
         assert all(k == "content" for k, _ in events[2:])
         assert "".join(d for _, d in events[2:]) == "你好呀"
 
+    def test_form_context_injected_to_submit_plan_form(self, monkeypatch):
+        """form_context 注入：submit_plan_form 收到编排层注入的表单快照。"""
+
+        captured: dict = {}
+
+        async def fake_submit_plan_form(form_context: dict | None = None, **kwargs) -> dict:
+            captured["form_context"] = form_context
+            return {"task_id": "t-1", "status": "pending"}
+
+        async def run():
+            fake = _FakeLLM(
+                [
+                    (
+                        "tool",
+                        [
+                            ToolCallResult(
+                                id="call_1",
+                                name="submit_plan_form",
+                                arguments={},
+                            )
+                        ],
+                    ),
+                    ("text",),
+                ]
+            )
+            monkeypatch.setattr(orchestrator, "_llm", fake)
+            monkeypatch.setattr(
+                orchestrator, "TOOL_REGISTRY", {"submit_plan_form": fake_submit_plan_form}
+            )
+            form_context = {"city": "广州", "hotel_name": "广州塔酒店", "spots": [{"name": "白云山"}]}
+            events = []
+            async for ev in orchestrator.stream_orchestrator(
+                [{"role": "user", "content": "规划一下"}], form_context=form_context
+            ):
+                events.append(ev)
+            return events
+
+        asyncio.run(run())
+        # 编排层把 form_context 注入到声明该参数的函数（LLM 无需拼参数）
+        assert captured["form_context"] == {"city": "广州", "hotel_name": "广州塔酒店", "spots": [{"name": "白云山"}]}
+
     def test_tool_exception_does_not_abort(self, monkeypatch):
         """容错：工具执行抛异常时回填 error 让 LLM 修正重调，不中断整轮对话。
 
@@ -155,7 +196,7 @@ class TestOrchestratorContract:
                 pass
             return fake
 
-        # 默认全量 6 个工具
+        # 默认全量 7 个工具
         fake_all = asyncio.run(run(None))
         all_names = {d["function"]["name"] for d in fake_all.seen_tools[0]}
         assert all_names == {
@@ -165,6 +206,7 @@ class TestOrchestratorContract:
             "get_driving",
             "add_poi",
             "remove_poi",
+            "submit_plan_form",
         }
 
         # 只裁剪出 poi 分类
@@ -172,7 +214,7 @@ class TestOrchestratorContract:
         poi_names = {d["function"]["name"] for d in fake_poi.seen_tools[0]}
         assert poi_names == {"poi_lookup"}
 
-        # 只裁剪出 planning 分类（重工具 + 方案调整）
+        # 只裁剪出 planning 分类（重工具 + 方案调整 + 表单提交）
         fake_plan = asyncio.run(run({"plan"}))
         plan_names = {d["function"]["name"] for d in fake_plan.seen_tools[0]}
-        assert plan_names == {"get_plan", "get_plan_result", "add_poi", "remove_poi"}
+        assert plan_names == {"get_plan", "get_plan_result", "add_poi", "remove_poi", "submit_plan_form"}

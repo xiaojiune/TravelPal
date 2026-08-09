@@ -147,7 +147,7 @@ async def chat(req: ChatRequest):
     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
 
     Args:
-        req: 聊天请求，含 message 和可选的 plan_result 上下文。
+        req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
 
     Returns:
         StreamingResponse: SSE 流式响应，逐 token 推送内容。
@@ -156,12 +156,16 @@ async def chat(req: ChatRequest):
         HTTPException 500: LLM 调用异常或数据格式错误。
     """
     try:
-        messages = build_chat_messages(req.message, req.plan_result)
+        messages = build_chat_messages(req.message, req.plan_result, req.form_context)
 
         async def _stream():
             """SSE 生成器：LangGraph 编排产出事件，映射为 SSE 事件流。"""
             try:
-                async for event_type, data in stream_orchestrator(messages, plan_result=req.plan_result):
+                async for event_type, data in stream_orchestrator(
+                    messages,
+                    plan_result=req.plan_result,
+                    form_context=req.form_context,
+                ):
                     if event_type == "content":
                         yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"
                     elif event_type == "tool_status":

@@ -15,7 +15,7 @@ schema.py 为工具契约生成器（build_tool_definitions），供编排器/MC
 from collections.abc import Callable
 
 from backend.agent.tools.driving import get_driving
-from backend.agent.tools.plan import add_poi, get_plan, get_plan_result, remove_poi
+from backend.agent.tools.plan import add_poi, get_plan, get_plan_result, remove_poi, submit_plan_form
 from backend.agent.tools.poi import parse_biz_hours, poi_lookup
 
 TOOL_REGISTRY: dict[str, Callable] = {
@@ -25,6 +25,7 @@ TOOL_REGISTRY: dict[str, Callable] = {
     "get_driving": get_driving,
     "add_poi": add_poi,
     "remove_poi": remove_poi,
+    "submit_plan_form": submit_plan_form,
 }
 
 # 工具分组元数据（方案 B 平行映射）：TOOL_REGISTRY 保持纯注册表，分类独立维护。
@@ -39,6 +40,7 @@ TOOL_CATEGORIES: dict[str, str] = {
     "get_driving": "driving",
     "add_poi": "plan",
     "remove_poi": "plan",
+    "submit_plan_form": "plan",
 }
 
 __all__ = [
@@ -47,6 +49,7 @@ __all__ = [
     "get_plan",
     "get_plan_result",
     "remove_poi",
+    "submit_plan_form",
     "parse_biz_hours",
     "poi_lookup",
     "TOOL_REGISTRY",

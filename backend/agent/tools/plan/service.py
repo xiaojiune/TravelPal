@@ -89,6 +89,57 @@ async def get_plan(
         return {"error": str(e)}
 
 
+async def submit_plan_form(
+    form_context: dict | None = None,
+    n_days: int | None = None,
+    mode: str = "fast",
+) -> dict:
+    """基于表单上下文提交规划任务（表单驱动版规划入口）。
+
+    LLM 不拼参数：form_context 由编排层注入（前端 send() 携带首页表单快照），
+    后端从中构造 PlanRequest 提交 suggest/plan 异步任务。n_days 缺失时按 suggest
+    （自动推断天数），指定时按 plan（mode 决定 CA/VNS）。
+
+    Args:
+        form_context: 表单输入快照（编排层注入），含 city/hotel_name/hotel_lon/
+            hotel_lat/hotel_tw_start/hotel_tw_end/day_start/min_days/spots
+            {name,lon,lat,tw_start,tw_end,stay,expected_arrival}/惩罚权重。
+        n_days: 行程天数。缺失 → suggest（自动推断）；指定 → plan。
+        mode: 求解模式，"fast"(CA) 或 "deep"(VNS)，仅指定 n_days 时生效。
+
+    Returns:
+        dict: { task_id: str, status: "pending" }，供 get_plan_result 轮询；
+        无 form_context 时返回 { error: "请先在首页填写城市/酒店/景点" }。
+    """
+    if not form_context:
+        return {"error": "请先在首页填写城市/酒店/景点"}
+    try:
+        params = {
+            "city": form_context.get("city", ""),
+            "hotel_name": form_context.get("hotel_name", ""),
+            "hotel_lon": form_context.get("hotel_lon", 0),
+            "hotel_lat": form_context.get("hotel_lat", 0),
+            "hotel_tw_start": form_context.get("hotel_tw_start", 0),
+            "hotel_tw_end": form_context.get("hotel_tw_end", 1440),
+            "day_start": form_context.get("day_start", 480),
+            "min_days": form_context.get("min_days"),
+            "spots": form_context.get("spots", []),
+            "penalty_weight": form_context.get("penalty_weight", 100.0),
+            "early_wait_weight": form_context.get("early_wait_weight", 0.1),
+            "late_return_weight": form_context.get("late_return_weight", 50.0),
+        }
+        if n_days is not None:
+            params["n_days"] = n_days
+            params["mode"] = mode
+            task_type = "plan"
+        else:
+            task_type = "suggest"
+        task_id = await submit_task(task_type, params)
+        return {"task_id": task_id, "status": "pending"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 async def get_plan_result(task_id: str) -> dict:
     """查询异步规划任务的执行状态与结果。
 

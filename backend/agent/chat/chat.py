@@ -27,12 +27,18 @@ def _readme_core() -> str:
         return ""
 
 
-def build_chat_messages(message: str, plan_result: dict | None = None) -> list[dict]:
+def build_chat_messages(
+    message: str,
+    plan_result: dict | None = None,
+    form_context: dict | None = None,
+) -> list[dict]:
     """构建对话消息列表。
 
     Args:
         message: 用户输入的消息。
         plan_result: 可选的规划结果，注入 system prompt 作为上下文。
+        form_context: 可选的表单输入快照（城市/酒店/景点名列表），
+            非空时注入 system prompt，供 Agent 感知用户已填内容。
 
     Returns:
         OpenAI-compatible messages 列表。
@@ -46,6 +52,15 @@ def build_chat_messages(message: str, plan_result: dict | None = None) -> list[d
             "commentary": plan_result.get("commentary", ""),
         }
         system += f"\n\n当前规划概要（供参考）：\n{json.dumps(summary, ensure_ascii=False)}"
+
+    if form_context:
+        fc = {
+            "city": form_context.get("city", ""),
+            "hotel_name": form_context.get("hotel_name", ""),
+            "spot_names": [s.get("name") for s in form_context.get("spots", [])],
+            "n_days": form_context.get("n_days"),
+        }
+        system += f"\n\n用户已填写的表单（当前状态，供参考）：\n{json.dumps(fc, ensure_ascii=False)}"
 
     system += _readme_core()
 

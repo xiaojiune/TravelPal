@@ -41,12 +41,15 @@ class OrchestratorState(TypedDict):
         tools: 本次会话暴露的工具 schema（按 category 裁剪后，agent 节点据此决策）。
         plan_result: 当前方案快照（PlanResult，可选）。用户进入方案修改场景时由
             前端透传，工具执行时注入给声明 plan 参数的函数（如 add_poi）。
+        form_context: 首页表单输入快照（可选）。前端透传，工具执行时注入给声明
+            form_context 参数的函数（如 submit_plan_form，据此构造规划请求）。
     """
 
     messages: list[dict]
     pending_tool_calls: list[ToolCallResult]
     tools: list[dict]
     plan_result: dict | None
+    form_context: dict | None
 
 
 async def _agent_node(state: OrchestratorState) -> dict:
@@ -100,6 +103,10 @@ async def _tools_node(state: OrchestratorState) -> dict:
         plan = state.get("plan_result")
         if plan and "plan" in inspect.signature(tool_fn).parameters and "plan" not in kwargs:
             kwargs["plan"] = plan
+        # 表单上下文工具（submit_plan_form）需要首页输入快照：编排层注入 form_context
+        form_ctx = state.get("form_context")
+        if form_ctx and "form_context" in inspect.signature(tool_fn).parameters and "form_context" not in kwargs:
+            kwargs["form_context"] = form_ctx
         try:
             if inspect.iscoroutinefunction(tool_fn):
                 tool_result = await tool_fn(**kwargs)
@@ -156,6 +163,7 @@ async def stream_orchestrator(
     messages: list[dict],
     categories: set[str] | None = None,
     plan_result: dict | None = None,
+    form_context: dict | None = None,
 ) -> AsyncIterator[tuple]:
     """运行编排器，产出 (event_type, data) 事件流。
 
@@ -166,6 +174,8 @@ async def stream_orchestrator(
             None 表示暴露全部工具。
         plan_result: 当前方案快照（PlanResult，可选）。用户进入方案修改场景时
             透传，供 add_poi 等方案修改工具注入。
+        form_context: 首页表单输入快照（可选）。前端透传，供 submit_plan_form
+            等表单上下文工具注入（据此构造规划请求）。
 
     Yields:
         (event_type, data) 元组，event_type 为 content / tool_status / tool_result。
@@ -175,6 +185,7 @@ async def stream_orchestrator(
         "pending_tool_calls": [],
         "tools": build_tool_definitions(categories),
         "plan_result": plan_result,
+        "form_context": form_context,
     }
     async for mode, payload in _graph.astream(state, stream_mode="custom"):
         yield mode, payload

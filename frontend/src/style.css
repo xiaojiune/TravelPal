@@ -77,6 +77,16 @@ body {
   color: var(--tp-primary);
 }
 
+/* 「关于项目」链接着色：靛蓝指示色（与页内反馈引导块同色关联），吸引新访客进入 */
+.nav-links a.nav-about {
+  color: var(--tp-info);
+  font-weight: 600;
+}
+.nav-links a.nav-about:hover {
+  background: var(--tp-info-soft);
+  color: var(--tp-info);
+}
+
 /* 导航栏右侧 Agent 入口按钮：推至最右 */
 .nav-agent {
   margin-left: auto;

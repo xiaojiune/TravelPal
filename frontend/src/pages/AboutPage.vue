@@ -8,6 +8,17 @@
       </p>
     </section>
 
+    <section class="feedback-guide">
+      <span class="fb-icon">📮</span>
+      <div class="fb-text">
+        <p class="fb-title">想提意见？</p>
+        <p class="fb-body">
+          点击左侧工具栏的 📮 按钮，在任意页面都能反馈。提交时会自动附带当前页面，
+          帮助我们定位问题所在。
+        </p>
+      </div>
+    </section>
+
     <section class="faq-section">
       <h2>常见问题</h2>
       <n-collapse>
@@ -17,50 +28,13 @@
         </n-collapse-item>
       </n-collapse>
     </section>
-
-    <section class="survey-section">
-      <h2>告诉我们你的想法</h2>
-      <p class="survey-tip">你的意见会直接影响 TravelPal 的下一个版本，欢迎畅所欲言。</p>
-      <div class="survey-form">
-        <div class="survey-row">
-          <label>称呼</label>
-          <n-input v-model:value="form.name" placeholder="怎么称呼你（可选）" clearable />
-        </div>
-        <div class="survey-row">
-          <label>联系方式</label>
-          <n-input v-model:value="form.contact" placeholder="邮箱 / 微信，方便我们回复你（可选）" clearable />
-        </div>
-        <div class="survey-row">
-          <label>评分</label>
-          <n-rate v-model:value="form.rating" />
-        </div>
-        <div class="survey-row">
-          <label>意见</label>
-          <n-input
-            v-model:value="form.content"
-            type="textarea"
-            :rows="4"
-            placeholder="说说你的使用感受、遇到的问题或建议（必填）"
-          />
-        </div>
-        <div class="survey-actions">
-          <n-button type="primary" :loading="submitting" @click="submitFeedback">
-            提交反馈
-          </n-button>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-/** 关于页：项目介绍 + FAQ 手风琴（faq.md 经 markdown-it 切分）+ 用户反馈问卷。 */
-import { ref, reactive } from 'vue'
-import { useRoute } from 'vue-router'
-import { useMessage } from 'naive-ui'
+/** 关于页：项目介绍 + 反馈引导（指向左侧工具栏 📮）+ FAQ 手风琴（faq.md 经 markdown-it 切分）。 */
 import MarkdownIt from 'markdown-it'
 import faqRaw from '@/content/faq.md?raw'
-import { postFeedback } from '@/services/api'
 
 const md = new MarkdownIt()
 
@@ -98,45 +72,6 @@ function parseFaqs(raw: string): { q: string; a: string }[] {
 }
 
 const faqs = parseFaqs(faqRaw)
-
-// ================== 反馈问卷 ==================
-
-const route = useRoute()
-const message = useMessage()
-const submitting = ref(false)
-const form = reactive({
-  name: '',
-  contact: '',
-  rating: 0,
-  content: '',
-})
-
-/** 提交反馈：校验必填 → POST /api/feedback（page 自动记录当前路径）→ 成功后清空表单。 */
-async function submitFeedback() {
-  if (!form.content.trim()) {
-    message.warning('请填写反馈内容')
-    return
-  }
-  submitting.value = true
-  try {
-    await postFeedback({
-      name: form.name.trim() || undefined,
-      contact: form.contact.trim() || undefined,
-      rating: form.rating || undefined,
-      content: form.content.trim(),
-      page: route.path,
-    })
-    message.success('感谢反馈！')
-    form.name = ''
-    form.contact = ''
-    form.rating = 0
-    form.content = ''
-  } catch (e) {
-    message.error(e instanceof Error ? e.message : '提交失败，请稍后重试')
-  } finally {
-    submitting.value = false
-  }
-}
 </script>
 
 <style scoped>
@@ -190,42 +125,33 @@ async function submitFeedback() {
   padding: 0 4px;
   font-size: 12px;
 }
-.survey-section {
-  margin-top: 36px;
-}
-.survey-section h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--tp-text);
-}
-.survey-tip {
-  margin: 0 0 16px;
-  font-size: 13px;
-  color: var(--tp-text-2);
-}
-.survey-form {
+/* 反馈引导块：靛蓝指示色（与导航「关于项目」着色同色关联，引导用户发现左侧工具栏 📮） */
+.feedback-guide {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-  max-width: 560px;
-}
-.survey-row {
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  margin-bottom: 28px;
+  padding: 14px 16px;
+  border: 1px solid var(--tp-info);
+  border-radius: 8px;
+  background: var(--tp-info-soft);
 }
-.survey-row label {
-  flex-shrink: 0;
-  width: 56px;
+.fb-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.fb-text p {
+  margin: 0;
+}
+.fb-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-info);
+  margin-bottom: 4px;
+}
+.fb-body {
   font-size: 13px;
+  line-height: 1.7;
   color: var(--tp-text-2);
-}
-.survey-row .n-input {
-  flex: 1;
-}
-.survey-actions {
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

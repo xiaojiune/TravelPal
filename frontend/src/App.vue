@@ -14,7 +14,7 @@
               <router-link to="/suggest">方案建议</router-link>
               <router-link to="/plan">规划结果</router-link>
               <router-link to="/history">历史记录</router-link>
-              <router-link to="/about">关于项目</router-link>
+              <router-link to="/about" class="nav-about">关于项目</router-link>
               <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
                 🆕 新建规划
               </n-button>
@@ -36,7 +36,7 @@
             </n-tooltip>
           </nav>
           <div class="app-body">
-            <ToolRail v-model:active="toolPanel" />
+            <ToolRail v-model:active="toolPanel" @feedback="onFeedback" />
             <ToolPanel v-if="toolPanel" :active="toolPanel" />
             <main class="main-content">
               <router-view v-slot="{ Component }">
@@ -52,6 +52,7 @@
             </a>
           </footer>
           <AgentPanel v-model:show="agentOpen" />
+          <FeedbackModal v-model:show="feedbackOpen" />
         </div>
       </n-dialog-provider>
     </n-message-provider>
@@ -68,12 +69,21 @@ import { usePlanStore } from '@/stores/plan'
 import ToolRail from '@/components/ToolRail.vue'
 import ToolPanel from '@/components/ToolPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
+import FeedbackModal from '@/components/FeedbackModal.vue'
 
 const router = useRouter()
 const store = usePlanStore()
 
 /** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）；null 表示全部收起。 */
 const toolPanel = ref<'query' | 'ops' | 'tasks' | null>('query')
+
+/** 全局反馈弹窗显隐（由 ToolRail 📮 按钮触发）。 */
+const feedbackOpen = ref(false)
+
+/** ToolRail 反馈按钮事件：打开全局反馈弹窗（居中，可在任意页面）。 */
+function onFeedback() {
+  feedbackOpen.value = true
+}
 
 /**
  * 新建规划：清空全部规划状态并回首页（reset 补全清空待选栏/加载态/惩罚权重）。

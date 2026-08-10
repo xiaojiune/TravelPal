@@ -162,6 +162,7 @@ _graph = _build_graph()
 async def stream_orchestrator(
     messages: list[dict],
     categories: set[str] | None = None,
+    exclude: set[str] | None = None,
     plan_result: dict | None = None,
     form_context: dict | None = None,
 ) -> AsyncIterator[tuple]:
@@ -172,6 +173,8 @@ async def stream_orchestrator(
         categories: 本次会话暴露的工具分类集合（如 {"poi"}）；
             其余分类的工具 schema 不注入 LLM，实现按上下文裁剪工具；
             None 表示暴露全部工具。
+        exclude: 显式排除的工具名集合（如对话链路不暴露 add_poi/remove_poi）；
+            None 表示不排除（默认）。与 categories 正交，可同时生效。
         plan_result: 当前方案快照（PlanResult，可选）。用户进入方案修改场景时
             透传，供 add_poi 等方案修改工具注入。
         form_context: 首页表单输入快照（可选）。前端透传，供 submit_plan_form
@@ -183,7 +186,7 @@ async def stream_orchestrator(
     state: OrchestratorState = {
         "messages": list(messages),
         "pending_tool_calls": [],
-        "tools": build_tool_definitions(categories),
+        "tools": build_tool_definitions(categories, exclude),
         "plan_result": plan_result,
         "form_context": form_context,
     }

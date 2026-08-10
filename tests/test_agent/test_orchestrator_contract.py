@@ -218,3 +218,28 @@ class TestOrchestratorContract:
         fake_plan = asyncio.run(run({"plan"}))
         plan_names = {d["function"]["name"] for d in fake_plan.seen_tools[0]}
         assert plan_names == {"get_plan", "get_plan_result", "add_poi", "remove_poi", "submit_plan_form"}
+
+    def test_exclude_tools(self, monkeypatch):
+        """exclude 裁剪：注入 LLM 的 tools schema 排除指定工具（对话链路禁用方案修改工具）。"""
+
+        async def run(categories: set[str] | None, exclude: set[str] | None):
+            fake = _FakeLLM([("text",)])
+            monkeypatch.setattr(orchestrator, "_llm", fake)
+            async for _ in orchestrator.stream_orchestrator(
+                [{"role": "user", "content": "test"}], categories=categories, exclude=exclude
+            ):
+                pass
+            return fake
+
+        # 对话链路 exclude add_poi/remove_poi：剩余工具含 poi_lookup/submit_plan_form
+        fake_chat = asyncio.run(run(None, {"add_poi", "remove_poi"}))
+        chat_names = {d["function"]["name"] for d in fake_chat.seen_tools[0]}
+        assert "add_poi" not in chat_names
+        assert "remove_poi" not in chat_names
+        assert "poi_lookup" in chat_names
+        assert "submit_plan_form" in chat_names
+
+        # exclude 与 categories 正交：裁剪 poi 分类 + exclude 后剩余仅 poi_lookup
+        fake_both = asyncio.run(run({"poi"}, {"poi_lookup"}))
+        both_names = {d["function"]["name"] for d in fake_both.seen_tools[0]}
+        assert both_names == set()

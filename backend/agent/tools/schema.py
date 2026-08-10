@@ -112,11 +112,13 @@ def _build_tool_definition(name: str, fn: Callable) -> dict:
     }
 
 
-def build_tool_definitions(categories: set[str] | None = None) -> list[dict]:
-    """从 TOOL_REGISTRY 自动生成全部（或指定分类）工具的 schema 列表。
+def build_tool_definitions(categories: set[str] | None = None, exclude: set[str] | None = None) -> list[dict]:
+    """从 TOOL_REGISTRY 自动生成全部（或指定分类/排除集）工具的 schema 列表。
 
     Args:
         categories: 只生成指定 category 的工具；None 表示全部（默认）。
+        exclude: 显式排除的工具名集合（如对话链路不暴露 add_poi/remove_poi）；
+            None 表示不排除（默认）。
 
     Returns:
         list[dict]: OpenAI tools 列表，按 TOOL_REGISTRY 注册顺序。
@@ -126,6 +128,8 @@ def build_tool_definitions(categories: set[str] | None = None) -> list[dict]:
     definitions: list[dict] = []
     for name, fn in TOOL_REGISTRY.items():
         if categories is not None and TOOL_CATEGORIES.get(name) not in categories:
+            continue
+        if exclude and name in exclude:
             continue
         definitions.append(_build_tool_definition(name, fn))
     return definitions

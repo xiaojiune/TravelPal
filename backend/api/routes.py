@@ -33,6 +33,11 @@ from backend.tasks.submit import submit_task
 
 router = APIRouter()
 
+# 对话链路不暴露的方案修改工具（add_poi/remove_poi）：
+# 异步路径返回 task_id 后前端无轮询回传（结果会丢），故对话内禁用；
+# 工具本身保留（单一事实来源，MCP 等外部调用方仍可用）。见 ADR-014 场景二。
+_CHAT_EXCLUDE_TOOLS = {"add_poi", "remove_poi"}
+
 # ================== 路由端点 ==================
 
 
@@ -164,6 +169,7 @@ async def chat(req: ChatRequest):
             try:
                 async for event_type, data in stream_orchestrator(
                     messages,
+                    exclude=_CHAT_EXCLUDE_TOOLS,
                     plan_result=req.plan_result,
                     form_context=req.form_context,
                 ):

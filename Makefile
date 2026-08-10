@@ -4,6 +4,9 @@
         dc-migration migrate \
         clean help
 
+# 裸 make 默认显示帮助（避免误触第一个目标 install 引发 npm ci 重装）
+.DEFAULT_GOAL := help
+
 # 迁移脚本消息：make dc-migration MESSAGE="xxx" 指定，默认 auto
 MESSAGE ?= auto
 
@@ -13,7 +16,7 @@ install: ## 一键安装前后端依赖
 	@echo '==> 安装后端依赖（poetry）'
 	.venv/bin/poetry install
 	@echo '==> 安装前端依赖（npm ci）'
-	cd frontend && npm ci
+	cd frontend && npm ci --legacy-peer-deps
 
 build: ## 前端生产构建
 	cd frontend && npm run build

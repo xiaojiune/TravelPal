@@ -14,6 +14,7 @@
               <router-link to="/suggest">方案建议</router-link>
               <router-link to="/plan">规划结果</router-link>
               <router-link to="/history">历史记录</router-link>
+              <router-link to="/about">关于项目</router-link>
               <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
                 🆕 新建规划
               </n-button>
@@ -58,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。导航链接覆盖 4 个页面。 */
+/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。导航链接覆盖 5 个页面。 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'

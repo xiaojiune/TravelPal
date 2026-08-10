@@ -1,6 +1,6 @@
 """LlamaIndex 检索实现占位。
 
-LlamaIndex 用于增强 RAG（当前 BM25 见 backend/agent/tools/rag.py）。
+LlamaIndex 用于增强 RAG（当前 BM25 见 backend/infrastructure/retrieval/bm25.py）。
 当前仅保留目录占位（ADR-008 轴7），具体实现统一 TODO，按需引入。
 """
 

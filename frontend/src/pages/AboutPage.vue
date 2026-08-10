@@ -11,9 +11,9 @@
     <section class="feedback-guide">
       <span class="fb-icon">📮</span>
       <div class="fb-text">
-        <p class="fb-title">想提意见？</p>
+        <p class="fb-title">遇到困难？</p>
         <p class="fb-body">
-          点击左侧工具栏的 📮 按钮，在任意页面都能反馈。提交时会自动附带当前页面，
+          可在任意页面点击左侧工具栏的 📮 按钮进行反馈，提交时会自动附带当前页面，
           帮助我们定位问题所在。
         </p>
       </div>

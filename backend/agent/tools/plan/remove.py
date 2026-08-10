@@ -21,6 +21,7 @@ plan 参数（当前方案快照）由编排层注入：内部 FC 经 orchestrat
 
 from typing import cast
 
+from backend.agent.tools.plan._common import ensure_matrix
 from backend.tasks.submit import submit_task
 
 
@@ -49,8 +50,11 @@ async def remove_poi(
     """
     if not plan:
         return {"error": "缺少当前方案（plan），无法执行移除景点调整"}
-    if not (plan.get("spots") and plan.get("solution") and plan.get("cost_matrix") and plan.get("dist_matrix")):
-        return {"error": "方案快照不完整（需 spots/solution/cost_matrix/dist_matrix）"}
+    if not (plan.get("spots") and plan.get("solution")):
+        return {"error": "方案快照不完整（需 spots/solution），请先重新生成方案"}
+    # fast 模式合成方案缺驾车矩阵：从矩阵快照缓存补全（命中即注入）
+    if not ensure_matrix(plan, city):
+        return {"error": "方案快照不完整（缺少驾车矩阵），请先生成方案后再调整景点"}
 
     adjustments: dict = {"remove_poi": poi_name}
     if day is not None:

@@ -13,6 +13,8 @@ from backend.agent.tools.poi.service import estimate_stay
 
 # add.py 顶层 import 的模块路径，供 monkeypatch 字符串方式打桩
 _ADJUST_MODULE = "backend.agent.tools.plan.add"
+# _common.py（ensure_matrix 所在模块，get_driving_matrix 打桩需指向此处）
+_COMMON_MODULE = "backend.agent.tools.plan._common"
 
 
 def _plan_snapshot() -> dict:
@@ -34,11 +36,63 @@ def test_missing_plan_returns_error():
     assert "error" in result and "缺少当前方案" in result["error"]
 
 
-def test_incomplete_snapshot_returns_error():
+def test_incomplete_snapshot_returns_error(monkeypatch):
+    """快照缺 spots/solution → 报错（矩阵补全前置条件不满足）。"""
     plan = _plan_snapshot()
-    del plan["cost_matrix"]
+    del plan["solution"]
     result = asyncio.run(add_poi_fn("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0, plan=plan))
     assert "error" in result and "快照不完整" in result["error"]
+
+
+def test_missing_matrix_snapshot_hit_backfills(monkeypatch):
+    """fast 模式方案缺 cost/dist 矩阵：矩阵快照命中 → 自动补全并继续走同步路径。"""
+    plan = _plan_snapshot()
+    del plan["cost_matrix"]
+    del plan["dist_matrix"]
+
+    fake_snapshot = {
+        "cost": [[0.0, 10.0, 8.0], [10.0, 0.0, 6.0], [8.0, 6.0, 0.0]],
+        "dist": [[0.0, 5.0, 4.0], [5.0, 0.0, 3.0], [4.0, 3.0, 0.0]],
+        "polylines": {},
+    }
+    monkeypatch.setattr(f"{_COMMON_MODULE}.get_driving_matrix", lambda *a, **k: fake_snapshot)
+    monkeypatch.setattr(
+        f"{_ADJUST_MODULE}.get_driving_pair",
+        lambda *a, **k: {"duration_min": 10.0, "distance_km": 5.0},
+    )
+
+    captured = {}
+
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+        captured["cost"] = cost
+        captured["dist"] = dist
+        return {"solution": {"routes": [[0, 1, 3, 0], [0, 2, 0]]}}
+
+    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+
+    result = asyncio.run(
+        add_poi_fn(
+            "广州",
+            {"name": "珠江夜游", "lon": 113.3, "lat": 23.12, "poi_type": "spot"},
+            0,
+            plan=plan,
+        )
+    )
+    # 补全后矩阵注入，同步路径被调用
+    assert "error" not in result
+    assert captured["cost"] == fake_snapshot["cost"]
+    assert captured["dist"] == fake_snapshot["dist"]
+
+
+def test_missing_matrix_snapshot_miss_returns_error(monkeypatch):
+    """快照缺矩阵且矩阵快照未命中 → 报友好错误（请先生成方案）。"""
+    plan = _plan_snapshot()
+    del plan["cost_matrix"]
+    del plan["dist_matrix"]
+    monkeypatch.setattr(f"{_COMMON_MODULE}.get_driving_matrix", lambda *a, **k: None)
+
+    result = asyncio.run(add_poi_fn("广州", {"name": "珠江夜游", "lon": 113.3, "lat": 23.12}, 0, plan=plan))
+    assert "error" in result and "缺少驾车矩阵" in result["error"]
 
 
 def test_day_out_of_range_returns_error():

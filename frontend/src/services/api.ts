@@ -72,3 +72,10 @@ export function postHistory(
 export function deleteHistory(id: string, deviceId: string): Promise<{ ok: boolean }> {
   return http.delete(`/history/${id}`, { data: { device_id: deviceId } })
 }
+
+/** 提交一条用户反馈（/about 页面问卷），请求体由 OpenAPI 的 FeedbackCreate 约束。 */
+export function postFeedback(
+  data: components['schemas']['FeedbackCreate'],
+): Promise<{ id: string }> {
+  return http.post('/feedback', data)
+}

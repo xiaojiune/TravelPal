@@ -13,6 +13,7 @@ from backend.agent.chat import build_chat_messages, stream_orchestrator
 from backend.agent.tools import parse_biz_hours
 from backend.api.schemas import (
     ChatRequest,
+    FeedbackCreate,
     HistoryCreate,
     HistoryDeleteRequest,
     HistoryDetail,
@@ -27,7 +28,7 @@ from backend.api.schemas import (
 )
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
-from backend.data.model.models import HistoryRecord, PlanTask
+from backend.data.model.models import FeedbackRecord, HistoryRecord, PlanTask
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -291,6 +292,32 @@ async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get
         spot_count=req.spot_count,
         plan_result=req.plan_result,
         request_params=req.request_params,
+    )
+    session.add(record)
+    await session.commit()
+    return {"id": str(record.id)}
+
+
+@router.post("/api/feedback", status_code=201)
+async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(get_session)):
+    """保存一条用户反馈（/about 页面问卷）。
+
+    Args:
+        req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
+        session: 数据库会话（依赖注入）。
+
+    Returns:
+        dict: { id: str } 新创建的反馈 UUID。
+
+    Raises:
+        HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
+    """
+    record = FeedbackRecord(
+        name=req.name,
+        contact=req.contact,
+        content=req.content,
+        rating=req.rating,
+        page=req.page,
     )
     session.add(record)
     await session.commit()

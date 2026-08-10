@@ -142,7 +142,7 @@ export interface paths {
          *     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
          *
          *     Args:
-         *         req: 聊天请求，含 message 和可选的 plan_result 上下文。
+         *         req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
          *
          *     Returns:
          *         StreamingResponse: SSE 流式响应，逐 token 推送内容。
@@ -250,6 +250,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Feedback
+         * @description 保存一条用户反馈（/about 页面问卷）。
+         *
+         *     Args:
+         *         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
+         *         session: 数据库会话（依赖注入）。
+         *
+         *     Returns:
+         *         dict: { id: str } 新创建的反馈 UUID。
+         *
+         *     Raises:
+         *         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
+         */
+        post: operations["create_feedback_api_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/{task_id}": {
         parameters: {
             query?: never;
@@ -309,6 +339,8 @@ export interface components {
          *
          *     message: 用户输入的消息。
          *     plan_result: 可选的规划结果上下文，供 Agent 参考。
+         *     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
+         *         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
          */
         ChatRequest: {
             /**
@@ -323,6 +355,47 @@ export interface components {
             plan_result?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Form Context
+             * @description 表单输入快照（城市/酒店/景点）
+             */
+            form_context?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * FeedbackCreate
+         * @description 用户反馈提交请求体。
+         *
+         *     问卷固定在 /about 页面：name/contact/rating 均可选以降低填写门槛，
+         *     content 为唯一必填字段。page 由前端自动记录来源页面路径（接受恒为 /about）。
+         */
+        FeedbackCreate: {
+            /**
+             * Name
+             * @description 用户称呼（可选）
+             */
+            name?: string | null;
+            /**
+             * Contact
+             * @description 联系方式（可选）
+             */
+            contact?: string | null;
+            /**
+             * Content
+             * @description 反馈内容（必填）
+             */
+            content: string;
+            /**
+             * Rating
+             * @description 评分 1-5（可选）
+             */
+            rating?: number | null;
+            /**
+             * Page
+             * @description 来源页面路径，如 /about
+             */
+            page?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1122,6 +1195,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_feedback_api_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

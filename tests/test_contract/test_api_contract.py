@@ -5,6 +5,7 @@ ADR-010 #7（契约测试）：纯单元验证 backend/api/schemas.py 的请求/
 - PlanRequest 必填字段 / 默认值 / 校验约束（mode/day_start 范围）
 - TaskSubmitResponse / TaskDetail 形状（前端轮询依赖）
 - SuggestResult / PlanResult 响应形状
+- FeedbackCreate 形状（/about 问卷提交依赖）
 
 不启 TestClient（避免触网/依赖 DB），纯 Pydantic 验证。
 """
@@ -12,6 +13,7 @@ ADR-010 #7（契约测试）：纯单元验证 backend/api/schemas.py 的请求/
 import pytest
 
 from backend.api.schemas import (
+    FeedbackCreate,
     PlanRequest,
     SuggestionItem,
     SuggestResult,
@@ -127,6 +129,36 @@ class TestSuggestResultContract:
             amap_security_code="c",
         )
         assert result.type == "suggestion"
+
+
+class TestFeedbackCreateContract:
+    """用户反馈请求模型契约（/about 问卷提交依赖）。"""
+
+    def test_content_required(self):
+        with pytest.raises(ValueError):
+            FeedbackCreate(content="")
+
+    def test_optional_fields(self):
+        fb = FeedbackCreate(content="很好用", name="张三", contact="a@b.com", rating=4, page="/about")
+        assert fb.name == "张三"
+        assert fb.rating == 4
+        assert fb.page == "/about"
+
+    def test_minimal_content_only(self):
+        fb = FeedbackCreate(content="很好用")
+        assert fb.name is None
+        assert fb.contact is None
+        assert fb.rating is None
+        assert fb.page is None
+
+    def test_rating_range(self):
+        for bad in (0, 6):
+            with pytest.raises(ValueError):
+                FeedbackCreate(content="x", rating=bad)
+
+    def test_content_max_length(self):
+        with pytest.raises(ValueError):
+            FeedbackCreate(content="长" * 2001)
 
 
 def _valid_item() -> dict:

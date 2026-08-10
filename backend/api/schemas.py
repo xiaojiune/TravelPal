@@ -341,3 +341,20 @@ class TaskDetail(BaseModel):
     status: str
     result: TaskResult | None = None
     error: str | None = None
+
+
+# ================== 用户反馈（问卷） ==================
+
+
+class FeedbackCreate(BaseModel):
+    """用户反馈提交请求体。
+
+    问卷固定在 /about 页面：name/contact/rating 均可选以降低填写门槛，
+    content 为唯一必填字段。page 由前端自动记录来源页面路径（接受恒为 /about）。
+    """
+
+    name: str | None = Field(default=None, max_length=100, description="用户称呼（可选）")
+    contact: str | None = Field(default=None, max_length=200, description="联系方式（可选）")
+    content: str = Field(min_length=1, max_length=2000, description="反馈内容（必填）")
+    rating: int | None = Field(default=None, ge=1, le=5, description="评分 1-5（可选）")
+    page: str | None = Field(default=None, max_length=50, description="来源页面路径，如 /about")

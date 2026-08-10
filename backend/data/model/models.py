@@ -61,3 +61,24 @@ class PlanTask(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     started_at = Column(DateTime(timezone=True), nullable=True, comment="任务开始执行时间")
     finished_at = Column(DateTime(timezone=True), nullable=True, comment="任务结束时间（成功或失败）")
+
+
+class FeedbackRecord(Base):
+    """用户反馈 ORM 模型，收集 /about 页面问卷提交。
+
+    设计说明：
+    - 问卷固定在 /about 页面，page 字段记录来源页面（接受恒为 /about），
+      为将来在其它页面复用问卷预留扩展位。
+    - name/contact 可选——降低填写门槛，内容(content)为唯一必填字段。
+    - rating 1-5 整数评分，可选，用于快速量化满意度。
+    """
+
+    __tablename__ = "feedback_records"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=True, comment="可选：用户称呼")
+    contact = Column(String(200), nullable=True, comment="可选：联系方式（邮箱/微信等）")
+    content = Column(Text, nullable=False, comment="反馈内容（必填）")
+    rating = Column(Integer, nullable=True, comment="评分 1-5，可选")
+    page = Column(String(50), nullable=True, comment="来源页面路径，如 /about")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -1,7 +1,8 @@
-.PHONY: install build gen-api gen-all sync-check serve mcp-serve celery dev lint format typecheck \
-        test check ruff ruff-fix ruff-format pyright \
+.PHONY: install build preview gen-api gen-all sync-check serve mcp-serve celery dev lint format typecheck \
+        test test-engine test-agent test-contract check ruff ruff-fix ruff-format pyright \
         dc-up dc-logs dc-ps dc-restart dc-build deploy-up deploy-down \
         dc-migration migrate \
+        docs docs-serve \
         clean help
 
 # 裸 make 默认显示帮助（避免误触第一个目标 install 引发 npm ci 重装）
@@ -20,6 +21,9 @@ install: ## 一键安装前后端依赖
 
 build: ## 前端生产构建
 	cd frontend && npm run build
+
+preview: ## 预览前端生产构建（需先 make build）
+	cd frontend && npm run preview
 
 gen-api: ## 重新生成前端 API 类型（后端 schema 变更后执行）
 	cd frontend && npm run gen:api
@@ -99,6 +103,15 @@ check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类�
 test: ## 运行全部 Python 测试
 	.venv/bin/pytest
 
+test-engine: ## 引擎层测试（tests/test_engine/，改动引擎后按需运行）
+	.venv/bin/pytest tests/test_engine/
+
+test-agent: ## Agent 层测试（tests/test_agent/，改动 Agent 后按需运行）
+	.venv/bin/pytest tests/test_agent/
+
+test-contract: ## 契约测试（tests/test_contract/，改动工具/编排/API 契约后按需运行）
+	.venv/bin/pytest tests/test_contract/
+
 # ======== Docker ========
 
 dc-up: ## 启动基础设施（PostgreSQL + Redis，后台）
@@ -128,10 +141,20 @@ dc-migration: ## 生成数据库迁移脚本（对比 models.py，需 docker com
 migrate: ## 应用数据库迁移到最新版本（需 docker compose up -d）
 	.venv/bin/alembic upgrade head
 
+# ======== 文档 ========
+
+docs: ## 构建 Sphinx 文档站（输出到 docs/_build/html）
+	@echo '==> sphinx-build（文档站）'
+	.venv/bin/sphinx-build docs docs/_build/html
+
+docs-serve: ## 本地预览文档站（需先 make docs，http://localhost:8001）
+	@echo '文档站已启动：http://localhost:8001'
+	cd docs/_build/html && python -m http.server 8001
+
 # ======== 工具 ========
 
 clean: ## 清理构建缓存与临时文件
-	rm -rf frontend/dist .pytest_cache .ruff_cache frontend/node_modules/.vite
+	rm -rf frontend/dist .pytest_cache .ruff_cache frontend/node_modules/.vite docs/_build
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 help: ## 显示此帮助信息

@@ -35,12 +35,12 @@ jobs:
             --exclude='.git' \
             ./ $DEPLOY_TARGET:~/TravelPal/
 
-      - name: Run database migrations
-        run: |
-          ssh $DEPLOY_TARGET \
-            "cd ~/TravelPal && docker compose run --rm backend alembic upgrade head"
-
       - name: Build & restart
         run: |
           ssh $DEPLOY_TARGET \
             "cd ~/TravelPal && docker compose build && docker compose up -d"
+
+      - name: Run database migrations
+        run: |
+          ssh $DEPLOY_TARGET \
+            "cd ~/TravelPal && docker compose run --rm backend alembic upgrade head"

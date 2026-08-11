@@ -16,7 +16,10 @@
 - 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
 - 🏗️ 架构总览：[ARCHITECTURE.md](ARCHITECTURE.md)（C4 图）
 - 📦 版本记录：[Releases](https://github.com/xiaojiune/TravelPal/releases)（tag 驱动自动生成）
-- 🟠 橙色徽章 = 新功能预发布 · 🔵 蓝色徽章 = 稳定版已部署，[🌐 在线体验](https://trippal.site)
+
+📌 **版本状态**
+- 🟠 橙色徽章 = 新功能预发布，[🌐 前往 dev 预览](https://github.com/xiaojiune/TravelPal/tree/dev)
+- 🔵 蓝色徽章 = 稳定版已部署，[🌐 在线体验](https://trippal.site)
 
 🏷️ `AI 行程决策引擎 · 对话式共创 · 全栈工程化`
 

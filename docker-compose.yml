@@ -72,7 +72,7 @@ services:
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-worker
     logging: *default-logging
-    command: [".venv/bin/celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
+    command: ["celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
       CELERY_BROKER_URL: redis://redis:6379/0

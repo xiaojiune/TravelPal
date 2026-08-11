@@ -2,15 +2,13 @@
 
 **不占有的陪伴，不缺席的可靠。**
 
-> 一句话：基于约束求解的可执行旅行规划工具——你提需求，它算行程。
+> 基于约束求解的可执行旅行规划工具——你提需求，它算行程。
 
 [![在线体验](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
 [![License](https://img.shields.io/github/license/xiaojiune/TravelPal)](LICENSE)
 
-<!-- 📸 主界面截图占位：将图片放入 docs/images/screenshots/ 后，在此添加：
-![TravelPal 主界面](docs/images/screenshots/home.png)
--->
+<img src="docs/images/screenshots/HomePage.png" alt="TravelPal 主界面" width="800" />
 
 📌 **入口**
 - 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
@@ -139,7 +137,7 @@ make deploy-up
 本地数据库依赖通过 Docker 启动（无需本地安装）：
 
 ```bash
-docker compose up -d postgres redis
+make dc-up
 ```
 
 ```bash

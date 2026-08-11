@@ -15,7 +15,11 @@ from backend.observability import http_duration, http_requests, metrics_response
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期：启动时创建数据库表，关闭时释放连接池。
+    """应用生命周期：按 DB_INIT_MODE 决定是否自动建表，关闭时释放连接池。
+
+    - DB_INIT_MODE=create（默认，本地开发）：启动时执行 create_all 自动建表。
+    - DB_INIT_MODE=none（生产 Docker）：由 alembic 迁移管理 schema，启动不建表，
+      避免 create_all 与迁移双轨冲突（见 deploy.yml 迁移步骤）。
 
     Args:
         app: FastAPI 应用实例。
@@ -23,7 +27,8 @@ async def lifespan(app: FastAPI):
     Yields:
         None: 应用运行期间 yield，退出后执行关闭逻辑。
     """
-    await init_db()
+    if settings.DB_INIT_MODE == "create":
+        await init_db()
     yield
     await close_db()
 

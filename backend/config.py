@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     PROMETHEUS_MULTIPROC_DIR: str = "/tmp/travelpal_metrics"
     # uvicorn 开发热重载开关
     DEV_RELOAD: bool = False
+    # 启动时是否自动建表：create=应用启动时执行 create_all（本地开发），
+    # none=不建表（生产由 alembic 迁移管理，避免双轨 schema 冲突）
+    DB_INIT_MODE: str = "create"
 
 
 settings = Settings()

@@ -47,6 +47,12 @@ def parse_time(s: str | None) -> tuple[int, int] | None: ...
 
 **行宽**：不超过 100 字符。
 
+**依赖分组约定**：新增依赖时必须按「生产镜像或部署流程是否需要它」判定分组。
+- `main` 组：生产运行与部署流程需要的工具（FastAPI / Celery / alembic / redis 等）
+- `dev` 组：仅限纯开发工具（pytest / ruff / pyright 等）
+- 判定标准：部署（`docker compose run --rm backend ...`）或 Dockerfile `poetry export`（仅导出 main 组）是否执行它——是则放 `main`，否则放 `dev`。
+- 反例（2026-08-11 事故）：alembic 曾误放 `dev` 组，导致 `docker compose run --rm backend alembic upgrade head` 在镜像内找不到可执行文件、部署失败。修复后加入本约定防再犯。
+
 **导入顺序**：标准库 → 第三方库 → 项目内部模块，各组之间空一行。函数内 import 需注释说明原因：
 
 ```python

@@ -1,6 +1,6 @@
-"""分词器 _tokenize() 单元测试。"""
+"""分词器 _tokenize() 单元测试（引擎位于基础设施层检索实现）。"""
 
-from backend.agent.tools.rag import _tokenize
+from backend.infrastructure.retrieval.bm25 import _tokenize
 
 
 class TestTokenize:

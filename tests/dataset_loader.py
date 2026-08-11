@@ -53,10 +53,11 @@ def _compute_mds_coords(cost_mat: np.ndarray) -> np.ndarray:
     """通过 MDS 将距离矩阵降维为二维坐标，用于景点位置展示"""
     mds = MDS(
         n_components=2,
-        metric=True,
-        dissimilarity="precomputed",
+        metric_mds=True,
+        metric="precomputed",
         random_state=42,
         n_init=4,
+        init="random",
         normalized_stress=False,
         max_iter=1000,
     )

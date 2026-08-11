@@ -4,6 +4,29 @@
  */
 
 export interface paths {
+    "/api/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Metrics
+         * @description Prometheus 指标端点：聚合 backend 与 celery worker 全部进程指标。
+         *
+         *     Returns:
+         *         Response: Prometheus 文本格式指标（Content-Type: text/plain; version=0.0.4）。
+         */
+        get: operations["metrics_api_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/poi-lookup": {
         parameters: {
             query?: never;
@@ -20,6 +43,12 @@ export interface paths {
          *     前端传入城市 + 名称列表，后端调用高德 POI 搜索 API，
          *     返回每个名称的坐标和地址。未找到的名称列入 failed 列表，
          *     若跨城市则附带建议地址。
+         *
+         *     Args:
+         *         req: POI 查询请求，含城市名和名称列表。
+         *
+         *     Returns:
+         *         POILookupResponse: 查询结果，items 为成功项，failed 为失败列表。
          */
         post: operations["poi_lookup_api_poi_lookup_post"];
         delete?: never;
@@ -39,15 +68,20 @@ export interface paths {
         put?: never;
         /**
          * Suggest
-         * @description 获取方案建议列表。
+         * @description 提交方案建议任务（异步执行）。
          *
-         *     不指定 n_days，run_planning 内部回退到 ca_suggest()，
-         *     遍历多种聚类方法 × 天数，返回 top-5 建议。
-         *     响应中附带 cost_matrix/dist_matrix，供后续深度规划
-         *     复用以跳过驾车 API 调用。
+         *     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
+         *     改为提交异步任务，立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。
+         *     实际求解在 Celery worker 中执行（复用 suggest 阶段缓存的矩阵则更快）。
+         *
+         *     Args:
+         *         req: 规划请求，n_days 不指定，mode 固定走建议模式。
+         *
+         *     Returns:
+         *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
          *
          *     Raises:
-         *         HTTPException 500: 建议搜索引擎内部错误。
+         *         HTTPException 500: 任务创建失败。
          */
         post: operations["suggest_api_suggest_post"];
         delete?: never;
@@ -67,15 +101,22 @@ export interface paths {
         put?: never;
         /**
          * Plan
-         * @description 执行完整规划，返回每日行程与高德地图可视化数据。
+         * @description 提交完整规划任务（异步执行）。
          *
          *     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
          *     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
-         *     则将矩阵作为 override 传给 run_planning，跳过驾车 API 调用。
+         *     则复用矩阵跳过驾车 API 调用，执行较快。
+         *     任务在 Celery worker 中执行，返回 task_id 供前端轮询。
+         *
+         *     Args:
+         *         req: 规划请求，含 n_days 与求解模式。
+         *
+         *     Returns:
+         *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
          *
          *     Raises:
          *         HTTPException 400: n_days 未指定时。
-         *         HTTPException 500: 规划引擎内部错误。
+         *         HTTPException 500: 任务创建失败。
          */
         post: operations["plan_api_plan_post"];
         delete?: never;
@@ -97,14 +138,192 @@ export interface paths {
          * Chat
          * @description LLM Agent 对话接口，SSE 流式输出。
          *
-         *     Mock 模式返回死 token，方便前端联调。
-         *     正式上线后设置 MOCK_MODE=False 即可切换 DeepSeek 真实调用。
+         *     编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
+         *     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
+         *
+         *     Args:
+         *         req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
+         *
+         *     Returns:
+         *         StreamingResponse: SSE 流式响应，逐 token 推送内容。
          *
          *     Raises:
          *         HTTPException 500: LLM 调用异常或数据格式错误。
          */
         post: operations["chat_api_chat_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List History
+         * @description 获取历史记录分页列表。
+         *
+         *     仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
+         *     不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
+         *
+         *     Args:
+         *         page: 页码，从 1 开始。
+         *         page_size: 每页条数，最大 100。
+         *
+         *     Returns:
+         *         HistoryListResponse: { items, total, page, page_size }。
+         */
+        get: operations["list_history_api_history_get"];
+        put?: never;
+        /**
+         * Create History
+         * @description 保存一条历史记录（分享方案到分享站）。
+         *
+         *     设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
+         *     这是软鉴权设计。核心考量：
+         *     1. 不引入注册/登录系统，保持访客零门槛
+         *     2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
+         *     3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+         *
+         *     Args:
+         *         req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+         *
+         *     Returns:
+         *         dict: { id: str } 新创建的记录 UUID。
+         *
+         *     Raises:
+         *         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
+         */
+        post: operations["create_history_api_history_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/history/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get History Detail
+         * @description 获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+         *
+         *     Args:
+         *         record_id: 记录 UUID。
+         *
+         *     Returns:
+         *         HistoryDetail: 含 plan_result/request_params 等完整字段。
+         *
+         *     Raises:
+         *         HTTPException 404: 记录不存在。
+         */
+        get: operations["get_history_detail_api_history__record_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete History
+         * @description 删除一条历史记录（需 device_id 匹配创建者）。
+         *
+         *     Args:
+         *         record_id: 记录 UUID。
+         *         req: HistoryDeleteRequest，包含 device_id。
+         *
+         *     Returns:
+         *         dict: { ok: true }
+         *
+         *     Raises:
+         *         HTTPException 404: 记录不存在。
+         *         HTTPException 403: device_id 不匹配，无权删除。
+         */
+        delete: operations["delete_history_api_history__record_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Feedback
+         * @description 保存一条用户反馈（/about 页面问卷）。
+         *
+         *     Args:
+         *         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
+         *         session: 数据库会话（依赖注入）。
+         *
+         *     Returns:
+         *         dict: { id: str } 新创建的反馈 UUID。
+         *
+         *     Raises:
+         *         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
+         */
+        post: operations["create_feedback_api_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Detail
+         * @description 获取异步规划任务的状态详情，供前端轮询。
+         *
+         *     status 四态：pending（排队中）/ running（执行中）/ done（成功）/ failed（失败）。
+         *     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
+         *     error 仅 failed 时存在。
+         *
+         *     Args:
+         *         task_id: 任务 UUID（由 POST /api/suggest 或 /api/plan 返回）。
+         *
+         *     Returns:
+         *         TaskDetail: { task_id, task_type, status, result?, error? }。
+         *
+         *     Raises:
+         *         HTTPException 404: 任务不存在。
+         */
+        get: operations["get_task_detail_api_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Task
+         * @description 删除一条异步规划任务记录（用户主动清理）。
+         *
+         *     任务历史默认保留，暂不做软删除/定期归档；
+         *     删除由用户主动发起，用于清理不再需要的任务。
+         *
+         *     Args:
+         *         task_id: 任务 UUID。
+         *
+         *     Returns:
+         *         dict: { ok: bool }。
+         *
+         *     Raises:
+         *         HTTPException 404: 任务不存在。
+         */
+        delete: operations["delete_task_api_tasks__task_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -120,6 +339,8 @@ export interface components {
          *
          *     message: 用户输入的消息。
          *     plan_result: 可选的规划结果上下文，供 Agent 参考。
+         *     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
+         *         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
          */
         ChatRequest: {
             /**
@@ -134,11 +355,164 @@ export interface components {
             plan_result?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Form Context
+             * @description 表单输入快照（城市/酒店/景点）
+             */
+            form_context?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * FeedbackCreate
+         * @description 用户反馈提交请求体。
+         *
+         *     问卷固定在 /about 页面：name/contact/rating 均可选以降低填写门槛，
+         *     content 为唯一必填字段。page 由前端自动记录来源页面路径（接受恒为 /about）。
+         */
+        FeedbackCreate: {
+            /**
+             * Name
+             * @description 用户称呼（可选）
+             */
+            name?: string | null;
+            /**
+             * Contact
+             * @description 联系方式（可选）
+             */
+            contact?: string | null;
+            /**
+             * Content
+             * @description 反馈内容（必填）
+             */
+            content: string;
+            /**
+             * Rating
+             * @description 评分 1-5（可选）
+             */
+            rating?: number | null;
+            /**
+             * Page
+             * @description 来源页面路径，如 /about
+             */
+            page?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HistoryCreate
+         * @description 保存历史记录的请求体。
+         *
+         *     device_id 由前端 localStorage 生成，仅用于删除鉴权。
+         *     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
+         *     request_params 为用户输入参数，方便复现。
+         */
+        HistoryCreate: {
+            /**
+             * Device Id
+             * @description 匿名设备标识
+             */
+            device_id?: string | null;
+            /**
+             * Note
+             * @description 用户备注
+             */
+            note?: string | null;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * HistoryDeleteRequest
+         * @description 删除历史记录的请求体，需与创建时的 device_id 一致。
+         */
+        HistoryDeleteRequest: {
+            /** Device Id */
+            device_id: string;
+        };
+        /**
+         * HistoryDetail
+         * @description 历史记录完整信息，含全量 plan_result。
+         */
+        HistoryDetail: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * HistoryListResponse
+         * @description 历史记录分页列表响应。
+         */
+        HistoryListResponse: {
+            /** Items */
+            items: components["schemas"]["HistorySummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * HistorySummary
+         * @description 历史记录列表中的摘要信息。
+         */
+        HistorySummary: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Created At */
+            created_at: string;
         };
         /**
          * POIItem
@@ -340,6 +714,200 @@ export interface components {
              */
             late_return_weight: number;
         };
+        /**
+         * PlanResult
+         * @description plan 任务完成时的完整响应（TaskDetail.result）。
+         *
+         *     对应 run_planning 求解分支 + celery_app 注入的高德 JS Key。
+         *     注意后端不返回 type 字段，前端自行构造展示标记。
+         */
+        PlanResult: {
+            solution: components["schemas"]["PlanSolution"];
+            /** Mode */
+            mode?: string | null;
+            /** Best Days */
+            best_days: number;
+            /** Best M */
+            best_m: string;
+            /** Spots */
+            spots: {
+                [key: string]: components["schemas"]["SpotDictItem"];
+            };
+            /** Dataset Name */
+            dataset_name?: string | null;
+            /** Algo Time */
+            algo_time: number;
+            /** Daily Schedules */
+            daily_schedules: components["schemas"]["ScheduleItem"][][];
+            /** Cost Matrix */
+            cost_matrix?: number[][] | null;
+            /** Dist Matrix */
+            dist_matrix?: number[][] | null;
+            /** Polylines */
+            polylines: {
+                [key: string]: string;
+            };
+            /** Commentary */
+            commentary?: string | null;
+            /** Amap Api Key */
+            amap_api_key?: string | null;
+            /** Amap Security Code */
+            amap_security_code?: string | null;
+        };
+        /**
+         * PlanSolution
+         * @description 规划求解结果（PlanResult.solution 字段）。
+         */
+        PlanSolution: {
+            /** Routes */
+            routes: number[][];
+            /** Histories */
+            histories?: number[][] | null;
+            /** Total Cost */
+            total_cost: number;
+            /** Total Dist */
+            total_dist: number;
+            /** Wait */
+            wait: number;
+            /** Late */
+            late: number;
+            /** Valid */
+            valid: boolean;
+        };
+        /**
+         * ScheduleItem
+         * @description 每日行程中的一条记录（result.daily_schedules 元素）。
+         *
+         *     stay 为展示字符串（如 "180 min" 或 "-"），arrival/departure 为距午夜分钟数。
+         */
+        ScheduleItem: {
+            /** Name */
+            name: string;
+            /** Arrival */
+            arrival: number;
+            /** Departure */
+            departure: number;
+            /** Tw */
+            tw: string;
+            /** Stay */
+            stay: string;
+            /** Arrival Status */
+            arrival_status: string;
+            /** Departure Status */
+            departure_status: string;
+        };
+        /**
+         * SpotDictItem
+         * @description 规划结果中的景点/酒店字典项（result.spots 字段值）。
+         *
+         *     与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+         *     (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
+         */
+        SpotDictItem: {
+            /** Name */
+            name: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Tw */
+            tw: number[];
+            /** Stay */
+            stay: number;
+            /** Original Tw */
+            original_tw: number[];
+            /** Lon */
+            lon?: number | null;
+            /** Lat */
+            lat?: number | null;
+            /** Expected Arrival */
+            expected_arrival?: number | null;
+        };
+        /**
+         * SuggestResult
+         * @description suggest 任务完成时的完整响应（TaskDetail.result）。
+         *
+         *     对应 run_planning 建议分支 + celery_app 注入的高德 JS Key。
+         *     不含 cost_matrix/dist_matrix：矩阵已由后端驾车快照缓存托管
+         *     （ADR-008 轴 4 缓存策略），前端不再持有/复用矩阵。
+         */
+        SuggestResult: {
+            /**
+             * Type
+             * @default suggestion
+             */
+            type: string;
+            /** Suggestions */
+            suggestions: components["schemas"]["SuggestionItem"][];
+            /** Algo Time */
+            algo_time: number;
+            /** Spots */
+            spots: {
+                [key: string]: components["schemas"]["SpotDictItem"];
+            };
+            /** Polylines */
+            polylines: {
+                [key: string]: string;
+            };
+            /** Amap Api Key */
+            amap_api_key: string;
+            /** Amap Security Code */
+            amap_security_code: string;
+            /** Message */
+            message?: string | null;
+        };
+        /**
+         * SuggestionItem
+         * @description 方案建议项（SuggestResult.suggestions 列表元素）。
+         *
+         *     daily_schedules 由 pipeline 在 suggest 阶段补全，老任务数据可能缺失。
+         */
+        SuggestionItem: {
+            /** N Days */
+            n_days: number;
+            /** Method */
+            method: string;
+            /** Cost */
+            cost: number;
+            /** Total Dist */
+            total_dist: number;
+            /** Wait */
+            wait: number;
+            /** Late */
+            late: number;
+            /** Routes */
+            routes: number[][];
+            /** Daily Schedules */
+            daily_schedules?: components["schemas"]["ScheduleItem"][][] | null;
+        };
+        /**
+         * TaskDetail
+         * @description 异步规划任务的状态详情，供前端轮询。
+         *
+         *     status 为 pending/running/done/failed 四态。
+         *     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
+         *     error 仅 failed 时存在。
+         */
+        TaskDetail: {
+            /** Task Id */
+            task_id: string;
+            /** Task Type */
+            task_type: string;
+            /** Status */
+            status: string;
+            /** Result */
+            result?: components["schemas"]["SuggestResult"] | components["schemas"]["PlanResult"] | null;
+            /** Error */
+            error?: string | null;
+        };
+        /**
+         * TaskSubmitResponse
+         * @description 提交异步规划任务后返回的响应，前端据此轮询任务状态。
+         */
+        TaskSubmitResponse: {
+            /** Task Id */
+            task_id: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -362,6 +930,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    metrics_api_metrics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
     poi_lookup_api_poi_lookup_post: {
         parameters: {
             query?: never;
@@ -414,7 +1002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskSubmitResponse"];
                 };
             };
             /** @description Validation Error */
@@ -447,7 +1035,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["TaskSubmitResponse"];
                 };
             };
             /** @description Validation Error */
@@ -473,6 +1061,232 @@ export interface operations {
                 "application/json": components["schemas"]["ChatRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_history_api_history_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_history_api_history_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistoryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_history_detail_api_history__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_history_api_history__record_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistoryDeleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_feedback_api_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_detail_api_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_task_api_tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

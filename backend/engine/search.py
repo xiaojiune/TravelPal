@@ -9,49 +9,8 @@ from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
 from backend.engine.vns import VNSSolver
 from backend.typedefs import RouteResult, SpotDict
-from backend.utils.decorators import placeholder
 
 # ================== 分组求解 ==================
-
-
-# 装饰器定义见 backend/utils/decorators.py
-# 说明：令每天停留时间均衡，当前仅被 adjust_plan 调用（未接入）
-@placeholder
-def balance_groups(groups: list, spots: dict[int, SpotDict], depot: int = 0) -> list:
-    """
-    强制均衡分组，确保每天的总停留时间接近。
-
-    将景点按停留时间贪心分配到当前负荷最小的天，
-    尽可能让每天的停留时间均匀分布。
-
-    Args:
-        groups: 原始分组（不含 depot），每组为景点索引列表。
-        spots: 景点字典，键为索引，值为含 stay 字段的属性。
-        depot: depot 索引，默认 0。
-
-    Returns:
-        均衡后的分组列表，每组含首尾 depot。
-    """
-    all_spots = []
-    for g in groups:
-        for node in g:
-            if node != depot and node not in all_spots:
-                all_spots.append(node)
-
-    k = len(groups)
-    new_groups = [[] for _ in range(k)]
-    day_loads: list[float] = [0.0] * k
-
-    for spot in all_spots:
-        stay = spots[spot]["stay"]
-        min_idx = min(range(k), key=lambda i: day_loads[i])
-        new_groups[min_idx].append(spot)
-        day_loads[min_idx] += stay
-
-    balanced = [[depot] + core + [depot] for core in new_groups]
-    final_loads = [sum(spots[n]["stay"] for n in g if n != depot) for g in balanced]
-    print(f"  均衡后每日停留负荷: {final_loads}, 目标均值: {sum(final_loads) / k:.0f} min")
-    return balanced
 
 
 def solve_groups(
@@ -309,8 +268,13 @@ def _solve_best(
     for method_name, method_func in CLUSTER_METHODS:
         groups = call_cluster(method_func, spots, depot, n_days, cost_mat)
         res = solve_groups(
-            groups, spots, cost_mat, solver_type,
-            penalty_weight, early_wait_weight, late_return_weight,
+            groups,
+            spots,
+            cost_mat,
+            solver_type,
+            penalty_weight,
+            early_wait_weight,
+            late_return_weight,
         )
         if len(res["routes"]) != n_days:
             continue
@@ -365,13 +329,19 @@ def cluster_and_solve(
     """
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
-        return _solve_best(spots, depot, cost_mat, solver_type, n_days,
-                           penalty_weight, early_wait_weight, late_return_weight)
+        return _solve_best(
+            spots, depot, cost_mat, solver_type, n_days, penalty_weight, early_wait_weight, late_return_weight
+        )
 
     if mode == "deep":
         raise ValueError("深度模式(VNS)需要指定 n_days，请先通过 ca_suggest() 获取建议")
 
-    return ca_suggest(spots, depot, cost_mat, min_days=min_days,
-                      penalty_weight=penalty_weight,
-                      early_wait_weight=early_wait_weight,
-                      late_return_weight=late_return_weight)
+    return ca_suggest(
+        spots,
+        depot,
+        cost_mat,
+        min_days=min_days,
+        penalty_weight=penalty_weight,
+        early_wait_weight=early_wait_weight,
+        late_return_weight=late_return_weight,
+    )

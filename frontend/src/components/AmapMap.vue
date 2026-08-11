@@ -1,5 +1,6 @@
 <template>
-  <div ref="container" class="amap-container"></div>
+  <div v-if="mapError" class="map-error">{{ mapError }}</div>
+  <div v-else ref="container" class="amap-container"></div>
 </template>
 
 <script setup lang="ts">
@@ -15,7 +16,16 @@ import { ref, watch, onMounted, onBeforeUnmount, onActivated, nextTick } from 'v
 import type { SpotDictItem, ScheduleItem } from '@/types'
 
 /** 每日路线配色轮换，避免相邻日颜色冲突。从旧项目 ROUTE_COLORS 迁移。 */
-const ROUTE_COLORS = ['#FF3030', '#4169E1', '#32CD32', '#FF8C00', '#9370DB', '#00CED1', '#FFD700', '#FF69B4']
+const ROUTE_COLORS = [
+  '#FF3030',
+  '#4169E1',
+  '#32CD32',
+  '#FF8C00',
+  '#9370DB',
+  '#00CED1',
+  '#FFD700',
+  '#FF69B4',
+]
 
 /**
  * 景点 emoji 映射：按名称关键词匹配返回对应 emoji。
@@ -57,13 +67,14 @@ function _getIcon(name: string): string {
  * 返回 [lng, lat] 坐标数组。
  */
 function parsePolyline(str: string): [number, number][] {
-  return str.split(';').filter(Boolean).map(pair => {
-    const [lng, lat] = pair.split(',')
-    return [parseFloat(lng), parseFloat(lat)]
-  })
+  return str
+    .split(';')
+    .filter(Boolean)
+    .map((pair) => {
+      const [lng, lat] = pair.split(',')
+      return [parseFloat(lng), parseFloat(lat)]
+    })
 }
-
-
 
 interface Props {
   /** 每日路线列表，每组为景点索引序列（含首尾 depot 0） */
@@ -94,26 +105,35 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const container = ref<HTMLDivElement | null>(null)
+// 地图加载/初始化失败的降级提示（如 key 失效、网络不可达）
+const mapError = ref('')
 let map: any = null
 let overlays: any[] = []
 let markerMap: Record<string, any> = {}
 let infoWindow: any = null
-let amapLoaded = false
 
-/** 动态加载高德 JS API（v2.0），避免重复加载。 */
+/** 动态加载高德 JS API（v2.0），避免重复加载；失败时 reject 供上层降级。 */
 function loadAmapScript() {
-  return new Promise<void>((resolve) => {
-    if (window.AMap) { amapLoaded = true; resolve(); return }
+  return new Promise<void>((resolve, reject) => {
+    if (window.AMap) {
+      resolve()
+      return
+    }
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${props.amapKey}`
-    script.onload = () => { amapLoaded = true; resolve() }
+    script.onload = () => {
+      resolve()
+    }
+    script.onerror = () => {
+      reject(new Error('高德地图脚本加载失败'))
+    }
     document.head.appendChild(script)
   })
 }
 
 /** 清除所有覆盖物（标记 + 路径），保持 overlays 列表与地图同步。 */
 function clearOverlays() {
-  overlays.forEach(o => map?.remove(o))
+  overlays.forEach((o) => map?.remove(o))
   overlays = []
   markerMap = {}
 }
@@ -175,19 +195,20 @@ function render() {
     }
     overlays.push(marker)
     map.add(marker)
-    if (spot?.name) markerMap[spot.name] = marker  // 供左右联动按名查找
+    if (spot?.name) markerMap[spot.name] = marker // 供左右联动按名查找
   })
 
   // 绘制每日驾车路径（每条路段独立 Polyline，无 polyline 数据时不绘制）
   ;(props.routes as number[][]).forEach((route, di) => {
-    if (props.highlightDays.length > 0 && !props.highlightDays.includes(di)) return  // 非高亮日完全隐藏
+    if (props.highlightDays.length > 0 && !props.highlightDays.includes(di)) return // 非高亮日完全隐藏
     const color = ROUTE_COLORS[di % ROUTE_COLORS.length]
 
     for (let i = 0; i < route.length - 1; i++) {
-      const fromIdx = route[i]; const toIdx = route[i + 1]
-      if (toIdx === 0) continue  // 跳过返回酒店的末段，仅计算成本不绘制
+      const fromIdx = route[i]
+      const toIdx = route[i + 1]
+      if (toIdx === 0) continue // 跳过返回酒店的末段，仅计算成本不绘制
       const key = `${fromIdx}_${toIdx}`
-      if (!props.polylines?.[key]) continue  // 无真实路径数据时不画该段
+      if (!props.polylines?.[key]) continue // 无真实路径数据时不画该段
       const pts = parsePolyline(props.polylines[key])
       if (pts.length < 2) continue
 
@@ -223,45 +244,49 @@ function render() {
 }
 
 onMounted(async () => {
-  console.log('[map] mount start, container:', container.value?.offsetHeight)
-  if (!props.amapKey) return
-  await loadAmapScript()
-  if (!amapLoaded) return
-  await nextTick()
-  if (props.securityCode && window.AMap) {
-    window.AMap.securityCode = props.securityCode
+  if (!props.amapKey) {
+    mapError.value = '未配置高德地图 Key，无法展示地图'
+    return
   }
-  if (container.value?.offsetHeight === 0) {
-    console.log('[map] awaiting resize...')
-    await new Promise<void>(resolve => {
-      const ro = new ResizeObserver(() => {
-        if (container.value?.offsetHeight) {
-          ro.disconnect()
-          resolve()
-        }
+  try {
+    await loadAmapScript()
+    await nextTick()
+    if (props.securityCode && window.AMap) {
+      window.AMap.securityCode = props.securityCode
+    }
+    if (container.value?.offsetHeight === 0) {
+      await new Promise<void>((resolve) => {
+        const ro = new ResizeObserver(() => {
+          if (container.value?.offsetHeight) {
+            ro.disconnect()
+            resolve()
+          }
+        })
+        ro.observe(container.value!)
       })
-      ro.observe(container.value!)
+    }
+    map = new AMap.Map(container.value, {
+      zoom: 13,
+      resizeEnable: true,
+      zooms: [3, 18],
     })
+    AMap.plugin('AMap.ToolBar', () => {
+      map.addControl(new AMap.ToolBar())
+    })
+    infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) }) // 偏移避免遮挡标记
+    await nextTick()
+    render()
+    map.resize()
+  } catch {
+    mapError.value = '地图加载失败，请检查网络后重试'
   }
-  console.log('[map] init AMap, height=' + container.value?.offsetHeight)
-  map = new AMap.Map(container.value, {
-    zoom: 13,
-    resizeEnable: true,
-    zooms: [3, 18],
-  })
-  AMap.plugin('AMap.ToolBar', () => {
-    map.addControl(new AMap.ToolBar())
-  })
-  infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -30) })  // 偏移避免遮挡标记
-  console.log('[map] AMap init done, rendering...')
-  await nextTick()
-  render()
-  map.resize()
 })
 
 onBeforeUnmount(() => {
-  console.log('[map] unmount')
-  if (map) { map.destroy(); map = null }
+  if (map) {
+    map.destroy()
+    map = null
+  }
 })
 
 onActivated(() => {
@@ -269,19 +294,37 @@ onActivated(() => {
 })
 
 // 任意地图数据变化时重新渲染
-watch(() => [props.routes, props.spots, props.polylines, props.highlightDays], render, { deep: true })
+watch(() => [props.routes, props.spots, props.polylines, props.highlightDays], render, {
+  deep: true,
+})
 
 /** 左右联动：行程表点击景点 → 对应 marker 弹跳 + 居中 */
-watch(() => props.highlightSpot, (name) => {
-  if (!map) return
-  Object.values(markerMap).forEach((m: any) => m.setAnimation())
-  if (name && markerMap[name]) {
-    markerMap[name].setAnimation('AMAP_ANIMATION_BOUNCE')
-    map.setCenter(markerMap[name].getPosition())
-  }
-})
+watch(
+  () => props.highlightSpot,
+  (name) => {
+    if (!map) return
+    Object.values(markerMap).forEach((m: any) => m.setAnimation())
+    if (name && markerMap[name]) {
+      markerMap[name].setAnimation('AMAP_ANIMATION_BOUNCE')
+      map.setCenter(markerMap[name].getPosition())
+    }
+  },
+)
 </script>
 
 <style scoped>
-.amap-container { width: 100%; height: 100%; }
+.amap-container {
+  width: 100%;
+  height: 100%;
+}
+.map-error {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--tp-text-2);
+  background: var(--tp-bg);
+}
 </style>

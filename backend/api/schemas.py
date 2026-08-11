@@ -124,10 +124,13 @@ class ChatRequest(BaseModel):
 
     message: 用户输入的消息。
     plan_result: 可选的规划结果上下文，供 Agent 参考。
+    form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
+        Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
     """
 
     message: str = Field(min_length=1, description="用户输入的消息")
     plan_result: dict | None = Field(default=None, description="规划结果上下文")
+    form_context: dict | None = Field(default=None, description="表单输入快照（城市/酒店/景点）")
 
 
 # ================== 方案调整 ==================
@@ -209,3 +212,149 @@ class HistoryDeleteRequest(BaseModel):
     """删除历史记录的请求体，需与创建时的 device_id 一致。"""
 
     device_id: str
+
+
+# ================== 异步规划任务 ==================
+
+
+class SpotDictItem(BaseModel):
+    """规划结果中的景点/酒店字典项（result.spots 字段值）。
+
+    与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+    (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
+    """
+
+    name: str
+    x: float
+    y: float
+    tw: list[float]
+    stay: float
+    original_tw: list[float]
+    lon: float | None = None
+    lat: float | None = None
+    expected_arrival: float | None = None
+
+
+class ScheduleItem(BaseModel):
+    """每日行程中的一条记录（result.daily_schedules 元素）。
+
+    stay 为展示字符串（如 "180 min" 或 "-"），arrival/departure 为距午夜分钟数。
+    """
+
+    name: str
+    arrival: int
+    departure: int
+    tw: str
+    stay: str
+    arrival_status: str
+    departure_status: str
+
+
+class PlanSolution(BaseModel):
+    """规划求解结果（PlanResult.solution 字段）。"""
+
+    routes: list[list[int]]
+    histories: list[list[float]] | None = None
+    total_cost: float
+    total_dist: float
+    wait: float
+    late: float
+    valid: bool
+
+
+class SuggestionItem(BaseModel):
+    """方案建议项（SuggestResult.suggestions 列表元素）。
+
+    daily_schedules 由 pipeline 在 suggest 阶段补全，老任务数据可能缺失。
+    """
+
+    n_days: int
+    method: str
+    cost: float
+    total_dist: float
+    wait: float
+    late: float
+    routes: list[list[int]]
+    daily_schedules: list[list[ScheduleItem]] | None = None
+
+
+class SuggestResult(BaseModel):
+    """suggest 任务完成时的完整响应（TaskDetail.result）。
+
+    对应 run_planning 建议分支 + celery_app 注入的高德 JS Key。
+    不含 cost_matrix/dist_matrix：矩阵已由后端驾车快照缓存托管
+    （ADR-008 轴 4 缓存策略），前端不再持有/复用矩阵。
+    """
+
+    type: str = "suggestion"
+    suggestions: list[SuggestionItem]
+    algo_time: float
+    spots: dict[str, SpotDictItem]
+    polylines: dict[str, str]
+    amap_api_key: str
+    amap_security_code: str
+    message: str | None = None
+
+
+class PlanResult(BaseModel):
+    """plan 任务完成时的完整响应（TaskDetail.result）。
+
+    对应 run_planning 求解分支 + celery_app 注入的高德 JS Key。
+    注意后端不返回 type 字段，前端自行构造展示标记。
+    """
+
+    solution: PlanSolution
+    mode: str | None = None
+    best_days: int
+    best_m: str
+    spots: dict[str, SpotDictItem]
+    dataset_name: str | None = None
+    algo_time: float
+    daily_schedules: list[list[ScheduleItem]]
+    cost_matrix: list[list[float]] | None = None
+    dist_matrix: list[list[float]] | None = None
+    polylines: dict[str, str]
+    commentary: str | None = None
+    amap_api_key: str | None = None
+    amap_security_code: str | None = None
+
+
+TaskResult = SuggestResult | PlanResult
+
+
+class TaskSubmitResponse(BaseModel):
+    """提交异步规划任务后返回的响应，前端据此轮询任务状态。"""
+
+    task_id: str
+
+
+class TaskDetail(BaseModel):
+    """异步规划任务的状态详情，供前端轮询。
+
+    status 为 pending/running/done/failed 四态。
+    result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
+    error 仅 failed 时存在。
+    """
+
+    task_id: str
+    task_type: str
+    status: str
+    result: TaskResult | None = None
+    error: str | None = None
+
+
+# ================== 用户反馈（问卷） ==================
+
+
+class FeedbackCreate(BaseModel):
+    """用户反馈提交请求体。
+
+    问卷固定在 /about 页面：name/contact/rating 均可选以降低填写门槛，
+    content 为唯一必填字段。page 由前端自动记录来源页面路径（接受恒为 /about）。
+    """
+
+    name: str | None = Field(default=None, max_length=100, description="用户称呼（可选）")
+    contact: str | None = Field(default=None, max_length=200, description="联系方式（可选）")
+    content: str = Field(min_length=1, max_length=2000, description="反馈内容（必填）")
+    rating: int | None = Field(default=None, ge=1, le=5, description="评分 1-5（可选）")
+    page: str | None = Field(default=None, max_length=50, description="来源页面路径，如 /about")

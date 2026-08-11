@@ -3,7 +3,7 @@
 不启动服务器即生成 openapi.json，供 openapi-typescript 等前端工具使用。
 
 用法:
-    python -m backend.tools.gen_openapi
+    python -m backend.utils.gen_openapi
 """
 
 import json

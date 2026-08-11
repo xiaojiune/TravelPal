@@ -18,10 +18,7 @@ jobs:
           key: ${{ secrets.SERVER_DEPLOY_KEY }}
           known_hosts: ${{ secrets.SERVER_KNOWN_HOSTS }}
 
-      - name: Test SSH connection
-        run: ssh $DEPLOY_TARGET "echo 'Connected'"
-
-      - name: Verify deploy key
+      - name: Verify SSH connection
         run: ssh $DEPLOY_TARGET "echo 'SSH OK'"
 
       - name: Rsync to server
@@ -37,6 +34,11 @@ jobs:
             --exclude='frontend/dist' \
             --exclude='.git' \
             ./ $DEPLOY_TARGET:~/TravelPal/
+
+      - name: Run database migrations
+        run: |
+          ssh $DEPLOY_TARGET \
+            "cd ~/TravelPal && docker compose run --rm backend alembic upgrade head"
 
       - name: Build & restart
         run: |

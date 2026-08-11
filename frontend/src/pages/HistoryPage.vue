@@ -3,16 +3,25 @@
     <h2>方案分享站</h2>
     <p class="subtitle">其他访客分享的行程方案，点击可直接查看完整规划。</p>
 
-    <div v-if="loading" class="loading">加载中...</div>
+    <div v-if="loading" class="loading">
+      <n-spin size="small" />
+      <span>加载中...</span>
+    </div>
 
     <div v-else-if="items.length === 0" class="empty">
-      <p>暂无分享的方案。</p>
-      <router-link to="/" class="btn btn-primary">去规划</router-link>
+      <n-empty description="暂无分享的方案">
+        <template #extra>
+          <router-link to="/"><n-button type="primary">去规划</n-button></router-link>
+        </template>
+      </n-empty>
     </div>
 
     <template v-else>
       <div class="history-list">
         <div v-for="r in items" :key="r.id" class="history-card" @click="viewRecord(r)">
+          <n-button text :focusable="false" class="btn-delete" @click.stop="deleteRecord(r)"
+            >×</n-button
+          >
           <div class="h-main">
             <span class="h-city">{{ r.city }}</span>
             <span class="h-days">{{ r.n_days }} 天</span>
@@ -24,14 +33,11 @@
             <span v-if="r.note" class="h-note">{{ r.note }}</span>
             <span>{{ formatTime(r.created_at) }}</span>
           </div>
-          <button class="btn-delete" @click.stop="deleteRecord(r)">×</button>
         </div>
       </div>
 
-      <div v-if="totalPages > 1" class="pagination">
-        <button :disabled="page <= 1" @click="goPage(page - 1)">‹ 上一页</button>
-        <span>{{ page }} / {{ totalPages }}</span>
-        <button :disabled="page >= totalPages" @click="goPage(page + 1)">下一页 ›</button>
+      <div class="pagination">
+        <n-pagination :page="page" :page-count="totalPages" @update:page="goPage" />
       </div>
     </template>
   </div>
@@ -41,13 +47,17 @@
 /** 历史记录页：方案分享站，支持分页列表、查看详情、删除（device_id 鉴权）。 */
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { getHistoryList, getHistoryDetail, deleteHistory, getDeviceId } from '@/services/api'
 import type { HistorySummary } from '@/services/api'
+import type { PlanResult } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
 const store = usePlanStore()
+const message = useMessage()
+const dialog = useDialog()
 
 const items = ref<HistorySummary[]>([])
 const loading = ref(true)
@@ -84,66 +94,139 @@ function goPage(p: number) {
 async function viewRecord(r: HistorySummary) {
   try {
     const detail = await getHistoryDetail(r.id)
-    store.planResult = detail.plan_result as any
+    store.planResult = detail.plan_result as PlanResult
     store.historyRecordId = r.id
     store.historyRequestParams = detail.request_params as Record<string, unknown> | null
     router.push('/plan')
   } catch {
-    alert('加载方案详情失败，请稍后重试。')
+    message.error('加载方案详情失败，请稍后重试。')
   }
 }
 
-async function deleteRecord(r: HistorySummary) {
-  if (!confirm(`确定删除 ${r.city} ${r.n_days} 日游的分享？`)) return
-  try {
-    await deleteHistory(r.id, getDeviceId())
-    items.value = items.value.filter(x => x.id !== r.id)
-    total.value--
-  } catch {
-    alert('删除失败，可能不是你分享的方案。')
-  }
+function deleteRecord(r: HistorySummary) {
+  dialog.warning({
+    title: '删除分享',
+    content: `确定删除 ${r.city} ${r.n_days} 日游的分享？`,
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await deleteHistory(r.id, getDeviceId())
+        items.value = items.value.filter((x) => x.id !== r.id)
+        total.value--
+        // 删除当前页最后一条记录后页码回退，避免落到空页
+        if (items.value.length === 0 && page.value > 1) {
+          page.value--
+          await loadList()
+        }
+      } catch {
+        message.error('删除失败，可能不是你分享的方案。')
+      }
+    },
+  })
 }
 
-watch(() => route.path, (path) => {
-  if (path === '/history') loadList()
-}, { immediate: true })
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/history') loadList()
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
-.page-history { max-width: 800px; margin: 0 auto; }
-.subtitle { font-size: 13px; color: #888; margin-top: -8px; margin-bottom: 20px; }
-.loading { text-align: center; padding: 60px 0; color: #999; }
-.empty { text-align: center; padding: 60px 0; color: #999; }
-.empty .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
-.history-list { display: flex; flex-direction: column; gap: 8px; }
+.page-history {
+  max-width: 800px;
+  margin: 0;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--tp-text-3);
+  margin-top: -8px;
+  margin-bottom: 20px;
+}
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 60px 0;
+  color: var(--tp-text-3);
+}
+.empty {
+  display: flex;
+  justify-content: center;
+  padding: 60px 0;
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .history-card {
   position: relative;
-  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
-  padding: 14px 18px; cursor: pointer; transition: box-shadow .15s;
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  cursor: pointer;
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
 }
-.history-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.h-main { display: flex; gap: 16px; align-items: center; }
-.h-city { font-size: 16px; font-weight: 700; color: #1a73e8; }
-.h-days { background: #e8f0fe; color: #1a73e8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-.h-cost { font-size: 14px; color: #333; }
-.h-spots { font-size: 12px; color: #888; }
-.h-meta { margin-top: 4px; font-size: 11px; color: #aaa; display: flex; gap: 12px; flex-wrap: wrap; }
-.h-note { font-style: italic; color: #888; }
+.history-card:hover {
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
+}
+.h-main {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.h-city {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tp-primary);
+}
+.h-days {
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.h-cost {
+  font-size: 14px;
+  color: var(--tp-text);
+}
+.h-spots {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
+.h-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--tp-text-3);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.h-note {
+  font-style: italic;
+  color: var(--tp-text-3);
+}
 .btn-delete {
-  position: absolute; top: 8px; right: 10px;
-  background: none; border: none; font-size: 18px; color: #ccc; cursor: pointer;
-  line-height: 1; padding: 0 4px;
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  color: var(--tp-text-3);
 }
-.btn-delete:hover { color: #e74c3c; }
+.btn-delete:hover {
+  color: var(--tp-error);
+}
 .pagination {
-  display: flex; justify-content: center; align-items: center; gap: 16px;
-  margin-top: 20px; font-size: 13px; color: #666;
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
-.pagination button {
-  padding: 6px 14px; border: 1px solid #d0d0d0; border-radius: 4px;
-  background: #fff; cursor: pointer; font-size: 13px;
-}
-.pagination button:disabled { opacity: 0.4; cursor: default; }
-.btn { padding: 10px 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block; }
-.btn-primary { background: #1a73e8; color: #fff; }
 </style>

@@ -7,7 +7,8 @@ import time
 import numpy as np
 import requests
 
-from backend.config import AMAP_API_KEY
+from backend.config import settings
+from backend.observability import driving_calls, driving_duration, matrix_build_duration
 from backend.utils.decorators import legacy_only
 
 # ---------- 工具函数 ----------
@@ -149,7 +150,7 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
         params = {
             "keywords": poi_name,
             "city": city,
-            "key": AMAP_API_KEY,
+            "key": settings.AMAP_API_KEY,
             "extensions": "all",
             "city_limit": True,
             "types": "风景名胜",
@@ -213,9 +214,10 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
     params = {
         "origin": f"{origin[0]},{origin[1]}",
         "destination": f"{destination[0]},{destination[1]}",
-        "key": AMAP_API_KEY,
+        "key": settings.AMAP_API_KEY,
         "strategy": "32",
     }
+    start = time.monotonic()
     for attempt in range(max_retries):
         try:
             resp = requests.get(url, params=params, timeout=10)
@@ -232,9 +234,13 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
                         if step_poly:
                             all_points.append(step_poly)
                     polyline = ";".join(all_points)
+                driving_calls.labels(result="success").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return distance_km, duration, polyline
             else:
                 print(f"驾车API错误: {data.get('info', '未知错误')}, 状态码: {data.get('infocode', '无')}")
+                driving_calls.labels(result="fail").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return None, None, None
         except Exception as e:
             if attempt < max_retries - 1:
@@ -242,6 +248,8 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
                 time.sleep(1)
             else:
                 print(f"驾车路径规划请求失败（已重试{max_retries}次）: {e}")
+                driving_calls.labels(result="fail").inc()
+                driving_duration.observe(time.monotonic() - start)
                 return None, None, None
 
 
@@ -264,12 +272,16 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
         Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
 
     Raises:
-        Exception: 驾车 API 调用失败时输出警告，对应矩阵元素置为 -1 标记不可达。
+        RuntimeError: 存在驾车路径规划失败段时抛出，错误信息含失败段数
+            与具体失败段（景点名描述，超过 8 段截断显示）。失败即整体失败，
+            让任务进入 failed 由用户重新提交，不做 -1 降级（避免带洞矩阵）。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))
     dist = np.zeros((n, n))
     polylines = {}
+    failures: list[tuple[int, int]] = []
+    build_start = time.monotonic()
     print(f"正在调用驾车API计算 {n}x{n} 矩阵...")
     for i in range(n):
         for j in range(n):
@@ -280,6 +292,10 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
                 cost[i][j] = cost[j][i]
                 dist[i][j] = dist[j][i]
                 continue
+            if (j, i) in failures:
+                # 反向段已失败：对称标记失败，避免重复请求
+                failures.append((i, j))
+                continue
             result = _get_driving_data(coords[i], coords[j])
             d_km, dur, poly = result if result else (None, None, None)
             if dur is not None and d_km is not None:
@@ -289,9 +305,13 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
                     polylines[(i, j)] = poly
             else:
                 print(f"警告：{i} -> {j} 驾车路径规划失败")
-                # -1 标记不可达（分钟级），下游在计算路由时需跳过此类边
-                cost[i][j] = -1
-                dist[i][j] = -1
+                failures.append((i, j))
             # 每次 API 调用后等待 delay 秒，控制 QPS 避免被高德限流
             time.sleep(delay)
+    matrix_build_duration.observe(time.monotonic() - build_start)
+    if failures:
+        desc = "，".join(f"{poi_names[i]}→{poi_names[j]}" for i, j in failures[:8])
+        if len(failures) > 8:
+            desc += f"，... 等共 {len(failures)} 段"
+        raise RuntimeError(f"驾车路径规划失败 {len(failures)} 段：{desc}。请稍后重试")
     return cost, dist, polylines

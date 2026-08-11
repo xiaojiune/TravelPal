@@ -1,7 +1,15 @@
+# 默认日志轮转：单容器日志上限 10MB、保留 3 份，超限自动覆盖（避免无限增长占满磁盘）
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
     container_name: travelpal-postgres
+    logging: *default-logging
     environment:
       POSTGRES_USER: travelpal
       POSTGRES_PASSWORD: travelpal123
@@ -19,6 +27,8 @@ services:
   redis:
     image: redis:alpine
     container_name: travelpal-redis
+    command: ["redis-server", "--maxmemory-policy", "allkeys-lru"]
+    logging: *default-logging
     ports:
       - "6379:6379"
     volumes:
@@ -32,16 +42,49 @@ services:
         PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-backend
+    logging: *default-logging
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
+      CELERY_BROKER_URL: redis://redis:6379/0
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_BASE_URL: ${LLM_BASE_URL}
       LLM_MODEL: ${LLM_MODEL}
+      PROMETHEUS_MULTIPROC_DIR: /tmp/travelpal_metrics
     ports:
       - "8000:8000"
+    volumes:
+      - metrics_data:/tmp/travelpal_metrics
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
+    container_name: travelpal-worker
+    logging: *default-logging
+    command: [".venv/bin/celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
+      CELERY_BROKER_URL: redis://redis:6379/0
+      AMAP_API_KEY: ${AMAP_API_KEY}
+      AMAP_JS_KEY: ${AMAP_JS_KEY}
+      AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_MODEL: ${LLM_MODEL}
+      PROMETHEUS_MULTIPROC_DIR: /tmp/travelpal_metrics
+    volumes:
+      - metrics_data:/tmp/travelpal_metrics
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,14 +98,20 @@ services:
       args:
         NPM_REGISTRY: https://registry.npmmirror.com
     container_name: travelpal-nginx
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Prometheus /api/metrics 的 Basic Auth 密码文件。
+      # 部署前必须在服务器创建：htpasswd -c /etc/nginx/htpasswd metrics
+      # （未创建会导致 nginx 启动失败，请先创建或删除本行与 nginx.conf 的 auth_basic 块）
+      - /etc/nginx/htpasswd:/etc/nginx/.htpasswd:ro
     depends_on:
       - backend
 
 volumes:
   postgres_data:
   redis_data:
+  metrics_data:

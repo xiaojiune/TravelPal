@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Install git-cliff
+        uses: kenji-miyake/setup-git-cliff@v1
+      - name: Generate changelog notes
+        id: changelog
+        run: |
+          echo "NOTES<<EOF" >> "$GITHUB_OUTPUT"
+          git-cliff --latest --strip header >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.NOTES }}
+          generate_release_notes: false
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}

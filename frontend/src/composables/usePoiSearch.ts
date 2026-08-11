@@ -1,6 +1,5 @@
 /** POI 搜索 composable：自动确认查询结果，无需用户勾选。 */
 import { ref, computed } from 'vue'
-import { AxiosError } from 'axios'
 import { usePlanStore } from '@/stores/plan'
 import { postPoiLookup } from '@/services/api'
 
@@ -12,8 +11,8 @@ export function usePoiSearch() {
   const spotMsg = ref('')
   const loading = ref(false)
 
-  const canSearchHotel = computed(() => !!store.city && store.hotelName.trim().length > 0)  // 城市+酒店名非空时可搜
-  const canSearchSpots = computed(() => !!store.city && spotText.value.trim().length > 0)  // 城市+景点文本非空时可搜
+  const canSearchHotel = computed(() => !!store.city && store.hotelName.trim().length > 0) // 城市+酒店名非空时可搜
+  const canSearchSpots = computed(() => !!store.city && spotText.value.trim().length > 0) // 城市+景点文本非空时可搜
 
   /** 搜索酒店坐标，成功则自动确认到 store。 */
   async function searchHotel() {
@@ -33,7 +32,7 @@ export function usePoiSearch() {
         hotelMsg.value = `⚠️ ${data.failed?.[0] || '未找到该酒店'}`
       }
     } catch (e: unknown) {
-      const msg = e instanceof AxiosError ? (e.response?.data as { detail?: string })?.detail || e.message : '未知错误'
+      const msg = e instanceof Error ? e.message : '未知错误'
       hotelMsg.value = '搜索酒店失败: ' + msg
     } finally {
       loading.value = false
@@ -41,19 +40,33 @@ export function usePoiSearch() {
   }
 
   /** 批量搜索景点坐标，成功则自动确认到 store。 */
+  /**
+   * 批量搜索并添加景点到 store.spots（按名称去重）。
+   *
+   * Returns:
+   *     boolean: 是否有成功添加的景点（调用方据此决定是否跳转/弹开下一步）。
+   */
   async function searchSpots() {
     loading.value = true
     spotMsg.value = ''
     try {
-      const names = spotText.value.split('\n').map(s => s.trim()).filter(Boolean)
+      const names = spotText.value
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
       const data = await postPoiLookup(store.city, names)
-      const existingNames = new Set(store.spots.map(s => s.name))
+      const existingNames = new Set(store.spots.map((s) => s.name))
       for (const item of data.items) {
         if (!existingNames.has(item.name)) {
           store.spots.push({
-            name: item.name, lon: item.lon, lat: item.lat,
-            twStart: item.tw_start ?? 480, twEnd: item.tw_end ?? 1020, stay: 0,
-            expectedArrival: 0, address: item.address,
+            name: item.name,
+            lon: item.lon,
+            lat: item.lat,
+            twStart: item.tw_start ?? 480,
+            twEnd: item.tw_end ?? 1020,
+            stay: 0,
+            expectedArrival: 0,
+            address: item.address,
           })
         }
       }
@@ -62,17 +75,24 @@ export function usePoiSearch() {
       if (data.failed?.length) msgs.push(`⚠️ ${data.failed.join('；')}`)
       spotMsg.value = msgs.join('\n') || '⚠️ 未找到任何景点'
       if (data.items.length) spotText.value = ''
+      return data.items.length > 0
     } catch (e: unknown) {
-      const msg = e instanceof AxiosError ? (e.response?.data as { detail?: string })?.detail || e.message : '未知错误'
+      const msg = e instanceof Error ? e.message : '未知错误'
       spotMsg.value = '搜索景点失败: ' + msg
+      return false
     } finally {
       loading.value = false
     }
   }
 
   return {
-    spotText, hotelMsg, spotMsg, loading,
-    canSearchHotel, canSearchSpots,
-    searchHotel, searchSpots,
+    spotText,
+    hotelMsg,
+    spotMsg,
+    loading,
+    canSearchHotel,
+    canSearchSpots,
+    searchHotel,
+    searchSpots,
   }
 }

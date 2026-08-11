@@ -4,7 +4,7 @@
 
     <div v-if="!store.suggestions.length && !store.deepResults.length" class="empty-state">
       <p>暂无方案建议，请先在首页输入规划参数。</p>
-      <router-link to="/" class="btn btn-primary">返回首页</router-link>
+      <n-button type="primary" @click="router.push('/')">返回首页</n-button>
     </div>
 
     <template v-else>
@@ -32,31 +32,29 @@
       <!-- ====== 模式切换 + 深度操作区 ====== -->
       <div class="action-bar">
         <div class="mode-toggle">
-          <button
-            class="btn btn-mode"
-            :class="{ active: mode === 'fast' }"
-            @click="mode = 'fast'; deepNDays = null"
-          >快速</button>
-          <button
-            class="btn btn-mode"
-            :class="{ active: mode === 'deep' }"
-            @click="mode = 'deep'; deepNDays = defaultDays"
-          >深度</button>
+          <n-radio-group v-model:value="mode" @update:value="onModeChange">
+            <n-radio-button value="fast">快速</n-radio-button>
+            <n-radio-button value="deep">深度</n-radio-button>
+          </n-radio-group>
         </div>
 
         <div v-if="mode === 'deep'" class="deep-form">
           <label>行程天数</label>
-          <input v-model.number="deepNDays" type="number" min="1" :max="maxDayOption" placeholder="天数" />
+          <n-input-number
+            v-model:value="deepNDays"
+            :min="1"
+            :max="maxDayOption"
+            placeholder="天数"
+            style="width: 130px"
+          />
           <span class="hint">建议 {{ defaultDays }} 天</span>
-          <button class="btn btn-primary" :disabled="!deepNDays || store.loading" @click="runDeep">
-            {{ store.loading ? '计算中...' : '🚀 获取规划' }}
-          </button>
+          <n-button type="primary" :loading="store.loading" :disabled="!deepNDays" @click="runDeep">
+            🚀 获取规划
+          </n-button>
         </div>
-        <div v-if="mode === 'fast'" class="mode-hint">
-          💡 点击上方方案卡片直接查看规划结果
-        </div>
-        <div v-if="mode === 'fast' && store.suggestAlgoTime" class="algo-time">
-          ⏱ 搜索耗时 {{ store.suggestAlgoTime.toFixed(3) }}s
+        <div v-if="mode === 'fast'" class="mode-hint">💡 点击上方方案卡片直接查看规划结果</div>
+        <div v-if="mode === 'fast' && cache.suggestAlgoTime.value" class="algo-time">
+          ⏱ 搜索耗时 {{ cache.suggestAlgoTime.value.toFixed(3) }}s
         </div>
         <div v-if="mode === 'deep' && deepAlgoTime" class="algo-time">
           ⏱ 深度规划耗时 {{ deepAlgoTime.toFixed(3) }}s
@@ -89,16 +87,30 @@
 /** 方案建议页：快速/深度双模式入口。快速点击卡片直达，深度生成结果卡片后点击跳转。 */
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
-import { postPlan } from '@/services/api'
+import { submitTask } from '@/services/api'
+import { useTaskPolling } from '@/composables/useTaskPolling'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import type { SuggestionItem, PlanResult } from '@/types'
 
 const store = usePlanStore()
+const cache = useSuggestCache()
 const router = useRouter()
+const message = useMessage()
+
+const { startPolling } = useTaskPolling()
 
 const mode = ref<'fast' | 'deep'>('fast')
 const deepNDays = ref<number | null>(null)
 const deepAlgoTime = ref(0)
+
+/** 模式切换：切到快速清空天数，切到深度预填建议天数。 */
+function onModeChange(value: string | number) {
+  mode.value = value as 'fast' | 'deep'
+  if (mode.value === 'fast') deepNDays.value = null
+  else deepNDays.value = defaultDays.value
+}
 
 /** 按天数分组建议，每组内部按成本升序排列。 */
 const groupedSuggestions = computed(() => {
@@ -109,17 +121,19 @@ const groupedSuggestions = computed(() => {
       seen.add(s.n_days)
       groups.push({
         n_days: s.n_days,
-        items: store.suggestions.filter(x => x.n_days === s.n_days).sort((a, b) => a.cost - b.cost),
+        items: store.suggestions
+          .filter((x) => x.n_days === s.n_days)
+          .sort((a, b) => a.cost - b.cost),
       })
     }
   }
   return groups.sort((a, b) => a.n_days - b.n_days)
 })
 
-const maxDayOption = computed(() => Math.max(...store.suggestions.map(s => s.n_days), 1))
+const maxDayOption = computed(() => Math.max(...store.suggestions.map((s) => s.n_days), 1))
 const defaultDays = computed(() => {
   if (!store.suggestions.length) return 1
-  return store.suggestions.reduce((a, b) => a.cost < b.cost ? a : b).n_days
+  return store.suggestions.reduce((a, b) => (a.cost < b.cost ? a : b)).n_days
 })
 
 /**
@@ -128,7 +142,6 @@ const defaultDays = computed(() => {
  */
 function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
   return {
-    type: 'solution',
     solution: {
       routes: s.routes,
       total_cost: s.cost,
@@ -139,12 +152,12 @@ function buildPlanResultFromSuggestion(s: SuggestionItem): PlanResult {
     },
     best_days: s.n_days,
     best_m: s.method,
-    spots: store.suggestSpots,
+    spots: cache.suggestSpots.value,
     daily_schedules: s.daily_schedules || [],
     amap_api_key: store.amapApiKey,
     amap_security_code: store.amapSecurityCode,
-    algo_time: store.suggestAlgoTime,
-    polylines: Object.keys(store.suggestPolylines).length ? store.suggestPolylines : undefined,
+    algo_time: cache.suggestAlgoTime.value,
+    polylines: cache.suggestPolylines.value,
   }
 }
 
@@ -157,27 +170,25 @@ function onCardClick(s: SuggestionItem) {
 }
 
 /**
- * 深度规划：复用 suggest 阶段缓存的成本/距离矩阵，
- * 使后端 run_planning 跳过驾车 AMap API 调用。
+ * 深度规划：提交异步 plan 任务后轮询，完成后追加到深度结果卡片。
+ * 成本矩阵由后端驾车快照缓存托管（同一城市同一批点自动命中，跳过驾车 API）。
  */
 async function runDeep() {
   if (!deepNDays.value) return
   store.loading = true
   store.deepResults = []
   try {
-    const req = store.buildRequest(deepNDays.value, {
-      cost_matrix: store.suggestCostMatrix.length ? store.suggestCostMatrix : undefined,  // 复用成本矩阵，避免 re-fetch
-      dist_matrix: store.suggestDistMatrix.length ? store.suggestDistMatrix : undefined,
-    })
+    const req = store.buildRequest(deepNDays.value)
     req.mode = 'deep'
-    const data = await postPlan(req)
+    const { task_id } = await submitTask('plan', req)
+    const data = (await startPolling(task_id)) as unknown as PlanResult
     // 深度模式复用 suggest 阶段缓存的真实路径坐标（后端因跳过驾车 API 返回空 polylines）
-    if (Object.keys(store.suggestPolylines).length) data.polylines = store.suggestPolylines
+    if (Object.keys(cache.suggestPolylines.value).length) data.polylines = cache.suggestPolylines.value
     store.deepResults.push(data)
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
   } catch (e: unknown) {
-    alert('深度规划失败: ' + ((e as any)?.response?.data?.detail || (e as Error)?.message))
+    message.error('深度规划失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }
@@ -192,51 +203,129 @@ function viewDeepResult(r: PlanResult) {
 </script>
 
 <style scoped>
-.page-suggest { max-width: 700px; margin: 0 auto; }
-.empty-state { text-align: center; padding: 60px 0; color: #999; }
-.empty-state .btn { display: inline-block; margin-top: 16px; text-decoration: none; }
-.suggest-section { margin-bottom: 24px; }
-.day-group { margin-bottom: 24px; }
-.day-group h3 { font-size: 16px; margin-bottom: 10px; color: #333; border-left: 3px solid #1a73e8; padding-left: 10px; }
-.card-list { display: flex; flex-direction: column; gap: 8px; }
+.page-suggest {
+  max-width: 700px;
+  margin: 0;
+}
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--tp-text-3);
+}
+.suggest-section {
+  margin-bottom: 24px;
+}
+.day-group {
+  margin-bottom: 24px;
+}
+.day-group h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: var(--tp-text);
+  border-left: 3px solid var(--tp-primary);
+  padding-left: 10px;
+}
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .suggest-card {
-  display: flex; align-items: center; justify-content: space-between;
-  background: #fff; border: 1px solid #e0e0e0; border-radius: 8px;
-  padding: 10px 16px; cursor: pointer; transition: box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--tp-bg-card);
+  border: 1px solid var(--tp-card-border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  box-shadow: var(--tp-card-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
 }
-.suggest-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-.suggest-card.disabled { opacity: 0.5; cursor: default; }
-.suggest-card.disabled:hover { box-shadow: none; }
-.result-card { border-color: #1a73e8; background: #f8fbff; }
-.card-body { display: flex; align-items: center; gap: 14px; }
+.suggest-card:hover {
+  box-shadow: var(--tp-card-shadow-hover);
+  transform: translateY(-1px);
+}
+.suggest-card.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.suggest-card.disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+.result-card {
+  border-color: var(--tp-primary);
+  background: var(--tp-primary-soft);
+}
+.card-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 .card-method {
-  background: #e8f0fe; color: #1a73e8;
-  padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.card-cost { font-size: 14px; color: #555; }
-.card-meta { font-size: 12px; color: #888; }
+.card-cost {
+  font-size: 14px;
+  color: var(--tp-text-2);
+}
+.card-meta {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
 
 /* ====== 操作栏 ====== */
-.action-bar { margin: 20px 0; padding: 16px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; }
-.mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-.btn-mode {
-  flex: 1; padding: 8px; border: 1px solid #d0d0d0; border-radius: 6px;
-  background: #f5f5f5; color: #555; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
+.action-bar {
+  margin: 20px 0;
+  padding: 16px;
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
 }
-.btn-mode.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
-.deep-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.deep-form label { font-size: 13px; color: #555; }
-.deep-form input { width: 72px; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; text-align: center; }
-.deep-form .hint { font-size: 12px; color: #999; }
-.mode-hint { font-size: 13px; color: #888; text-align: center; padding: 4px 0; }
-.algo-time { font-size: 12px; color: #999; text-align: center; padding: 2px 0; }
+.mode-toggle {
+  display: flex;
+  margin-bottom: 12px;
+}
+.deep-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.deep-form label {
+  font-size: 13px;
+  color: var(--tp-text-2);
+}
+.deep-form .hint {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
+.mode-hint {
+  font-size: 13px;
+  color: var(--tp-text-3);
+  text-align: center;
+  padding: 4px 0;
+}
+.algo-time {
+  font-size: 12px;
+  color: var(--tp-text-3);
+  text-align: center;
+  padding: 2px 0;
+}
 
 /* ====== 深度结果区 ====== */
-.deep-section { margin-top: 20px; }
-.deep-section h3 { font-size: 15px; margin-bottom: 10px; color: #1a73e8; }
-
-.btn { padding: 6px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: #1a73e8; color: #fff; }
+.deep-section {
+  margin-top: 20px;
+}
+.deep-section h3 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--tp-primary);
+}
 </style>

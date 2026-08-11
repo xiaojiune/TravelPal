@@ -31,7 +31,7 @@ class TestClustering:
             )
 
     def test_cluster_count_matches_k(self, any_dataset):
-        # 参数化验证（any_dataset 覆盖 n20/n60/n100/n200 四种规模），确保每种方法都精确返回 k 组
+        # 参数化验证（any_dataset 覆盖 n20/n40/n60 三种规模），确保每种方法都精确返回 k 组
         spots, cost_mat, _ = any_dataset
         depot = 0
 

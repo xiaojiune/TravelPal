@@ -6,8 +6,8 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f5f5;
-  color: #333;
+  background: var(--tp-bg);
+  color: var(--tp-text);
 }
 
 #travelpal-app {
@@ -16,21 +16,46 @@ body {
   flex-direction: column;
 }
 
+/* 主体区：左侧待选栏 + 主内容，撑满导航栏与 footer 之间 */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 .nav-bar {
   display: flex;
   align-items: center;
   gap: 24px;
   padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  background: var(--tp-surface);
+  border-bottom: 1px solid var(--tp-border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* 高于 Agent 面板遮罩(1999)与面板(2000)，保证导航栏始终可交互 */
+  position: relative;
+  z-index: 2001;
+}
+
+.nav-brand-area {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.25;
 }
 
 .nav-brand {
   font-size: 20px;
   font-weight: 700;
-  color: #1a73e8;
+  color: var(--tp-primary);
   text-decoration: none;
+}
+
+.nav-slogan {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--tp-text-3);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .nav-links {
@@ -39,7 +64,7 @@ body {
 }
 
 .nav-links a {
-  color: #555;
+  color: var(--tp-text-2);
   text-decoration: none;
   font-size: 14px;
   padding: 4px 8px;
@@ -48,11 +73,61 @@ body {
 }
 
 .nav-links a:hover {
-  background: #e8f0fe;
-  color: #1a73e8;
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+}
+
+/* 「关于项目」链接着色：靛蓝指示色（与页内反馈引导块同色关联），吸引新访客进入 */
+.nav-links a.nav-about {
+  color: var(--tp-info);
+  font-weight: 600;
+}
+.nav-links a.nav-about:hover {
+  background: var(--tp-info-soft);
+  color: var(--tp-info);
+}
+
+/* 导航栏右侧 Agent 入口按钮：推至最右 */
+.nav-agent {
+  margin-left: auto;
+}
+
+/* 首访引导：按钮轻微上下弹跳，仅首次打开页面出现一次 */
+@keyframes agent-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-3px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-2px);
+  }
+}
+.agent-attention {
+  animation: agent-bounce 1s ease-in-out 3;
 }
 
 .main-content {
   flex: 1;
-  padding: 24px;
+  min-width: 0;
+  /* 左侧约一个「TravelPal」标题宽的距离（160px），其余保持 24px */
+  padding: 24px 24px 24px 160px;
+  overflow-y: auto;
+}
+
+.footer {
+  text-align: center;
+  padding: 16px;
+  color: var(--tp-text-3);
+  font-size: 12px;
+}
+
+.footer a {
+  color: var(--tp-text-3);
+  text-decoration: none;
 }

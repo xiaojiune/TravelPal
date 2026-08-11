@@ -1,7 +1,10 @@
 <template>
   <div class="chat-message" :class="role">
     <div class="avatar">{{ role === 'user' ? '👤' : '🤖' }}</div>
-    <div class="bubble">{{ content }}</div>
+    <div class="msg-body">
+      <div class="bubble">{{ content }}</div>
+      <div v-if="time" class="msg-time">{{ time }}</div>
+    </div>
   </div>
 </template>
 
@@ -14,10 +17,12 @@
  * Props:
  *   role: 'user' | 'assistant'   — 消息角色
  *   content: string               — 消息内容（父组件 SSE 追加）
+ *   time: string                  — 消息发送时间（HH:MM），可选
  */
 interface Props {
   role: string
   content: string
+  time?: string
 }
 defineProps<Props>()
 </script>
@@ -37,7 +42,7 @@ defineProps<Props>()
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #eee;
+  background: var(--tp-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,15 +50,45 @@ defineProps<Props>()
   flex-shrink: 0;
 }
 .bubble {
-  background: #f0f0f0;
+  position: relative;
+  background: var(--tp-border-light);
   padding: 10px 14px;
   border-radius: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+  /* 助手气泡：浅色底 + 左侧尖角尾巴 */
+}
+.bubble::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  transform: rotate(45deg);
 }
 .chat-message.user .bubble {
-  background: #007aff;
-  color: #fff;
+  background: var(--tp-primary);
+  color: var(--tp-on-primary);
+  /* 用户气泡：主色底 + 右侧尖角尾巴 */
+}
+.chat-message.user .bubble::before {
+  left: auto;
+  right: -5px;
+}
+.msg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.chat-message.user .msg-body {
+  align-items: flex-end;
+}
+.msg-time {
+  font-size: 10px;
+  color: var(--tp-text-3);
 }
 </style>

@@ -22,7 +22,7 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: |
-          pip install poetry
+          pip install poetry poetry-plugin-export
           poetry config virtualenvs.create false
           poetry install --no-interaction
           pip install pytest-cov
@@ -30,6 +30,19 @@ jobs:
         run: |
           python -m backend.utils.sync_all
           git diff --exit-code
+      - name: Verify deploy-required packages in prod export
+        run: |
+          poetry export --without-hashes -o /tmp/prod_req.txt
+          missing=""
+          for pkg in alembic; do
+            grep -q "^${pkg}==" /tmp/prod_req.txt || missing="$missing $pkg"
+          done
+          if [ -n "$missing" ]; then
+            echo "部署流程所需包未出现在生产 export（main 组）产物中：$missing"
+            echo "请将该包移入 main 组依赖（约定见 coding.md「依赖分组约定」）"
+            exit 1
+          fi
+          echo "部署所需包已全部包含在 main 组产物中 ✓"
       # 串行执行：实测 pytest-xdist 对 numba/sklearn 求解测试无收益甚至更慢，
       # 当前规模（<100 点、秒级求解）无并行需求；未来走 learning-based 求解时再考虑 GPU
       - name: Run tests with coverage

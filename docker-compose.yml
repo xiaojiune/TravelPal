@@ -46,6 +46,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
       CELERY_BROKER_URL: redis://redis:6379/0
+      DB_INIT_MODE: none
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -76,6 +77,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
       CELERY_BROKER_URL: redis://redis:6379/0
+      DB_INIT_MODE: none
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}

@@ -22,42 +22,61 @@
 
 ---
 
-## ✨ 核心功能
+## 🎒 规划一次旅行，是不是总这样？
 
-**Agent 陪你聊，算法陪你走，从一句话到每一程。**
+- 翻遍攻略和点评，还是不知道该把哪些地方排进同一天
+- 营业时间、开车耗时、停留时长……全靠感觉估算
+- 排出来的行程"看起来合理"，真出门却发现根本走不完
 
-- **双引擎求解**：CA 快速求解可行方案 + VNS 深度迭代优化，严格保证时间窗约束下的路径最优
-- **算法验证**：基于 Dumas TSPTW 基准测试集（n20~n200）多规模算例验证，求解时间秒至分钟级
-- **对话式交互**：LLM Agent 理解自然语言需求，支持 POI 查询与景点添加，更多功能正在完善
-- **地图可视化**：真实驾车路径实时渲染，景点标注精确到达/离开时间与状态
-- **方案选择**：一次生成多组方案，按总成本/时长/等待时间灵活选择
-- **匿名公共历史**：可选保存行程至云端，跨设备查看与分享
+TravelPal 把这些体力活接过来：你说一句想去哪，它把坐标、营业时间、驾车耗时全部核实好，再交给算法排出一条真的能走完的行程。
 
-## 💡 与纯 LLM 旅行规划的区别
+## ✨ 它给你什么
 
-- 纯 LLM 方案（如直接问 ChatGPT）生成的行程"看起来合理"，但常出现景点绕路、营业时间不符、时间估算失真，无法直接执行
-- **TravelPal 的行程是"可执行"的方案**：自定义元启发式算法保证时间窗约束与路径最优，LLM 只负责需求理解与自然语言解说——各司其职
-- **结果差异**：纯 LLM 给你"一段文字"，TravelPal 给你"精确时间表 + 真实驾车路径 + 可交互地图"
+- **一句大白话，一条真行程**：告诉它想去哪、玩几天，剩下的它来
+- **精确到分钟的行程表**：每个景点几点到、几点走、营业时间对不对，一目了然
+- **真实驾车路线**：不是画直线，基于高德真实路网逐段验证
+- **多套方案挑着选**：不同天数与求解方法多组选择，决策权始终在你
 
-## 🖼️ 效果预览
+> 更多正在生长：对话式行程调整、个性化偏好记忆已在规划中——不承诺一步到位，但每一步都在长。
 
-从自然语言对话到可执行的地图路线，完整链路一目了然：
-> 💡 当前界面与文档均针对 PC 端设计，建议在桌面浏览器中体验。
+## 🤔 和市面上的旅行产品有什么区别？
 
-| 🏠 首页规划 | 📋 方案建议 |
-|:---:|:---:|
-| <img src="docs/images/screenshots/HomePage.png" width="360"> | <img src="docs/images/screenshots/Suggestions.png" width="360"> |
-| 景点批量导入，一键配置行程参数 | 多方法对比求解，成本/时长灵活选优 |
+**基础设施与平台（高德地图、携程、飞猪）**
+解决「怎么到、怎么订」：地图导航、交通住宿预订。优势是数据与生态完备，但不负责「该去哪、按什么顺序去」——排程决策仍靠你自己。
 
-| 🗺️ 规划结果 | 📜 历史记录 |
-|:---:|:---:|
-| <img src="docs/images/screenshots/Plan-Map.png" width="360"> | <img src="docs/images/screenshots/History.png" width="360"> |
-| 地图路线 + 时间表，成本/耗时多维度展示 | 行程方案云端保存，跨设备加载回顾 |
+**商业与主流规划软件（马蜂窝、穷游、Wanderlog、TripIt）**
+攻略内容社区或手动整理工具。优势是 UGC 丰富、信息真实，但规划本质是信息聚合与人工整理，不对景点顺序、营业时间做约束求解——给你「建议」，不是「可执行的方案」。
 
-| 🤖 Function Calling | 📚 RAG 文档问答 |
-|:---:|:---:|
-| <img src="docs/images/screenshots/ChatBot.png" width="360"> | <img src="docs/images/screenshots/RAG.png" width="360"> |
-| 自然语言交互，动态添加景点 | 基于项目文档的智能问答 |
+**开源与 AI Agent 项目（智旅云图、TripStar）**
+同走对话式 AI 路线，多为 LangChain + RAG 生成图文攻略。样式丰富、观感高级，但伴随着「不确定性」：绕路、营业时间不符、时间估算失真，方案看着合理，未必走得了。
+
+**TravelPal 不做信息的聚合，做「真的能走」的排程**
+- LLM 负责听懂需求，CA/VNS 双引擎负责算得准——把营业时间、停留时长、驾车耗时全部纳入约束
+- 每条路线都经过算法求解与真实数据校验，产出的是「精确时间表 + 真实驾车路线 + 可交互地图」
+
+## ⚙️ 技术概览
+
+**决策层 —— LLM Agent（LangGraph 编排）**
+- 听懂自然语言，把「想去哪」变成可执行的规划请求
+- 工具化接入 POI 查询、驾车耗时、行程规划，支持对话式增删调整
+
+**求解层 ——  CA / VNS 元启发式算法（未引入第三方求解框架）**
+- 压缩退火（CA）秒级给出可行方案，变邻域搜索（VNS）预留
+- 严格约束营业时间窗、停留时长与驾车耗时，输出路径最优的每日行程
+- 基于 Dumas TSPTW 基准算例（n20 / n40 / n60）验证求解质量
+
+**工程层 —— 全栈工程化落地**
+- FastAPI + SSE 流式对话，Celery + Redis 异步任务，PostgreSQL + Alembic 数据迁移
+- Vue 3 + TypeScript + Naive UI，高德地图真实路线可视化
+- Docker Compose 五服务一键部署，GitHub Actions 自动化 CI/CD
+- 面向外部 AI 助手提供 MCP Server 接入同一套工具
+
+| 方向 | 技术                                                 |
+|------|------------------------------------------------------|
+| 后端 | FastAPI · LangGraph · Celery · PostgreSQL · Redis    |
+| 引擎 | NumPy · Numba JIT（ CA / VNS）                       |
+| 前端 | Vue 3 · TypeScript · Naive UI · 高德 JS API          |
+| 工程 | Docker Compose · Nginx · GitHub Actions · MCP Server |
 
 ## 🚀 Docker 快速开始
 
@@ -72,9 +91,9 @@ cd TravelPal
 cp .env.example .env
 # 编辑 .env，填入以下 key（申请方式见下表）
 
-# 3. 一键启动（四服务编排：PostgreSQL + Redis + 后端 + 前端 Nginx）
+# 3. 一键启动（五服务编排：PostgreSQL + Redis + Celery worker + 后端 + 前端 Nginx）
 docker compose up -d
-# 首次启动自动完成数据库建表，无需手动初始化
+# 首次启动自动执行数据库迁移（Alembic），无需手动初始化
 
 # 4. 打开 http://localhost
 # 后端启动后可访问 http://localhost:8000/docs 查看交互式 Swagger API 文档
@@ -91,6 +110,8 @@ docker compose up -d
 
 ## 🔧 开发模式
 
+想直接用 Docker 一键体验？`make deploy-up`（五服务全量编排，无需手动装环境）。
+
 前置条件：Python 3.12、Node.js 22、PostgreSQL、Redis。
 
 本地数据库依赖通过 Docker 启动（无需本地安装）：
@@ -98,63 +119,17 @@ docker compose up -d postgres redis
 
 ```bash
 make install            # 一键安装前后端依赖
-cp .env.example .env    # 配置环境变量（本地开发 DATABASE_URL 需改为 postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal）
+cp .env.example .env    # 配置环境变量
+#注意:（本地开发 DATABASE_URL 需改为 postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal）
 make serve              # 启动后端（热重载）
 make dev                # 启动前端（Vite HMR）
 ```
 
+异步任务（行程规划）依赖 Celery worker，本地需另开终端启动：
+make celery
+
 完整命令清单：
 make help
-
-## 📁 项目结构
-
-```
-TravelPal/
-├── backend/         Python 后端（FastAPI）
-│   ├── agent/       LLM Agent
-│   ├── api/         HTTP 路由与 Schema
-│   ├── engine/      核心算法（CA / VNS / Clustering）
-│   ├── data/        数据加载与数据库模型
-│   └── utils/       工具脚本
-├── frontend/        Vue 3 前端（Vite + TypeScript）
-├── docker/          Docker 构建文件 + nginx 配置
-├── docs/            Sphinx 文档站
-│   └── ADR/        架构决策记录（ADR-001 ~ ADR-007）
-├── tests/           Python 测试
-├── docker-compose.yml   四服务编排
-└── Makefile              开发命令统一入口
-```
-
-## 🏗️ 技术栈
-
-| 层 | 技术 | 用途 |
-|---|------|------|
-| 后端框架 | Python 3.12 + FastAPI | REST API / SSE 流式服务 |
-| 求解引擎 | NumPy + Numba JIT | 多日行程规划（CA 快速预览 / VNS 深度优化） |
-| Agent | DeepSeek + BM25 上下文检索 | 对话理解与项目文档问答 |
-| 数据库 | PostgreSQL 16 (pgvector) + SQLAlchemy | 历史记录持久化 |
-| 缓存 | Redis | 缓存基础设施（预留） |
-| 地图 | 高德 Web 服务 API + JS API 2.0 | POI 数据查询与 2D 路线可视化 |
-| 前端 | Vue 3 + TypeScript + Vite + Pinia | SPA 用户界面 |
-| 容器化 | Docker + Docker Compose + Nginx | 四服务一键编排，开箱即用 |
-
-## 📖 相关文档
-
-> **快速导航**：
-> - 想了解系统架构？看 [`backend.md`](docs/structure/backend.md)
-> - 想了解 Agent 怎么工作的？看 [`agent.md`](docs/structure/agent.md)
-> - 想了解数据结构？看 [`data.md`](docs/structure/data.md)
-> - 项目包含 7 篇架构决策记录（ADR），完整记录技术选型理由与设计权衡过程
-
-| 文档 | 说明 |
-|------|------|
-| [`project.md`](docs/structure/project.md) | 项目总览与调用链路 |
-| [`backend.md`](docs/structure/backend.md) | 后端架构与数据流 |
-| [`frontend.md`](docs/structure/frontend.md) | 前端组件与状态管理 |
-| [`agent.md`](docs/structure/agent.md) | LLM Agent 交互流程 |
-| [`data.md`](docs/structure/data.md) | 统一数据字典 |
-| [`ADR/`](docs/ADR/) | 架构决策记录（ADR-001 ~ ADR-007） |
-| [`deploy.md`](docs/runbooks/deploy.md) | 服务器部署与 HTTPS |
 
 ## 许可
 

@@ -21,5 +21,5 @@
 ## 维护契约
 
 - 规范类文档（coding/git）变更时同步检查各 ADR 的交叉引用与 `AGENTS.md`
-- 部署/排查文档（deploy/troubleshooting）变更时同步检查 `ARCHITECTURE.md` 文档导航与 `index.rst`
-- 本目录文件增删时更新 `docs/index.rst` 与根 `ARCHITECTURE.md` 文档导航
+- 部署/排查文档（deploy/troubleshooting）变更时同步检查 `docs/index.rst`（导航唯一事实源）
+- 本目录文件增删时更新 `docs/index.rst` 文档导航

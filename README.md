@@ -12,11 +12,11 @@
 [![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](pyproject.toml)
 [![Vue](https://img.shields.io/badge/Vue-3-green?logo=vuedotjs)](frontend/)
 
-📌 **版本状态**
-- 🟠 橙色徽章 = 新功能预发布，[🌐点击前往dev](https://github.com/xiaojiune/TravelPal/tree/dev)
-- 🔵 蓝色徽章 = 稳定版已部署，[🌐点击前往体验](https://trippal.site)
-
-📖 文档站：<https://xiaojiune.github.io/TravelPal/>
+📌 **入口**
+- 📖 文档站：<https://xiaojiune.github.io/TravelPal/>
+- 🏗️ 架构总览：[ARCHITECTURE.md](ARCHITECTURE.md)（C4 图）
+- 📦 版本记录：[Releases](https://github.com/xiaojiune/TravelPal/releases)（tag 驱动自动生成）
+- 🟠 橙色徽章 = 新功能预发布 · 🔵 蓝色徽章 = 稳定版已部署，[🌐 在线体验](https://trippal.site)
 
 🏷️ `AI 行程决策引擎 · 对话式共创 · 全栈工程化`
 
@@ -51,7 +51,7 @@ TravelPal 把这些体力活接过来：你说一句想去哪，它把坐标、�
 同走对话式 AI 路线，多为 LangChain + RAG 生成图文攻略。样式丰富、观感高级，但伴随着「不确定性」：绕路、营业时间不符、时间估算失真，方案看着合理，未必走得了。
 
 **TravelPal 不只聚合信息，更给你可信任的行动**
-- 别人有的，它也有：需求理解与信息聚合（POI 坐标、营业时间、驾车耗时），LLM 负责听懂与整理
+- 别人有的，它也可以有：需求理解与信息聚合（POI 坐标、营业时间、驾车耗时），LLM 负责听懂与整理
 - 别人没有的，它补上：CA/VNS 把营业时间、停留时长、驾车耗时纳入约束求解，每条路线经算法校验——给你「建议」之外的「可执行方案」
 - 产出「精确时间表 + 真实驾车路线 + 可交互地图」
 

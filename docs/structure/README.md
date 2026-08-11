@@ -8,13 +8,14 @@
 | 日期 | 变更 | 动机 |
 |------|------|------|
 | 2026-08-06 | docs.md → README.md 重写为 structure 规范 | 承接 ARCHITECTURE.md 文档导航，明确 structure 每篇必备章节与写作约定 |
+| 2026-08-11 | 文档导航职责移交 docs/index.rst | ARCHITECTURE.md 精简为纯 C4 图（被引对象），导航统一由 index.rst 承接 |
 
 ## 一、文档分层
 
 | 层级 | 位置 | 职责 |
 |------|------|------|
 | 根 README | `README.md` | 产品介绍、徽章、快速开始 |
-| 架构总入口 | `ARCHITECTURE.md` | C4 图 + 决策速览 + 文档导航 |
+| 架构总入口 | `ARCHITECTURE.md` | C4 图（被引对象，导航见 `docs/index.rst`） |
 | 项目结构 | `docs/structure/`（本文） | 各层详解与数据字典 |
 | 架构决策 | `docs/ADR/` | 决策记录 + 写作规范（`README.md`）+ 模板（`TEMPLATE.md`） |
 | 运维手册 | `docs/runbooks/` | 故障排查等可操作手册 |
@@ -64,10 +65,11 @@
 1. 改动了 `backend/` 公开接口 → 更新 `backend.md` + `data.md` + 对应 ADR 组件状态跟踪表
 2. 改动了 MCP 工具注册 → 更新 `tools.md`（TOOL_REGISTRY 是单一事实来源）
 3. 改动了路由/schema → 跑 `make gen-api` 重新生成 openapi.json 与前端类型
-4. 本目录文档索引变化 → 同步 `index.rst` 与根 `ARCHITECTURE.md` 文档导航
+4. 本目录文档索引变化 → 同步 `docs/index.rst`（文档导航唯一事实源）
 
 ## 五、交叉引用
 
-- 根 `ARCHITECTURE.md`：本目录是它「项目结构」章节的下钻入口
+- `docs/index.rst`：文档站导航唯一事实源（含本目录 7 篇）
+- `ARCHITECTURE.md`：C4 架构图（被引对象）
 - `docs/ADR/README.md`：ADR 写作规范与完整索引
 - `docs/runbooks/troubleshooting.md`：故障排查手册

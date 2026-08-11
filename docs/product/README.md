@@ -24,4 +24,4 @@
 ## 维护契约
 
 - 新增产品级文档（PRD / 愿景 / 用户画像等）：创建于本目录并登记上文文档列表。
-- 改动 slogan / 产品路线图：同步检查 [`ARCHITECTURE.md`](../../ARCHITECTURE.md) 文档导航与 [`docs/index.rst`](../index.rst)。
+- 改动 slogan / 产品路线图：同步检查 [`docs/index.rst`](../index.rst)（导航唯一事实源）。

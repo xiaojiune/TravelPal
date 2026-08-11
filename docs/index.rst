@@ -3,6 +3,14 @@
 
 旅行伴侣 —— 基于双引擎 + LLM Agent 的智能旅行规划系统。
 
+.. note::
+
+   文档状态说明：
+   各包的**代码规范**已确立（见 ``runbooks/coding``）；
+   ADR / product / runbooks 包**可供阅读**，但信息不一定准确；
+   structure / 包**内容过时**，暂不可作为依据；
+   阅读时请以各文档「修改记录」的**日期**为准。
+
 .. toctree::
    :maxdepth: 2
    :caption: 架构与设计

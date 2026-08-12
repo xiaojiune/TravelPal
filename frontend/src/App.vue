@@ -1,6 +1,13 @@
 <template>
+  <!-- 移动端降级提示：全屏展示，桌面端（>=768px）不渲染 -->
+  <div v-if="isMobile" class="mobile-block">
+    <div class="mobile-block-inner">
+      <h1 class="mobile-block-title">暂只适配桌面端</h1>
+      <p class="mobile-block-sub">请在电脑浏览器访问 trippal.site，体验更完整的行程规划。</p>
+    </div>
+  </div>
   <!-- 全局 Provider：Naive UI 中文 locale + 品牌色主题 + message/dialog（供全站替换原生 alert/confirm） -->
-  <n-config-provider :locale="zhCN" :date="dateZhCN" :theme-overrides="themeOverrides">
+  <n-config-provider v-else :locale="zhCN" :date="dateZhCN" :theme-overrides="themeOverrides">
     <n-message-provider>
       <n-dialog-provider>
         <div id="travelpal-app">
@@ -60,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-/** 根组件：全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。导航链接覆盖 5 个页面。 */
+/** 根组件：移动端降级提示 + 全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
@@ -73,6 +80,22 @@ import FeedbackModal from '@/components/FeedbackModal.vue'
 
 const router = useRouter()
 const store = usePlanStore()
+
+/** 移动端检测（CSS 媒体查询，含竖屏平板）；true 时整页渲染桌面端降级提示，隐藏主应用。 */
+const isMobile = ref(false)
+const MOBILE_QUERY = '(max-width: 767px)'
+function applyIsMobile() {
+  isMobile.value = window.matchMedia(MOBILE_QUERY).matches
+}
+let mobileQuery: MediaQueryList | undefined
+onMounted(() => {
+  mobileQuery = window.matchMedia(MOBILE_QUERY)
+  applyIsMobile()
+  mobileQuery.addEventListener('change', applyIsMobile)
+})
+onUnmounted(() => {
+  mobileQuery?.removeEventListener('change', applyIsMobile)
+})
 
 /** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）；null 表示全部收起。 */
 const toolPanel = ref<'query' | 'ops' | 'tasks' | null>('query')
@@ -119,3 +142,32 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
+
+<style scoped>
+/* 移动端降级提示：全屏覆盖，品牌色背景 + 居中文案（桌面端不渲染） */
+.mobile-block {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tp-bg);
+  padding: 24px;
+  text-align: center;
+}
+.mobile-block-inner {
+  max-width: 360px;
+}
+.mobile-block-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--tp-text);
+  margin-bottom: 12px;
+}
+.mobile-block-sub {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--tp-text-2);
+}
+</style>

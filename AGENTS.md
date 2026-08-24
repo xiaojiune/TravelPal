@@ -20,6 +20,7 @@
 | 编码规范（注释/代码风格/接口清单/数据模型/VNS 引擎） | `travelpal-coding` | backend / frontend / engine 三块 |
 | 测试规范（何时跑/划范围/环境探测/依赖分组/测试风格） | `travelpal-testing` | 测试全流程 |
 | 版本发布（git/tag/推送/同步 main） | `travelpal-git-release` | 发布与同步流 |
+| 运维与排障（部署/日志/重启/域名/故障排查） | `travelpal-ops` | deploy / troubleshooting 两类 |
 | 会话交接（跨会话上下文） | `session-handoff` | 交接文档读写 |
 | 任务执行（plan/build 行为） | `plan-build-protocol` | 响应节奏 |
 

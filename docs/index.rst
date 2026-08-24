@@ -7,7 +7,7 @@
 
    文档状态说明：
 
-   - 各包的**代码规范**已确立（见 ``runbooks/coding``）
+   - 各包的**代码规范**已确立（见 ``travelpal-coding`` skill）
    - ADR / product / runbooks 包**可供阅读**，但信息不一定准确
    - structure / 包**内容过时**，暂不可作为依据
    - 阅读时请以各文档「修改记录」的**日期**为准
@@ -49,13 +49,9 @@
    :maxdepth: 1
    :caption: 规范与路线图
 
-   runbooks/coding
-   runbooks/git
    product/README
    product/slogan
    product/产品路线图
-   runbooks/deploy
-   runbooks/troubleshooting
    runbooks/README
 
 .. toctree::

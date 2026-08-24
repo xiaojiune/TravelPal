@@ -16,8 +16,8 @@
 |------|------|------|
 | 编码规范 | `travelpal-coding` skill | 写代码前加载 |
 | Git/版本发布 | `travelpal-git-release` skill | 发布 / 同步前加载 |
-| [`deploy.md`](deploy.md) | 服务器选购、Docker 部署、HTTPS | 上线部署 |
-| [`troubleshooting.md`](troubleshooting.md) | 常见故障排查（容器/任务/Key/指标/DB/本地流程） | 出问题时按症状定位 |
+| 运维与排障 | `travelpal-ops` skill | 部署 / 排障前加载 |
+| 测试规范 | `travelpal-testing` skill | 跑测试前加载 |
 
 ## 维护契约
 

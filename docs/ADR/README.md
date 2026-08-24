@@ -81,4 +81,4 @@ ADR 本身有生命周期，与决策内组件的实施状态是**两套体系**
 
 - 编码规范：`travelpal-coding` skill（原 docs/runbooks/coding.md 已 skill 化）
 - 文档组织结构：[`../structure/README.md`](../structure/README.md)
-- 部署指引：[`../runbooks/deploy.md`](../runbooks/deploy.md)
+- 部署指引：`travelpal-ops` skill（原 docs/runbooks/deploy.md 已 skill 化）

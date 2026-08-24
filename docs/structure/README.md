@@ -72,4 +72,4 @@
 - `docs/index.rst`：文档站导航唯一事实源（含本目录 7 篇）
 - `ARCHITECTURE.md`：C4 架构图（被引对象）
 - `docs/ADR/README.md`：ADR 写作规范与完整索引
-- `docs/runbooks/troubleshooting.md`：故障排查手册
+- `travelpal-ops` skill：运维与排障规范（原 docs/runbooks/troubleshooting.md 已 skill 化）

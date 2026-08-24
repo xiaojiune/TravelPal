@@ -131,3 +131,44 @@ body {
   color: var(--tp-text-3);
   text-decoration: none;
 }
+
+/* 底部多备案/版本链接：居中横向排列，窄屏自动换行 */
+.footer-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 备案项之间的分隔点 */
+.footer-sep {
+  color: var(--tp-text-3);
+  opacity: 0.6;
+}
+
+/* 公安联网备案链接：盾牌图标 + 文案对齐 */
+.footer-beian {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 公安备案盾牌图标（内联 SVG） */
+.beian-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* 当前版本徽标 */
+.footer-version {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  color: var(--tp-text-3);
+  font-size: 11px;
+  line-height: 1.4;
+}

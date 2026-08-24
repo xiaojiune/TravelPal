@@ -128,7 +128,7 @@ frontend/openapi.json
 # Sphinx 构建时自动生成
 docs/openapi.json
 
-# Agent 技能本地入口软链（指向 ~/.dsh，与 opencode 一样属本地产物，不进版本控制）
+# Agent 技能本地入口软链（指向 ~/.dsh，不进版本控制）
 .dsh/skills/skill-authoring
 .dsh/skills/plan-build-protocol
 .dsh/skills/session-handoff

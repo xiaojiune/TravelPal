@@ -46,6 +46,29 @@
 - 配置/环境变量：Pydantic `BaseSettings`
 - 命名：内部 `XxxDict`，API `XxxModel`
 
+## NumPy / Numba 专项
+
+- `dtype` 显式声明（`np.float64`，不用浮点字面量）。
+- `njit` 只用于纯数值计算，不传 Python 对象。
+- 矩阵维度语义全局统一：**行 = 出发节点，列 = 到达节点**。
+
+## 数据单位全局约定
+
+| 变量名 | 单位 | 说明 |
+|--------|------|------|
+| `dist_matrix` | km | 距离矩阵 |
+| `cost_matrix` | 分钟 | 耗时矩阵（cost_matrix_hours * 60）|
+| `travel_speed` | 无量纲 | `use_real_time_matrix=False` 时固定 1.0 |
+| `use_real_time_matrix` | — | False=标准距离矩阵；True=高德真实时间矩阵 |
+| `stay` | 分钟 | 景点停留时间 |
+| `tw` | 分钟 | 时间窗 (start,end)，0-1440 |
+
+## 接口清单（`__all__` 同步）
+
+- 用 `__all__` 声明模块公开 API（替代手写清单），如 `__all__ = ["VNSSolver", "CASolver"]`。
+- `__all__` 不得含下划线开头的私有函数。
+- 新增公开 API：先更新 `__init__.py` 的 `__all__`，再跑 `tools/sync_all.py` 同步导出。
+
 ## 注释规范
 
 - 段分隔线：`# ==== 段标题 ====`（主要）、`# ---- 子段 ----`（子）、`# ***** 标注 *****`（强调）。

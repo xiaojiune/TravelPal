@@ -174,7 +174,7 @@ make help
 
 ## 🤝 贡献
 
-欢迎提交 [Issue](https://github.com/xiaojiune/TravelPal/issues)、[PR](https://github.com/xiaojiune/TravelPal/pulls) 与使用反馈。开发环境见上方「本地开发」，代码规范见 [docs/runbooks/coding.md](docs/runbooks/coding.md)。
+欢迎提交 [Issue](https://github.com/xiaojiune/TravelPal/issues)、[PR](https://github.com/xiaojiune/TravelPal/pulls) 与使用反馈。开发环境见上方「本地开发」，代码规范见 `travelpal-coding` skill。
 
 ## 许可
 

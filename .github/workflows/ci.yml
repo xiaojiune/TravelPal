@@ -53,7 +53,7 @@ jobs:
           done
           if [ -n "$missing" ]; then
             echo "部署流程所需包未出现在生产 export（main 组）产物中：$missing"
-            echo "请将该包移入 main 组依赖（约定见 coding.md「依赖分组约定」）"
+            echo "请将该包移入 main 组依赖（约定见 travelpal-coding skill 依赖分组）"
             exit 1
           fi
           echo "部署所需包已全部包含在 main 组产物中 ✓"

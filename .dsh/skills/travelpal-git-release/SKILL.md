@@ -1,7 +1,7 @@
 ---
 name: travelpal-git-release
 description: TravelPal 版本发布与 git 操作规范。涉及推送 GitHub（打 tag）、本地同步 main、或版本一致性核验时使用。它把项目 git 操作分成几层：日常开发只 commit；推送 GitHub 时打 tag 到 dev 触发自动 Release；本地同步走"切 main → 拉取 → 切 dev → merge"流程。发布前会先核验版本同步（pyproject/footer/README 三处），确保可推送再动手。
-whenToUse: 用户说"推送 / 打 tag / 发布 v某版本 / 同步 main / 拉取 origin / 版本核验"或涉及 git commit、tag、push、merge 时使用。参考 docs/runbooks/git.md 的同时用本技能规范发布与同步流。
+whenToUse: 用户说"推送 / 打 tag / 发布 v某版本 / 同步 main / 拉取 origin / 版本核验"或涉及 git commit、tag、push、merge、PR 时使用，用于规范发布、同步与 PR 流程。
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 
@@ -23,9 +23,17 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 ## 二、日常开发（只 commit）
 
-- 遵循 docs/runbooks/git.md 的 commit 规范：`<type>: <中文描述>`。
+- commit 规范：`<type>: <中文描述>`。
 - type：`feat` / `fix` / `docs` / `chore` / `refactor` / `test`。
 - 在 `dev` 分支开发、提交、`push origin dev`。**不打 tag**。
+- 分支：`main`=发布分支（只从 GitHub PR 合并）；`dev`=开发分支（所有工作在此提交）。当前早期阶段直接在 dev 开发，不设特性分支。
+
+## 二.5、PR 规范（dev → main）
+
+- PR 标题格式同 commit 规范。
+- PR 描述包含：改了什么、为什么改、如何验证。
+- 合并方式：统一 **Squash and merge**。
+- **外部贡献（Fork 工作流）**：Fork 到个人账号 → 在 Fork 建分支提改进 → 向本仓库 `dev` 分支发 PR → PR 过 CI 后维护者合并。
 
 ## 三、推送 GitHub（引入 tag 流）
 

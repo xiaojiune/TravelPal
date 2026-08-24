@@ -16,4 +16,4 @@ version: ""
 
 # 下一步目标
 
-（本代码会话要达成的目标。参考 docs/runbooks/coding.md、docs/ADR/）
+（本代码会话要达成的目标。参考 `travelpal-coding` skill、docs/ADR/）

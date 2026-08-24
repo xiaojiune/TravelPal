@@ -42,3 +42,38 @@
 - 不用 `reactive()`（用 `ref()`）。
 - 不用 `defineEmits`（回调 prop）。
 - Props 不用对象展开传递。
+
+## 注释具体写法
+
+- **页面级（`pages/`）**：段注释区分逻辑区域：
+  ```html
+  // ====== 状态定义 ======
+  const loading = ref(false)
+  // ====== 计算属性 ======
+  const totalDays = computed(...)
+  // ====== 数据操作 ======
+  function handleSearch() { ... }
+  // ====== 生命周期 ======
+  onMounted(() => { ... })
+  ```
+- **组件级（`components/`）**：JSDoc + 行内 Why。组件顶部注释块写职责 + 设计说明：
+  ```js
+  /**
+   * AmapMap — 高德 2D 地图视图
+   * 职责：... 设计说明：...
+   */
+  const props = defineProps({
+    /** 每日路径数组 */
+    routes: { type: Array, default: () => [] },
+    ...
+  })
+  ```
+- **`services/*.ts`**：函数级 JSDoc：
+  ```ts
+  /**
+   * 查询景点 POI 坐标。
+   * @param city - 城市名
+   * @param names - 景点名称列表
+   */
+  export function postPoiLookup(city: string, names: string[]) { ... }
+  ```

@@ -8,13 +8,14 @@
 | 日期 | 变更 | 动机 |
 |------|------|------|
 | 2026-08-06 | 初始创建（收录 coding/deploy/git） | 收拢 docs/ 根目录散落的规范文档，runbooks/ 成为「规范 + 手册」集合 |
+| 2026-08-25 | 编码规范与 Git 规范 skill 化（coding.md/git.md 移除） | 规范转为按需加载的 skill，runbooks/ 保留 deploy/troubleshooting |
 
 ## 本目录索引
 
 | 文档 | 覆盖 | 场景 |
 |------|------|------|
-| [`coding.md`](coding.md) | 编码规范（P0-P3 注释体系、类型/单位约定） | 写代码前阅读 |
-| [`git.md`](git.md) | Git 分支策略与提交/PR 规范 | 每次 commit / push 前核对 |
+| 编码规范 | `travelpal-coding` skill | 写代码前加载 |
+| Git/版本发布 | `travelpal-git-release` skill | 发布 / 同步前加载 |
 | [`deploy.md`](deploy.md) | 服务器选购、Docker 部署、HTTPS | 上线部署 |
 | [`troubleshooting.md`](troubleshooting.md) | 常见故障排查（容器/任务/Key/指标/DB/本地流程） | 出问题时按症状定位 |
 

@@ -89,7 +89,7 @@ async def _tools_node(state: OrchestratorState) -> dict:
 
     容错：工具调用包 try/except，参数错误等异常不回传传播（不中断整轮对话），
     而是回填 {"error": ...} 让 LLM 看到错误后 ReAct 自我修正重调——
-    这是 PydanticAI re-prompt 重试的手写等价实现（ADR-014 场景二）。
+    这是 PydanticAI re-prompt 重试的手写等价实现（ADR-009 场景二）。
     """
     writer = get_stream_writer()
     messages = list(state["messages"])

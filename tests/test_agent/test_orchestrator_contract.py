@@ -1,6 +1,6 @@
 """编排器契约测试：锁定 LangGraph 单 Agent 编排的 SSE 事件协议与工具裁剪行为。
 
-ADR-010 #7（契约测试）：用可编程 fake LLMService 验证 stream_orchestrator 产出的事件
+契约测试：用可编程 fake LLMService 验证 stream_orchestrator 产出的事件
 序列与形状，防止编排层重构（LangGraph 版本/节点调整）时静默破坏对话链路协议：
 - 纯聊天 → 仅 content 事件
 - 工具调用 → tool_status → tool_result → content 的顺序契约
@@ -143,7 +143,7 @@ class TestOrchestratorContract:
     def test_tool_exception_does_not_abort(self, monkeypatch):
         """容错：工具执行抛异常时回填 error 让 LLM 修正重调，不中断整轮对话。
 
-        ADR-014 场景二（PydanticAI re-prompt 手写等价）契约：_tools_node
+        ADR-009 场景二（PydanticAI re-prompt 手写等价）契约：_tools_node
         对工具调用包 try/except，异常转为 {"error": ...} 回填 tool 消息。
         """
 

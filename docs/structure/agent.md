@@ -1,162 +1,89 @@
-# Agent 层
+# Agent 层架构详解
 
 ## 修改记录
 
-| 日期 | 变更 |
-|------|------|
-| 2026-07-18 | 从 backend.md 拆分独立 |
+| 日期 | 变更 | 动机 |
+|------|------|------|
+| 2026-08-25 | 重写：跟随实际代码重构（chat/ 子包、planning/ 子包、prompts.py、tools/ 分组），对齐 structure 模板 | 旧文档按 backend agent 平铺结构描述，已与代码严重脱节 |
+| 2026-07-18 | 从 backend.md 拆分独立 | 建立 agent 层独立文档 |
 
-## 一、架构总览
+## 读者指南
 
-Agent 层位于 HTTP 路由层和求解引擎层之间，负责 LLM 对话与工具调用。
+| 列 | 内容 |
+|----|------|
+| 面向读者 | 后端开发者、Agent 功能维护者 |
+| 阅读前置 | [backend.md](backend.md)、[data.md](data.md) |
+| 阅读目标 | 读懂 Agent 层的对话编排、工具系统、prompt 管理与规划能力，动手扩展 Agent 功能 |
 
-```
-路由层 (routes.py)
-    ↓ POST /api/chat
-Agent 层
-    ├── chat.py        对话流调度
-    ├── tools/          工具注册与执行
-    ├── commentator.py  评语生成
-    └── planner.py      规划调整
-    ↓
-引擎层 (engine/)     ← 工具函数（poi_lookup 等）
-```
+## 架构总览
 
-## 二、目录结构
+Agent 层位于 HTTP 路由层（backend/api/）与求解引擎层（backend/engine/）之间，负责把用户的自然语言意图翻译成「查 POI、排行程、调方案」的动作。它不做路线求解，只负责 LLM 对话、工具分发与 SSE 事件流。
 
-```
-backend/agent/
-├── chat.py           对话流：build_chat_messages / chat_stream / stream_chat
-├── commentator.py    评语生成器：generate_commentary
-├── planner.py        三指令规划器：add_poi / remove_poi / adjust_days
-└── tools/
-    ├── __init__.py   工具注册表 TOOL_REGISTRY
-    ├── schema.py     工具 schema 自动生成（build_tool_definitions）
-    ├── poi/          POI 查询：poi_lookup / parse_biz_hours / estimate_stay
-    ├── plan/         规划：get_plan / get_plan_result / add_poi / remove_poi
-    └── driving/      路径：get_driving
-```
+`路由层(backend/api/routes.py)` 到 `Agent 层(backend/agent/)` 再到 `引擎层(backend/engine/)` 的调用方向见下方数据流；Agent 层内部分为 chat/（对话编排）、planning/（规划能力）、prompts.py（prompt 集中管理）、tools/（工具注册表与分组子包）。
 
-## 三、对话流
+RAG 文档检索注入已于 **2026-08-08 移除**（项目文档查询对非技术用户无意义、技术人员直接看 GitHub）；BM25 引擎（infrastructure/retrieval/bm25.py）保留供未来 raw_data 清洗后复用。
 
-详见 [`backend.md §四 路由层`](backend.md#四http-接口层-api)。
+## 目录结构
 
-### SSE 协议格式
+`backend/agent/` 实际目录树：
 
-后端通过 `text/event-stream` 推送结构化事件：
+- **chat/**：对话编排
+  - chat.py —— 消息组装：`build_chat_messages`（注入 README 自述 + 规划上下文）
+  - orchestrator.py —— LangGraph 编排器：LLM 决策 → 工具执行 → 回填 → 再决策
+- **planning/**：规划能力（消费引擎）
+  - `__init__.py` —— 规划能力导出（方案调整 + 评语）
+  - `_core.py` —— 方案重排公共内核：`extract_cores` / `reorder_from_cores`
+  - commentator.py —— 评语生成：`generate_commentary`（@placeholder，待接入 agent 工具）
+  - ops/ —— 方案调整操作子包：add_poi.py / remove_poi.py / balance.py
+- **prompts.py** —— 所有 LLM prompt：`CHAT_SYSTEM` / `PARSE_PROMPT` / `build_date_context`
+- **tools/**：工具出口
+  - `__init__.py` —— 工具注册表 `TOOL_REGISTRY` + 分组元数据 `TOOL_CATEGORIES`
+  - schema.py —— 工具契约生成器：`build_tool_definitions`
+  - poi/ —— `poi_lookup` / `parse_biz_hours` / `estimate_stay`
+  - plan/ —— `get_plan` / `get_plan_result` / `submit_plan_form` / `add_poi` / `remove_poi`
+  - driving/ —— `get_driving`（驾车距离/耗时）
 
-| type | 触发时机 | 前端行为 |
+任务分工边界：`planning/` 是**引擎能力消费方**（被 `engine/pipeline.adjust_plan` 分发调用）；`tools/plan/` 是 **Agent 工具出口**（面向 LLM 的 `add_poi` / `remove_poi` 等）。二者都含「方案调整」，但一个走引擎重排、一个走工具调用，应在文档中区分。
+
+## 数据流
+
+### 对话编排（LangGraph 循环）
+
+用户消息 → `build_chat_messages()`（CHAT_SYSTEM + 规划上下文 + 日期上下文）→ orchestrator 的 agent 节点调 `LLMService.complete`：
+
+- 有 tool_call：进 tools 节点，按 `TOOL_REGISTRY` 分发执行 → 回填 tool 消息 → 回到 agent（图自环）
+- 无 tool_call：stream 实时输出最终回复 → 结束
+
+SSE 事件通过 LangGraph custom stream（StreamWriter）推送，协议：
+
+| 事件 | 触发时机 | 前端行为 |
 |------|---------|---------|
-| `tool_status` | LLM 返回 tool_call 时 | 显示"正在查询..." |
-| `tool_result` | 工具执行完成后 | 渲染 POI 卡片至左侧待选栏 |
-| `content` | LLM 流式生成文字时 | 打字机效果追加 |
-| `error` | 对话生成异常时 | 显示错误提示 |
-| `done` | 全部输出完毕 | 结束 loading 状态 |
+| `tool_status` | LLM 返回 tool_call 时 | 显示「正在查询…」 |
+| `tool_result` | 工具执行完成 | 渲染 POI 卡片至待选栏 |
+| `content` | LLM 流式生成文字 | 打字机效果追加 |
+| `error` | 对话生成异常 | 显示错误提示 |
+| `done` | 全部输出完毕 | 结束 loading |
 
-### 消息构建
+### 工具调用示例（poi_lookup）
 
-`build_chat_messages()` 从 `prompts.py` 读取 `CHAT_SYSTEM`，附加规划上下文后组装为 OpenAI 格式。
+「查一下广州的白云山」→ POST /api/chat → build_chat_messages() → orchestrator agent 节点：LLM 工具决策 → tool_call: `poi_lookup(city=广州, name=白云山)` → 高德 API → 坐标/地址/营业时间 → SSE: tool_result → 前端待选栏 → 回填 tool 消息 → agent 再次决策 → SSE: content + done。
 
-### RAG 上下文注入
+规划类工具（submit_plan_form）会自动注入表单上下文，n_days 由 LLM 根据用户提及决定（未提及则不传，引擎自动推断天数）。get_plan / get_plan_result 仅面向外部调用方，对话中不用。
 
-> **已移除（2026-08-08）**：RAG 文档检索注入已从对话流移除——项目文档查询对非技术用户无意义、
-> 技术人员直接看 GitHub。BM25 引擎（`backend/infrastructure/retrieval/bm25.py`）保留，
-> 留待未来 raw_data 清洗后复用（外部调用方经 `get_engine()` 获取单例）。
+## 术语表
 
-### 调试模式
-
-`MOCK_MODE=True` 时走 `mock_stream_chat()` 固定回复，无需 API Key。
-正式部署应保持 `MOCK_MODE=False`。
-
-## 四、工具系统
-
-### 注册表
-
-`TOOL_REGISTRY` 字典集中管理所有可调用工具（[`tools/__init__.py`](../../backend/agent/tools/__init__.py)）：
-
-```text
-TOOL_REGISTRY: dict[str, Callable] = {
-    "poi_lookup": poi_lookup,
-}
-```
-
-新增工具只需在 `tools/` 下新建文件、实现函数、注册到 `TOOL_REGISTRY`。
-
-### 主流程
-
-```
-用户消息 → build_chat_messages() + TOOL_DEFINITIONS
-  → LLM 非流式首调
-    ├─ tool_calls → 执行工具 → tool_result 追加 messages → LLM 二次调用 → SSE 流式回复
-    └─ text       → SSE 直接流式输出
-```
-
-### poi_lookup 工具
-
-详见 [`tools/poi.py`](../../backend/agent/tools/poi.py)。
-
-通过高德 API 查询 POI 坐标、地址和营业时间。自动识别酒店与景点：
-
-- 酒店：`poi_type="hotel"`，时间窗 `0-1440`（全天）
-- 景点：`poi_type="spot"`，时间窗由 LLM 解析 `opentime2`
-
-详见 [`data.md §POILookupItem`](data.md#poilookupitemapi-响应)。
-
-## 五、提示词管理
-
-所有 LLM prompt 集中在 `tools/prompts.py`：
-
-| 常量 | 用途 |
+| 术语 | 定义 |
 |------|------|
-| `CHAT_SYSTEM` | 对话系统 prompt |
-| `PARSE_PROMPT` | 营业时间 LLM 解析模板 |
-| `POI_TOOL_DEF` | poi_lookup 工具定义（JSON schema） |
-| `TOOL_DEFINITIONS` | 全部工具定义列表 |
+| TOOL_REGISTRY | 工具注册表：dict[str, Callable]，编排器/MCP 分发执行的唯一来源 |
+| TOOL_CATEGORIES | 工具分组元数据（poi/plan/driving），供编排器裁剪、未来 MCP 分组与表单渲染 |
+| build_tool_definitions | 从函数类型注解自动生成工具 schema（与 MCP input_schema 同源），见 tools/schema.py |
+| @placeholder | 已声明但未接线的能力占位符（如 generate_commentary），见 utils/decorators |
 
-## 六、评语与规划调整
+## 维护契约
 
-### commentator.py
+修改本层代码时必须同步以下内容：
 
-`generate_commentary(plan_result)` → 自然语言评语。规则模板 + LLM 润色混合模式。
-详见 [`docs/产品路线图.md`](../product/产品路线图.md) 第一阶段。
-
-### planner.py
-
-三指令规划器，当前函数已就绪但**未接入 Function Calling**：
-
-| 函数 | 功能 |
-|------|------|
-| `add_poi_to_plan()` | 加景点后调用 `cluster_and_solve` 重算 |
-| `remove_poi_from_plan()` | 去景点后重映射索引重算 |
-| `adjust_plan_days()` | 调天数后重分配行程 |
-
-目标：后续注册到 `TOOL_REGISTRY` 后，用户可通过对话调整方案。
-
-## 七、数据流
-
-### Function Calling 流程
-
-```
-用户: "查一下广州的白云山"
-  → POST /api/chat { message: "查一下广州的白云山" }
-  → build_chat_messages() → [system, user]
-  → OpenAI tools=TOOL_DEFINITIONS
-  → LLM: tool_call → poi_lookup(city="广州", name="白云山")
-  → 高德 API → 坐标/地址/营业时间
-  → SSE: tool_result
-  → pendingPois[] 追加 ← 前端左侧待选栏
-  → messages 追加 tool result → LLM 二次调用
-  → SSE: content → "找到了！白云山..."
-  → SSE: done
-```
-
-### 对话流程
-
-```
-用户: "这个项目是做什么的"
-  → POST /api/chat { message: "这个项目是做什么的" }
-  → build_chat_messages()（CHAT_SYSTEM + README 项目自述兜底）
-  → OpenAI 无 tools 调用 → SSE 直接流式输出
-  → SSE: content → "这是一个基于 VNS+ 引擎的..."
-  → SSE: done
-```
+- **新增工具**：在 tools/ 下建实现 → 注册到 TOOL_REGISTRY → 在 TOOL_CATEGORIES 标分组 → 更新本文件「目录结构」与工具表。
+- **改工具签名**：tools/schema.py 会自动从类型注解生成 schema，但需验证 build_tool_definitions() 输出，并同步对应前端表单（如 Agent-driven UI）。
+- **改 prompt**：统一改 prompts.py，勿在模块内散落 prompt 字符串；同步本文件「数据流」相关描述。
+- **改规划能力**：planning/ 被 engine/pipeline.adjust_plan 消费，改签名需同步该调用点；评语 generate_commentary 为占位，接线后更新「目录结构」与「维护契约」。

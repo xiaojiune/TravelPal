@@ -1,300 +1,128 @@
-# 后端结构
+# 后端架构详解
 
 ## 修改记录
 
-| 日期 | 变更 |
-|------|------|
-| 2026-07-21 | deprecated.py → decorators.py；调度拆出 `_solve_best`；引擎链路补 VNS 报错分支；工具表同步 `@placeholder` |
-| 2026-07-18 | 从 back.md 重写为 backend.md：全量结构重写 + 引擎链路/POI流程/数据流图修正，清理 ca.py 废弃参数 |
+| 日期 | 变更 | 动机 |
+|------|------|------|
+| 2026-08-25 | 重写：新增 domain/infrastructure/mcp/tasks/observability 层，suggest/plan 改异步任务，对齐 structure 模板 | 后端已扩展为分层架构，旧文档仅描述 api/agent/engine/data/utils 五层，严重缺失 |
+| 2026-07-21 | deprecated.py → decorators.py；调度拆出 `_solve_best`；引擎链路补 VNS 报错分支；工具表同步 `@placeholder` | 代码演进同步 |
+| 2026-07-18 | 从 back.md 重写为 backend.md：全量结构重写 + 引擎链路/POI流程/数据流图修正 | 建立后端独立文档 |
 
-## 一、架构总览
+## 读者指南
 
-后端采用**三条路径并列**的架构：
+| 列 | 内容 |
+|----|------|
+| 面向读者 | 后端开发者 |
+| 阅读前置 | [project.md](project.md)、[data.md](data.md) |
+| 阅读目标 | 读懂后端分层、接口、引擎求解与异步任务编排 |
+
+## 架构总览
+
+后端采用**分层 + 异步任务**架构。FastAPI 提供 HTTP 接口；`suggest` / `plan` 为**异步任务**（写入 `plan_tasks`，Celery 消费，前端轮询 `/api/tasks/{id}`），`poi-lookup` / `chat` 保持同步/SSE。核心原则：**Agent 是交互层，Engine 是计算层**——Agent 只做意图识别与工具分发，不参与路径求解。
 
 ```
-用户请求
-    │
-    ├── POST /api/poi-lookup ──→ 高德 API → LLM 解析营业时间
-    │
-    ├── POST /api/suggest ────→ Engine (CA 全参数搜索)
-    │    用户选天数
-    │   POST /api/plan ───────→ Engine (CA 或 VNS+)
-    │
-    └── POST /api/chat ───────→ Agent (Function Calling)
+HTTP 路由层 (api/)  ── 同步: poi-lookup / chat(SSE) ──┐
+       │                                            │
+       ├─ 异步: suggest / plan → tasks/(submit) → Celery → worker → engine
+       │                                            │
+       └─ history / feedback → data/model (ORM) ─────┘
+
+domain/ 定义防腐层接口（LLM / Weather），infrastructure/ 提供可插拔实现
+observability/ 聚合 Prometheus 指标，mcp/ 把叶子工具暴露给外部 AI 助手
 ```
 
-核心原则：**Agent 是交互层，Engine 是计算层**。Agent 不参与路径计算，只做意图识别与参数提取。当前 Agent 通过 chat.py + tools/ 直接调用函数，后续 MCP 迁移后可统一接管 API 入口。
-
-## 二、目录结构
+## 目录结构
 
 ```
 backend/
-├── config.py              环境变量（AMap Key、LLM Key、DATABASE_URL 等）
-├── typedefs.py            内部 TypedDict 定义（零运行时开销）
+├── config.py            环境变量配置（Settings，.env 注入）
+├── typedefs.py          内部 TypedDict（SpotDict/RouteResult/PlanResult/...）
 │
-├── api/                   HTTP 接口层
-│   ├── server.py          FastAPI 工厂 + CORS + lifespan（DB 初始化/关闭）
-│   ├── routes.py          8 个 API 端点
-│   └── schemas.py         Pydantic 请求/响应模型
+├── api/                 HTTP 接口层
+│   ├── server.py        FastAPI 工厂 + lifespan + MetricsMiddleware + /api/metrics
+│   ├── routes.py        端点：poi-lookup/suggest/plan/chat/history/feedback/tasks
+│   └── schemas.py       Pydantic 请求/响应模型（OpenAPI 驱动）
 │
-├── agent/                 LLM Agent 层
-│   ├── chat.py             对话调度（chat_stream、build_chat_messages、MOCK_MODE）
-│   ├── planner.py         行程调整三指令（加/删景点、调天数）
-│   ├── commentator.py     方案评语生成
-│   └── tools/             工具函数子包
-│       ├── __init__.py    TOOL_REGISTRY 注册表（统一导出）
-│       ├── poi.py         POI 工具（parse_biz_hours、poi_lookup）
-│       ├── prompts.py     LLM prompt 模板（CHAT_SYSTEM、PARSE_PROMPT、TOOL_DEFINITIONS）
-│       └── rag.py         RAG 工具（预留）
+├── agent/               LLM Agent 层（详见 agent.md）
+│   ├── chat/            LangGraph 编排（chat.py + orchestrator.py）
+│   ├── planning/        规划能力（_core.py + commentator.py + ops/）
+│   ├── prompts.py       LLM prompt 集中管理
+│   └── tools/           工具包（TOOL_REGISTRY + poi/plan/driving 子包）
 │
-├── engine/                求解引擎核心
-│   ├── pipeline.py        流程编排入口（run_planning）
-│   ├── search.py          建议/深度求解（ca_suggest / cluster_and_solve）
-│   ├── ca.py              压缩退火求解器
-│   ├── vns.py             变邻域搜索求解器
-│   ├── clustering.py      6 种聚类方法注册表
-│   └── fitness.py         适应度计算（距离/等待/迟到/晚归惩罚）
+├── engine/              求解引擎核心
+│   ├── pipeline.py      流程编排（run_planning / _rebuild_schedule / adjust_plan）
+│   ├── search.py        双模式分发（ca_suggest / cluster_and_solve / _solve_best）
+│   ├── ca.py            CASolver（压缩退火）
+│   ├── vns.py           VNSSolver（变邻域搜索）
+│   ├── clustering.py    6 种聚类方法注册表
+│   └── fitness.py       适应度计算（_cal_fitness_numba / analyze_solution）
 │
-├── data/                  数据层
-│   ├── amap_loader.py     高德 API → 成本/距离矩阵（build_real_data）
-│   ├── model/
-│   │   ├── database.py    async SQLAlchemy 引擎 + 会话工厂
-│   │   └── models.py      HistoryRecord ORM（详见 data.md）
-│   └── chroma_db/         向量数据库（待填充）
+├── data/                数据层
+│   ├── amap_loader.py   高德 API：POI 搜索/营业时间解析/驾车路径/成本矩阵
+│   ├── driving_cache.py 驾车路径缓存（点对基元 + 整矩阵快照，Redis/内存）
+│   └── model/           SQLAlchemy ORM（HistoryRecord / PlanTask / FeedbackRecord）
 │
-└── utils/                 通用工具
-    ├── decorators.py       @legacy_only / @placeholder 装饰器（标记遗留/占位函数）
-    ├── gen_openapi.py     导出 OpenAPI 规范 JSON
-    └── sync_all.py        自动同步 __init__.py 的 __all__
+├── domain/              领域层（防腐层接口定义）
+│   ├── llm_service.py   LLMService 协议（ToolCallResult/LLMResult）
+│   └── weather_service.py WeatherService 协议（WeatherInfo）
+│
+├── infrastructure/     基础设施层（可插拔领域实现）
+│   ├── llm/             LLM 实现（factory + openai_impl + dspy_optimizer 占位）
+│   ├── weather/         天气实现（factory + http + mcp）
+│   └── retrieval/       BM25 引擎 + Hybrid/LlamaIndex 占位
+│
+├── mcp/                 MCP 服务器：遍历 TOOL_REGISTRY 暴露叶子工具
+│   └── server.py        FastMCP 兼容层（build_server / _run_stdio / main）
+│
+├── tasks/               异步任务包（Celery）
+│   ├── app.py           Celery 应用 + 队列配置
+│   ├── submit.py        提交侧：创建 plan_tasks 记录并投递队列
+│   ├── worker.py        消费侧：run_plan_task + 状态流转
+│   └── executors.py     执行体：_run_suggest / _run_plan / _run_adjust
+│
+├── observability/       观测性层（Prometheus 指标定义与多进程聚合）
+│   └── metrics.py       metrics_response
+│
+└── utils/               通用工具
+    ├── decorators.py    @legacy_only / @placeholder / @refactor
+    ├── gen_openapi.py   导出 OpenAPI 规范 JSON
+    └── sync_all.py      自动同步 __init__.py 的 __all__
 ```
 
-## 三、配置层
+## 数据流
 
-### config.py
+### POI 查找 → LLM 营业时间解析（同步）
 
-环境变量配置入口，支持 `.env` 文件注入。关键变量：
+`POST /api/poi-lookup` → 逐个调用高德 POI 搜索（三策略：分类+城市限定 / 去类型关键词 / 全国跨城判定）→ 成功取坐标与 opentime2 → `parse_biz_hours`（LLM 解析，失败置 None）→ 返回 `{ items, failed }`。
 
-| 变量 | 默认值 | 用途 |
-|------|--------|------|
-| `AMAP_API_KEY` | `""` | 高德 Web 服务 API（路线/POI） |
-| `AMAP_JS_KEY` | `""` | 高德 JS API（前端地图） |
-| `LLM_API_KEY` | `""` | LLM 调用密钥 |
-| `LLM_BASE_URL` | `https://api.deepseek.com/v1` | LLM API 地址 |
-| `DATABASE_URL` | `postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal` | PostgreSQL 连接 |
-| `DEV_RELOAD` | `false` | uvicorn 热重载开关 |
+### 行程规划（异步任务）
 
-### typedefs.py
+`POST /api/suggest` 或 `/api/plan` → `submit_task` 创建 plan_tasks 记录 + 投递 Celery → worker 消费 → `executors._run_suggest/_run_plan` → `engine`（建议走 `ca_suggest`，规划走 `cluster_and_solve`）→ 更新任务状态为 done，前端轮询 `/api/tasks/{id}` 取 `result`。
 
-内部数据模型定义（TypedDict），零运行时开销，只在类型约束时使用。
-API 边界用 Pydantic（`schemas.py`），内部数据传递用 TypedDict。
+### Agent 对话（SSE）
 
-详见 [`docs/structure/data.md`](data.md) 统一数据字典。
+`POST /api/chat` → `chat.py` 组装消息（CHAT_SYSTEM + 规划上下文 + 表单上下文）→ `orchestrator.stream_orchestrator`（LangGraph 循环）→ SSE 事件流（tool_status/tool_result/content/error/done）。详细见 [agent.md](agent.md)。
 
-## 四、HTTP 接口层 (api/)
+### 历史记录与反馈
 
-### server.py
+`POST /api/history` 保存方案到分享站；`GET /api/history` 分页；`GET /api/history/{id}` 详情；`DELETE /api/history/{id}` 需 device_id 匹配。`POST /api/feedback` 保存 /about 问卷反馈。
 
-FastAPI 应用工厂：
+## 术语表
 
-- `init_db()` / `close_db()` — 生命周期中管理连接池
-- CORS 允许 `localhost:5173` 和 `127.0.0.1:5173`（Vue 开发服务器）
-- `DEV_RELOAD` 环境变量控制热重载
-
-### routes.py — 8 个端点
-
-| 方法 | 路径 | 用途 |
-|------|------|------|
-| `POST` | `/api/poi-lookup` | 批量查询 POI 坐标 + LLM 解析营业时间 |
-| `POST` | `/api/suggest` | 获取方案建议列表（fast 模式） |
-| `POST` | `/api/plan` | 执行完整规划（deep 模式） |
-| `POST` | `/api/chat` | LLM Agent 对话（SSE 流式） |
-| `GET` | `/api/history` | 历史记录列表（分页） |
-| `GET` | `/api/history/{record_id}` | 历史记录详情 |
-| `POST` | `/api/history` | 创建历史记录（分享方案） |
-| `DELETE` | `/api/history/{record_id}` | 删除历史记录（device_id 鉴权） |
-
-### schemas.py
-
-Pydantic 请求/响应模型，按功能分组：
-
-- **POI 查询**：`POILookupRequest` / `POILookupItem` / `POILookupResponse`
-- **规划请求**：`PlanRequest`（含酒店/景点/算法参数）
-- **Agent 对话**：`ChatRequest`
-- **历史记录**：`HistoryCreate` / `HistorySummary` / `HistoryDetail` / `HistoryListResponse` / `HistoryDeleteRequest`
-
-详见 [`docs/ADR/005.md`](../ADR/005.md) 营业时间 LLM 解析决策。
-
-## 五、LLM Agent 层 (agent/)
-
-负责 LLM 对话、工具调用和评语生成。详见 [`agent.md`](agent.md) 独立文档。
-
-| 组件 | 文件 | 说明 |
-|------|------|------|
-| 对话流 | `chat.py` | SSE 流式聊天入口 |
-| 工具系统 | `tools/` | Function Calling 工具注册与执行 |
-| 评语生成 | `commentator.py` | 规划结果解说 |
-| 规划调整 | `planner.py` | 加/删景点、调天数（`@placeholder`，未接入任何端点） |
-
-## 六、求解引擎层 (engine/)
-
-引擎核心，使用独立求解器 + 聚类方法的组合策略。
-
-### 模块职责
-
-| 模块 | 关键函数 | 定位 |
-|------|---------|------|
-| `pipeline.py` | `run_planning()` | 流程编排：矩阵构建 → 求解 → 行程生成 → 评语 |
-| `search.py` | `ca_suggest()` / `cluster_and_solve()` / `_solve_best()` | 建议/求解入口 + 调度阀门 |
-| `ca.py` | `CASolver.solve()` | 快速求解器（压缩退火） |
-| `vns.py` | `VNSSolver.solve()` | VNS+ 增强求解器（压缩成本 VND + 自适应算子权重 + 动态 Shake + 精英池后优化） |
-| `clustering.py` | `call_cluster()` | 6 种聚类方法注册表 |
-| `fitness.py` | `_cal_fitness_numba()` / `analyze_solution()` | Numba 共享内核 + 成本分析 |
-
-### 聚类方法注册表
-
-6 种方法（`clustering.py`）：
-
-1. 基于距离的 K-means 聚类
-2. 基于时间窗的聚类
-3. 基于时空特征的聚类
-4. 基于时间窗重叠的启发式分组
-5. 基于时间窗密度的聚类
-6. 混合分组方法
-
-详见 [`docs/ADR/001.md`](../ADR/001.md) 引擎并行架构决策。
-
-### 引擎内部调用链路
-
-`cluster_and_solve` 是 `run_planning` 中的核心调度入口，根据 `n_days` 和 `mode` 参数路由：
-
-```
-cluster_and_solve(spots, cost_mat, mode, n_days)
-│
-├─ n_days 已指定 ────────────────────────────
-│   ├─ solver_type = "VNS"（deep）或 "CA"（fast）
-│   └─ _solve_best() → 遍历 6 种聚类方法，固定天数
-│       └─ solve_groups(solver_type) 求解各组
-│       └─ 返回 type="solution"（单条最优方案 + best_days / best_m）
-│
-├─ n_days=None + mode="fast" ────────────────
-│   └─ ca_suggest()
-│       ├── 外层：遍历 6 种聚类方法
-│       ├── 内层：天数递增（min_days → n_spots）
-│       ├── solve_groups(solver_type="CA") 求解各组
-│       ├── 增益阈值早退（<1.0% × 3 次 → stop）
-│       ├── 按成本排序 + frozenset 去重
-│       └── 返回 type="suggestion"（多条方案，含 routes/daily_schedules/cost）
-│
-└─ n_days=None + mode="deep" ────────────────
-    └─ raise ValueError（VNS 无自动分群能力）
-```
-
-> `run_planning` 设计要点：
-> - suggest 和 plan 共用数据准备与后处理
-> - 共享范围：成本矩阵构建 → spots 时间窗收缩 → polyline 补调
-> - 分叉点仅在 `cluster_and_solve` 内部
-> - 拆为两个入口函数收益不高，当前保持统一
-
-## 七、数据层 (data/)
-
-### amap_loader.py
-
-- `get_poi_details(city, spot_names)` → 高德 POI 批量查询
-- `build_real_data(poi_cache)` → 构造成本矩阵、距离矩阵、真实轨迹 polylines
-
-### model/（数据库 ORM）
-
-- `database.py` — async SQLAlchemy 引擎连接池 + `get_session` 依赖注入
-- `models.py` — `HistoryRecord` ORM 模型（id / device_id / note / city / hotel / n_days / cost / spot_count / plan_result / request_params / created_at）
-
-详见 [`docs/structure/data.md`](data.md) 数据定义。
-
-### chroma_db/
-
-向量数据库存储目录（预留）。
-
-## 八、工具层 (tools/)
-
-| 脚本 | 用途 |
+| 术语 | 定义 |
 |------|------|
-| `decorators.py` | `@legacy_only` / `@placeholder` 装饰器，标记遗留参考/占位函数 |
-| `gen_openapi.py` | 导出 `openapi.json`（供 openapi-typescript 生成前端类型） |
-| `sync_all.py` | 扫描 `__init__.py` 的 import 语句，自动同步 `__all__` |
+| plan_tasks | 异步规划任务表（status: pending/running/done/failed） |
+| TaskResult | suggest/plan 完成响应（SuggestResult 或 PlanResult） |
+| LLMService | LLM 防腐层接口，infrastructure/llm 提供实现 |
+| CA | 压缩退火求解器 |
+| VNS | 变邻域搜索求解器 |
 
-## 九、数据流图
+## 维护契约
 
-### POI 查找 → LLM 营业时间解析
+修改以下内容时必须同步：
 
-```
-前端传入 city + names[]（景点名称列表）
-       ↓
-POST /api/poi-lookup
-       ↓
-逐个调用 get_poi_details(name, city)
-  ├── 高德 API 三策略搜索
-  │   ① types=风景名胜 + city_limit（高德分类准确）
-  │   ② 去掉 types 按关键词排序（如岭南印象园→中山纪念堂误配补救）
-  │   ③ 全国搜索 + 跨城市判定（确认不在本市 → 返回提示）
-  │
-  ├── 成功 → (lon, lat, opentime2, address, ...)
-  │     ↓
-  │   parse_biz_hours(opentime2) → LLM 解析营业时间
-  │     ├── 成功 → (start_min, end_min)
-  │     └── 失败 → None（tw_start/tw_end 均置 None）
-  │     ↓
-  │   加入 items[] → POILookupItem
-  │
-  └── 失败 → 加入 failed[]（返回错误信息字符串）
-       ↓
-返回 { items: POILookupItem[], failed: string[] }
-```
-
-详见 [`docs/ADR/005.md`](../ADR/005.md) 营业时间 LLM 解析与 Agent 架构决策。
-
-### 端到端业务流程（从前端视角）
-
-整个规划业务分**4 个阶段**，前后端配合完成：
-
-```
-Stage 1 — POI 查找
-  目的：获取景点坐标 + 营业时间
-  前端 → POST /api/poi-lookup（传入 city + names[]）
-  后端 → 高德 API 三策略搜索 → LLM 解析 opentime2
-  返回 → POILookupItem[]（含坐标/地址/时间窗）
-  前端 → 展示结果，用户确认
-
-Stage 2 — Suggest（CA 固定）
-  目的：让用户看到所有可能的行程方案
-  前端 → POST /api/suggest（传入酒店 + 已确认景点 + 参数）
-  后端 → run_planning(mode="fast", n_days=None)
-          └── ca_suggest()
-                ├── 遍历 6 种聚类 × 天数递增
-                ├── CASolver.solve() 求解各组
-                └── 返回 type="suggestion"（多条方案 + 矩阵）
-  返回 → { suggestions[], cost_matrix, dist_matrix, polylines }
-          每条建议已含完整 routes / daily_schedules / cost
-  前端 → 展示方案卡片，用户可点击预览
-
-  ┌── fast 路径（不调后端）──────────────────────────────┐
-  │ 用户点击卡片 → frontend/buildPlanResultFromSuggestion │
-  │ → store.planResult → router.push("/plan")            │
-  └──────────────────────────────────────────────────────┘
-
-Stage 3 — Plan（VNS 仅限 deep 模式）
-  目的：对选定天数做深度优化
-  前置：用户在 Suggest 页选好天数，点击"深度规划"
-  前端 → POST /api/plan（mode="deep", n_days=用户选定）
-  后端 → run_planning(mode="deep", n_days=指定)
-          └── cluster_and_solve()
-                ├── 遍历 6 种聚类，固定天数
-                ├── solve_groups(solver_type="VNS")   # 分钟级
-                └── 返回 type="solution"
-  返回 → PlanResult（含 best_days/daily_schedules/commentary）
-  前端 → 用户点击深度结果卡片
-         → store.planResult = data → router.push("/plan")
-
-Stage 4 — 结果展示
-  PlanPage 读取 store.planResult
-  纯展示，不调用任何后端 API
-  组件: metrics-bar + commentary + AmapMap + SchedulePanel
-```
+- **新增/变更端点**：更新 `routes.py`、`schemas.py` 及本页「数据流」、[data.md](data.md) 数据字典。
+- **改引擎**：`engine/` 与 `agent/planning/`（被 pipeline.adjust_plan 消费）需同改，并更新 [agent.md](agent.md)。
+- **改数据模型**：同步 `data/model/models.py` 与 [data.md](data.md)。
+- **改工具**：注册到 `TOOL_REGISTRY` + 更新 [tools.md](tools.md) 与 [agent.md](agent.md)。
+- **改接口契约**：`schemas.py` 改动需跑 `make gen-api`（生成前端 openapi 类型）。

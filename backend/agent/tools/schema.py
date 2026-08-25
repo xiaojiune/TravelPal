@@ -2,7 +2,7 @@
 
 从 TOOL_REGISTRY 各函数的类型注解 + docstring 生成 OpenAI 兼容的 tools schema，
 与 MCP input_schema（均由函数签名推导）保持同源，一处改签名两处同步生效
-（ADR-009 §5「schema 单一来源」）。
+（ADR-007 §5「schema 单一来源」）。
 
 生成规则：
 - 参数 JSON 类型由 typing 注解映射（str→string / int→integer / float→number /

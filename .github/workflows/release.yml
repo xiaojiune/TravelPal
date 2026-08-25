@@ -13,14 +13,19 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Install git-cliff
-        uses: kenji-miyake/setup-git-cliff@v1
-      - name: Generate changelog notes
+      - name: Read release notes
         id: changelog
         run: |
-          echo "NOTES<<EOF" >> "$GITHUB_OUTPUT"
-          git-cliff --latest --strip header >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          NOTES_FILE="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            {
+              echo 'NOTES<<RELEASE_EOF'
+              sed '1,5d' "$NOTES_FILE"
+              echo 'RELEASE_EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "缺少 docs/releases/${GITHUB_REF_NAME}.md，请补充后再发布" >> "$GITHUB_OUTPUT"
+          fi
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

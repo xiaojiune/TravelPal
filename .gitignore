@@ -116,8 +116,8 @@ docs/images/generated/*.jpg
 # Sphinx 文档站构建产物
 docs/_build/
 
-# 产品评审意见（复制自各 AI 助手的评审材料，频繁替换，不进版本控制）
-docs/product/feedback/
+# 产品评审意见（频繁替换，不进版本控制）
+docs/feedback/
 
 # Windows 重定向残留
 docs_buildhtml/
@@ -127,3 +127,12 @@ frontend/openapi.json
 
 # Sphinx 构建时自动生成
 docs/openapi.json
+
+# Agent 技能本地入口软链（指向 ~/.dsh，不进版本控制）
+.dsh/skills/skill-authoring
+.dsh/skills/plan-build-protocol
+.dsh/skills/session-handoff
+.dsh/skills/project-docs
+
+# 待做任务草稿本（想法暂存，不随项目版本控制）
+docs/inbox.md

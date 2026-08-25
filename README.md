@@ -164,10 +164,8 @@ make help
 
 | 阶段 | 方向 |
 |------|------|
-| v1.0-beta（📍 当前阶段） | 核心闭环上线、联调验收 |
-| v1.0 | 正式发布：文档统一翻修、稳定上线 |
-| v1.1 | 对话式行程调整、异步任务面板、Agent 驱动 UI（表单卡片）、方案对比视图 |
-| 远期 | 个性化偏好记忆、多 Agent 编排、MCP 生态接入 |
+| v0.1.0（📍 当前阶段） | 核心闭环上线、联调验收、GitHub 自动 Release（tag 驱动） |
+| 远期 | 对话式行程调整、异步任务面板、Agent 驱动 UI（表单卡片）、方案对比视图、个性化偏好记忆、多 Agent 编排 |
 
 ## ❓ 常见问题
 
@@ -175,7 +173,7 @@ make help
 
 ## 🤝 贡献
 
-欢迎提交 [Issue](https://github.com/xiaojiune/TravelPal/issues)、[PR](https://github.com/xiaojiune/TravelPal/pulls) 与使用反馈。开发环境见上方「本地开发」，代码规范见 [docs/runbooks/coding.md](docs/runbooks/coding.md)。
+欢迎提交 [Issue](https://github.com/xiaojiune/TravelPal/issues)、[PR](https://github.com/xiaojiune/TravelPal/pulls) 与使用反馈。开发环境见上方「本地开发」，代码规范见 `travelpal-coding` skill。
 
 ## 许可
 

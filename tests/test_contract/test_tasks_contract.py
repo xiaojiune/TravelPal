@@ -1,6 +1,6 @@
 """tasks 层契约测试：锁定任务执行注册表与参数转换契约。
 
-ADR-010 #7（契约测试）：纯单元验证 backend/tasks 层的三个稳定契约，
+契约测试：纯单元验证 backend/tasks 层的三个稳定契约，
 防止拆分/重构（executors 增删、参数结构演进）时静默破坏：
 - TASK_EXECUTORS 注册表 keys（suggest/plan/adjust）
 - _build_poi_cache 参数转换契约（TaskParams → PoiCache，缺字段 ValueError）

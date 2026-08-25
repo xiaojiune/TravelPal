@@ -54,9 +54,26 @@
             </main>
           </div>
           <footer class="footer">
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-              ICP备案/许可证号：桂ICP备2026015614号-1
-            </a>
+            <div class="footer-links">
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
+                ICP备案/许可证号：桂ICP备2026015614号-1
+              </a>
+              <span class="footer-sep" aria-hidden="true">·</span>
+              <a
+                href="https://beian.mps.gov.cn/#/query/webSearch?code=44030002015955"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-beian"
+              >
+                <svg class="beian-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z" fill="#2E6FE0" />
+                  <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                粤公网安备 44030002015955号
+              </a>
+              <span class="footer-sep" aria-hidden="true">·</span>
+              <span class="footer-version">v0.1.0</span>
+            </div>
           </footer>
           <AgentPanel v-model:show="agentOpen" />
           <FeedbackModal v-model:show="feedbackOpen" />

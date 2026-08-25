@@ -1,6 +1,6 @@
 """api 层契约测试：锁定 schemas Pydantic 模型契约。
 
-ADR-010 #7（契约测试）：纯单元验证 backend/api/schemas.py 的请求/响应模型，
+契约测试：纯单元验证 backend/api/schemas.py 的请求/响应模型，
 防止字段演进（重命名/类型变更/必填调整）时静默破坏前后端契约：
 - PlanRequest 必填字段 / 默认值 / 校验约束（mode/day_start 范围）
 - TaskSubmitResponse / TaskDetail 形状（前端轮询依赖）

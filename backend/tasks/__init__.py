@@ -1,6 +1,6 @@
 """异步任务包：Celery 应用 + 任务提交/消费/执行分层。
 
-解耦原 celery_app.py 单模块（ADR-010 #6）：
+解耦原 celery_app.py 单模块（后端架构评估与技术债清单，已归档）：
 - app.py：Celery 应用实例与队列配置（基础设施层）
 - submit.py：提交侧（submit_task），HTTP 端点与 MCP 工具的唯一依赖
 - worker.py：消费侧（run_plan_task + 状态流转），Celery 适配 + event loop 桥接

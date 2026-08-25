@@ -124,8 +124,8 @@ balance 是「记忆 → 决策」的算子：用户记忆中的参数经 balanc
 
 ### 相关文档
 
-- 项目哲学：`docs/product/004.md`（把决策留给人）。
-- 架构演进路线图：`docs/design/架构演进路线图.md`（中期记忆规划）。
+- 项目哲学：`docs/product/philosophy.md`（把决策留给人）。
+- 架构演进路线图：`docs/design/architecture.md`（中期记忆规划）。
 
 ## 修改记录
 

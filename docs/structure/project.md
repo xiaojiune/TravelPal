@@ -74,7 +74,8 @@ TravelPal 是一个**基于双引擎 + LLM Agent 的智能旅行规划系统**�
 | `design/` | 规划蓝图（架构演进 / UI-UX / 记忆），非决策记录 |
 | `product/` | 使命→原则→计划（slogan / philosophy / roadmap） |
 | `ADR/` | 决策记录（001-009，按 13 段模板） |
-| `runbooks/` | 运维与排障手册 |
+| `feedback/` | 用户反馈（AI 对话记录与外部建议） |
+| `handoff/` | 会话交接文档（CURRENT_CODE / CURRENT_DOC） |
 
 ### 关联 ADR
 

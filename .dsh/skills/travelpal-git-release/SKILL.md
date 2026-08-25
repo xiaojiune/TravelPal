@@ -59,7 +59,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 纯给 GitHub Actions 索引的版本说明存储，**不入文档站**（conf.py `exclude_patterns` 排除）、无 README、无 archive。
 
 - **文件名 = tag 名**：`v<X.Y.Z>.md` 或 `v<X.Y.Z>-beta.md`，严格与 pyproject 的 version 及要打的 tag 一致。
-- **每版本一份**，人工精炼，只写"这个版本带来了什么"，**不逐条列 commit**。
+- **每版本一份**，人工精炼。正文分两层：**「主要变化」**（面向读者，这版带来什么价值，偏 feat）+ **「主要修改」**（面向技术，具体改动明细，偏 fix）。**不逐条列 commit**。
 
 **内容模板**：用 `assets/release-template.md`（不留在 docs/，收敛于 skill；发布时复制为 `docs/releases/<tag>.md`）。
 
@@ -84,7 +84,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 4. **tag 一律打到 dev**，不直接打 main。
 5. **不越权读**：只读与发布相关的版本/状态，不全量读取无关历史。
 6. **版本说明缺失即阻断**：`docs/releases/<tag>.md` 未就绪（不存在或空），不推送、不打 tag。
-7. **不擅自生成/落盘发布正文**：agent 可提炼草稿，但必须用户确认后才写入；正文只写"主要修改"，不铺列 commit。
+7. **不擅自生成/落盘发布正文**：agent 可提炼草稿，但必须用户确认后才写入；正文分"主要变化"（读者价值）与"主要修改"（技术明细），不逐条列 commit。
 
 ## assets
 

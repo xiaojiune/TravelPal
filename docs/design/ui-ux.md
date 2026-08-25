@@ -122,9 +122,9 @@
 ### 关联 ADR
 
 - ADR-002：前端架构选型（Vue 3 + Vite）。
-- ADR-009：Naive UI 分步引入（Agent-driven UI）。
-- ADR-012：手写轻量架构 + 选择性引框架（不引 renderer 依据）。
-- ADR-006：MCP 协议迁移预留（A2UI over MCP 观察项承载方）。
+- ADR-007：Naive UI 分步引入（Agent-driven UI）。
+- ADR-008：手写轻量架构 + 选择性引框架（不引 renderer 依据）。
+- ADR-005：MCP 协议迁移预留（A2UI over MCP 观察项承载方）。
 
 ### 相关文档
 

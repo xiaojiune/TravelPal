@@ -157,12 +157,12 @@
 ### 关联 ADR
 
 - ADR-001：CA / VNS 平级并行（引擎层）。
-- ADR-005：营业时间 LLM 解析与 Agent 架构决策（MCP 迁移预留）。
-- ADR-006：MCP 协议迁移预留。
-- ADR-007：BM25 RAG 知识检索（Deprecated）。
-- ADR-009：Naive UI 分步引入（Agent-driven UI 承接方）。
-- ADR-012：手写轻量架构 + 选择性引框架（换框架边界判断）。
-- ADR-014：LLM 编排层选型（LangGraph 维持，PydanticAI 不引入）。
+- ADR-004：营业时间 LLM 解析与 Agent 架构决策（MCP 迁移预留）。
+- ADR-005：MCP 协议迁移预留。
+- ADR-006：BM25 RAG 知识检索（Deprecated）。
+- ADR-007：Naive UI 分步引入（Agent-driven UI 承接方）。
+- ADR-008：手写轻量架构 + 选择性引框架（换框架边界判断）。
+- ADR-009：LLM 编排层选型（LangGraph 维持，PydanticAI 不引入）。
 
 ### 相关文档
 

@@ -20,7 +20,7 @@ jobs:
           if [ -f "$NOTES_FILE" ]; then
             {
               echo 'NOTES<<RELEASE_EOF'
-              cat "$NOTES_FILE"
+              sed '1,5d' "$NOTES_FILE"
               echo 'RELEASE_EOF'
             } >> "$GITHUB_OUTPUT"
           else

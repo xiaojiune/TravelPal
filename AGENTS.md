@@ -10,7 +10,6 @@
 - **纪律1**：严格按用户指令执行。方向未明先问再做；plan 阶段绝不动手。
 - **纪律2**：禁止主动执行可能影响用户判断或较复杂的操作（如 git commit/push/pull/merge/checkout、前后端联调等）。这类操作遵循对应 skill 并先征得用户同意。
 - **纪律3**：新对话开始，若用户未提供上下文，主动询问是否回顾当前项目状态或关键决策，不自作主张假设已知上下文。
-- **纪律3.1**：涉及项目任务时，可引用 [`docs/handoff/`](docs/handoff/) 交接文档快速建立上下文：代码会话读 `CURRENT_CODE.md`，文档会话读 `CURRENT_DOC.md`。读取由用户主导，不自动、不全量。
 - **边界**：查看代码发现阻塞性 bug **先与用户商议**再操作；依赖外部环境（PostgreSQL/Redis/Celery 等）的操作**先探测端口**，不可用则提醒用户先启动。
 
 ## 规范指引（按需加载对应 skill）
@@ -18,6 +17,7 @@
 | 场景 | 加载 skill | 覆盖 |
 |------|-----------|------|
 | 编码规范（注释/代码风格/接口清单/数据模型/VNS 引擎） | `travelpal-coding` | backend / frontend / engine 三块 |
+| 架构编排（代码放哪层/模块怎么组织/公共逻辑怎么抽/文件要不要拆） | `travelpal-architecture` | 架构思想 + 分层决策 |
 | 测试规范（何时跑/划范围/环境探测/依赖分组/测试风格） | `travelpal-testing` | 测试全流程 |
 | 版本发布（git/tag/推送/同步 main） | `travelpal-git-release` | 发布与同步流 |
 | 运维与排障（部署/日志/重启/域名/故障排查） | `travelpal-ops` | deploy / troubleshooting 两类 |

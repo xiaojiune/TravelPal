@@ -22,6 +22,7 @@
 | 版本发布（git/tag/推送/同步 main） | `travelpal-git-release` | 发布与同步流 |
 | 运维与排障（部署/日志/重启/域名/故障排查） | `travelpal-ops` | deploy / troubleshooting 两类 |
 | 会话交接（跨会话上下文） | `session-handoff` | 交接文档读写 |
+| 文档维护（新增/修改任何 .md、ADR、入口文档、index.rst 导航） | `project-docs` | 全项目 md 文档 |
 | 任务执行（plan/build 行为） | `plan-build-protocol` | 响应节奏 |
 
 > 规范原文不在此注入常驻，涉及相应场景时加载对应 skill 即可；"遗忘时加载"，不随 AGENTS.md 常驻。

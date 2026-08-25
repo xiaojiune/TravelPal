@@ -132,7 +132,7 @@ docs/openapi.json
 .dsh/skills/skill-authoring
 .dsh/skills/plan-build-protocol
 .dsh/skills/session-handoff
-.dsh/skills/docs-maintenance
+.dsh/skills/project-docs
 
 # 待做任务草稿本（想法暂存，不随项目版本控制）
 docs/inbox.md

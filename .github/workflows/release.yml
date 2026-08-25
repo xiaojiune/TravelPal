@@ -18,9 +18,11 @@ jobs:
         run: |
           NOTES_FILE="docs/releases/${GITHUB_REF_NAME}.md"
           if [ -f "$NOTES_FILE" ]; then
-            echo "NOTES<<EOF" >> "$GITHUB_OUTPUT"
-            cat "$NOTES_FILE" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
+            {
+              echo 'NOTES<<RELEASE_EOF'
+              cat "$NOTES_FILE"
+              echo 'RELEASE_EOF'
+            } >> "$GITHUB_OUTPUT"
           else
             echo "缺少 docs/releases/${GITHUB_REF_NAME}.md，请补充后再发布" >> "$GITHUB_OUTPUT"
           fi

@@ -1,0 +1,3 @@
+docs/handoff/archive/ 存放被替换的旧交接文档（session-handoff 规范）。
+旧 CURRENT_CODE.md / CURRENT_DOC.md 被更新时，移入此处并按日期命名，如 2026-08-24-CURRENT_CODE.md。
+本占位文件用于让空目录被 git 跟踪。

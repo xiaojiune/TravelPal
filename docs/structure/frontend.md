@@ -1,295 +1,118 @@
-# 前端结构
+# 前端架构详解
 
 ## 修改记录
 
-| 日期 | 变更 |
-|------|------|
-| 2026-07-18 | 全量重写：同步实际代码结构，新增数据流图与交叉引用 |
+| 日期 | 变更 | 动机 |
+|------|------|------|
+| 2026-08-25 | 重写：异步任务轮询取代同步 suggest/plan，Agent 全局化浮动面板，新增 About/反馈与 ToolPanel 等，对齐 structure 模板 | 前端已演化，旧文档路径/组件过时 |
+| 2026-07-18 | 全量重写：同步实际代码结构，新增数据流图与交叉引用 | 建立前端独立文档 |
 
-## 1. 架构总览
+## 读者指南
 
-前端为 **Vue 3 + TypeScript + Vite** SPA，状态管理使用 **Pinia**（setup 语法），HTTP 客户端使用 **Axios**，路由使用 **Vue Router**（hash-free history 模式）。
+| 列 | 内容 |
+|----|------|
+| 面向读者 | 前端开发者 |
+| 阅读前置 | [data.md](data.md)、[backend.md](backend.md) |
+| 阅读目标 | 读懂前端分层、页面路由、状态管理与 API 封装 |
+
+## 架构总览
+
+前端为 **Vue 3 + TypeScript + Vite** SPA，状态管理 Pinia（setup 语法），HTTP 客户端 Axios（统一实例 `services/http.ts`），路由 Vue Router（hash-free history，懒加载）。API 类型由 openapi-typescript 从后端 OpenAPI 生成（`api/types.generated.ts`）。
 
 架构特点：
 
-- **全量 TypeScript**：frontend/src 下全部为 .ts / .vue 文件，API 类型由 openapi-typescript 从后端 OpenAPI 规范生成
-- **Composable 模式**：将 POI 搜索、编辑表格、打字机效果等分离为独立 composable
-- **SSE 流式渲染**：Agent 聊天使用 EventSource 实现打字机效果
-- **模块化组件**：地图（AmapMap）、行程（SchedulePanel）、聊天（ChatMessage）互相独立
+- **全量 TypeScript**：`src/` 下全部为 .ts / .vue，类型由后端 schema 驱动。
+- **Agent 全局化**：Agent 聊天不是独立页面，而是 `App.vue` 里的浮动抽屉（`AgentPanel`），配 `ToolPanel` / `ToolRail` 工具面板。
+- **异步任务**：suggest / plan 立即返回 `task_id`，前端轮询 `GET /api/tasks/{id}`（`useTaskPolling`）。
+- **Composable 模式**：POI 搜索、编辑表格、打字机、任务轮询等分离为 composable。
+- **SSE 流式渲染**：Agent 对话用 EventSource 打字机效果。
 
-## 2. 目录结构
+## 目录结构
 
 ```
 frontend/
-├── index.html                    # SPA 入口 HTML
-├── vite.config.js                # Vite 构建配置 + /api 代理
-├── tsconfig.json                 # TypeScript 配置
-├── eslint.config.js              # ESLint 扁平化配置
-├── package.json                  # 依赖与脚本
-├── .npmrc                        # npm 镜像配置
-├── .prettierrc                   # Prettier 格式化配置
-│
-├── public/                       # 公共静态资源
-├── dist/                         # 构建产物（gitignored）
-│
+├── index.html / vite.config.js / tsconfig.json / eslint.config.js / package.json
+├── static/  公共静态资源
 └── src/
-    ├── main.ts                   # Vue 应用入口（挂载 Pinia + Router）
-    ├── App.vue                   # 根组件：全局导航栏 + <router-view>
-    ├── style.css                 # 全局样式
+    ├── main.ts          Vue 挂载：Pinia + Router + 注入品牌色 CSS 变量
+    ├── App.vue          根组件：导航 + 全局 Agent 抽屉 + 移动端降级提示
+    ├── theme.ts         品牌色主题变量（applyThemeVars，防首帧 FOUC）
+    ├── style.css        全局样式
+    ├── amap.d.ts        高德地图类型声明
     │
-    ├── pages/                    # 页面级组件（5 个路由页面）
-    │   ├── HomePage.vue          首页：城市输入 + 参数配置
-    │   ├── SuggestPage.vue       方案建议列表（ca_suggest 结果展示）
-    │   ├── PlanPage.vue          核心规划展示页（地图 + 行程 + 评语）
-    │   ├── AgentPage.vue         LLM Agent 聊天页（SSE 流式对话）
-    │   └── HistoryPage.vue       历史记录分享站（API 分页列表）
+    ├── pages/           页面组件（5 个路由页面）
+    │   ├── HomePage.vue     首页：城市/酒店/景点输入 + 参数配置
+    │   ├── SuggestPage.vue  方案建议列表（异步任务结果）
+    │   ├── PlanPage.vue     规划结果展示（地图 + 行程 + 评语）
+    │   ├── HistoryPage.vue  历史记录分享站
+    │   └── AboutPage.vue    关于页面 + 用户反馈问卷
     │
-    ├── components/               # 可复用组件
-    │   ├── AmapMap.vue           高德 2D 地图（路线 + 景点标记）
-    │   ├── SchedulePanel.vue     每日行程表（折叠 + 高显联动）
-    │   └── ChatMessage.vue       单条聊天消息（打字机效果）
+    ├── components/       可复用组件
+    │   ├── AmapMap.vue      高德 2D 地图
+    │   ├── SchedulePanel.vue 每日行程表
+    │   ├── ChatMessage.vue  单条聊天消息（打字机）
+    │   ├── ChatStream.vue   SSE 流式消息列表
+    │   ├── AgentPanel.vue   全局 Agent 浮动抽屉
+    │   ├── ToolPanel.vue    工具查询结果面板（POI 待选 + 其它结果）
+    │   ├── ToolRail.vue     工具面板切换导航
+    │   ├── ToolResultCard.vue 工具结果卡片
+    │   ├── SchemaFormCard.vue  Agent-driven UI 表单卡片
+    │   └── FeedbackModal.vue  反馈弹窗
     │
-    ├── composables/              # 组合式函数
-    │   ├── useEditTable.ts       规划点编辑表格（增删改 + 确认）
-    │   ├── usePoiSearch.ts       POI 搜索（自动确认、无需勾选）
-    │   └── useTypewriter.ts      打字机效果（逐字 + 追加模式）
+    ├── composables/      组合式函数
+    │   ├── useEditTable.ts   规划点编辑表格
+    │   ├── usePoiSearch.ts   POI 搜索
+    │   ├── useTypewriter.ts  打字机效果
+    │   ├── useSuggestCache.ts suggest 结果缓存（矩阵快照）
+    │   └── useTaskPolling.ts 异步任务轮询
     │
-    ├── router/
-    │   └── index.ts              Vue Router 路由表（5 条懒加载路由）
-    │
+    ├── router/index.ts      路由表（5 条懒加载路由）
     ├── services/
-    │   └── api.ts                Axios 封装（7 个后端 API 函数 + History 类型）
-    │
-    ├── stores/
-    │   └── plan.ts               Pinia store（输入参数 + 方案 + 结果状态）
-    │
-    ├── types.ts                  # 手工维护的类型定义
-    │
-    └── api/
-        └── types.generated.ts    # openapi-typescript 自动生成（OpenAPI 驱动）
+    │   ├── http.ts          Axios 统一实例（baseURL /api + 错误规范化）
+    │   └── api.ts           类型化 API 调用（POI/任务/历史/反馈）
+    ├── stores/plan.ts       Pinia store（输入/建议/结果/Agent 对话状态）
+    ├── types.ts             手工类型定义
+    ├── api/types.generated.ts  openapi-typescript 自动生成
+    ├── utils/time.ts        时间格式化工具
+    └── content/faq.md       FAQ 内容（markdown）
 ```
 
-## 3. 页面组件
+## 数据流
 
-全部路由使用懒加载（`() => import(...)`），5 个页面组件：
+### 页面路由（Agent 已全局化，无独立路由）
 
-- **HomePage.vue**（`/`）
-  城市输入、酒店选择、景点编辑、参数配置（惩罚/起程时间/最小天数），触发 `/api/suggest`。
-
-- **SuggestPage.vue**（`/suggest`）
-  展示 ca_suggest 多方案卡片（按天数分组）。
-  fast 模式前端合成 PlanResult 跳转 /plan；deep 模式调 `/api/plan` 后跳转。
-
-- **PlanPage.vue**（`/plan`）
-  纯展示页：指标栏（成本/距离/等待）、评语、AmapMap 地图、SchedulePanel 行程表、原始请求参数折叠面板。
-- **AgentPage.vue**（`/agent`）
-
-  LLM Agent 对话：输入框 + SSE 流式消息列表 + 打字机效果 + 左侧待选栏。
-  后端协议详见 [`agent.md`](agent.md)。
-
-- **HistoryPage.vue**（`/history`）
-  历史记录分页列表，点击拉取完整数据跳转 /plan。
-
-## 4. 可复用组件
-
-- **AmapMap.vue**（PlanPage）
-  高德 2D 地图渲染：展示 routes 路线、spots 景点标记、真实 polylines 轨迹。
-  支持多日高显（`highlightDays`）和景点高亮（`highlightSpot`）。
-
-- **SchedulePanel.vue**（PlanPage）
-  每日行程表：按天折叠/展开，行程项含到达/离开时间及状态。
-  高显联动展开，地图点击高亮对应景点。
-
-- **ChatMessage.vue**（AgentPage）
-  单条消息渲染组件：支持打字机逐字效果（`useTypewriter`），区分用户/助手角色样式。
-
-## 5. Composables
-
-- **useEditTable**
-  管理 HomePage 规划点编辑表格（酒店 + N 景点），维护 `editRows` 临时数组，确认时同步 store。
-  关键方法：`editRows`, `editHint`, `confirmEdit`, `deleteRow`。
-
-- **usePoiSearch**
-  POI 搜索逻辑：根据城市+名称列表调 `postPoiLookup`，自动填充坐标和时间窗。
-  关键方法：`searchHotel`, `searchSpots`, `loading`。
-
-- **useTypewriter**
-  打字机效果：`start(text)` 逐字播放，`append(chunk)` SSE 流式追加，`reset()` 清空。
-  关键方法：`displayText`, `start`, `append`, `reset`。
-
-## 6. 状态管理
-
-单一 Pinia store `plan`（setup 语法），三组状态：
-
-### 输入状态
-
-| 字段 | 类型 | 说明 |
+| 路径 | 页面 | 用途 |
 |------|------|------|
-| `city` / `hotelName` / `hotelLon` / `hotelLat` | `string` / `number` | 城市及酒店 |
-| `dayStart` | `number` | 每日启程时间（距午夜分钟数） |
-| `spots` | `SpotFormItem[]` | 景点列表（名称/坐标/时间窗/停留） |
-| `penaltyWeight` / `earlyWaitWeight` / `lateReturnWeight` | `number` | 惩罚权重参数 |
-| `minDays` | `number \| null` | 最小天数（null 为引擎自动推断） |
-| `isParamsSaved` | `boolean` | 用户是否已完成参数确认 |
+| `/` | HomePage | 输入参数，触发 suggest 任务 |
+| `/suggest` | SuggestPage | 展示方案建议（异步任务轮询），可触发布局 |
+| `/plan` | PlanPage | 只读展示规划结果 |
+| `/history` | HistoryPage | 历史记录分享站 |
+| `/about` | AboutPage | 关于 + 反馈问卷 |
 
-### 方案状态
+### suggest / plan 异步流程
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `suggestions` | `SuggestionItem[]` | ca_suggest 返回到多组方案 |
-| `suggestSpots` | `Record<string, SpotDictItem>` | suggest 返回的景点字典（含 original_tw） |
-| `suggestCostMatrix` / `suggestDistMatrix` | `number[][]` | 成本/距离矩阵，deep 模式复用 |
-| `suggestPolylines` | `Record<string, string>` | 真实路径坐标字典 |
+HomePage 提交输入 → `store.buildRequest()` → `api.submitTask('suggest', data)` 返回 `task_id` → `useTaskPolling` 轮询 `GET /api/tasks/{id}` → 完成后写入 `store.suggestions` / `store.planResult`。
 
-### 结果状态
+### Agent 对话（SSE）
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `planResult` | `PlanResult \| null` | 当前展示的规划结果 |
-| `deepResults` | `PlanResult[]` | 深度模式生成的规划结果列表 |
-| `historyRecordId` | `string \| null` | 从历史加载的记录 ID（防重复分享） |
-| `historyRequestParams` | `Record \| null` | 历史记录原始请求参数 |
+`AgentPanel` → `POST /api/chat` → SSE 流式事件 → `ChatMessage`/`ChatStream` 打字机渲染；工具查询结果经 `store.addQueryResult` 汇总到 `ToolPanel`，POI 可加入首页表单（`addPoiToForm`）。
 
-关键方法：`buildRequest(nDays)` 构造请求体，`reset()` 清空全部状态。
+## 术语表
 
-## 7. API 层
+| 术语 | 定义 |
+|------|------|
+| Pinia store | 全局状态（plan）：输入/建议/结果/Agent 对话 |
+| Composable | 组合式函数（useTaskPolling 等） |
+| TaskDetail | 异步任务状态（OpenAPI 类型） |
+| Agent-driven UI | 由后端 schema 驱动表单渲染（SchemaFormCard） |
+| 打字机 | useTypewriter 逐字 + SSE 追加渲染 |
 
-后端 API base URL 由 Vite 代理（`/api` → `localhost:8000`）。
+## 维护契约
 
-### 核心 API
+修改前端时必须同步：
 
-| 函数 | 端点 | 用途 |
-|------|------|------|
-| `postPoiLookup(city, names)` | `POST /api/poi-lookup` | 批量查询 POI 坐标 / 营业时间 |
-| `postSuggest(data)` | `POST /api/suggest` | 获取多组候选方案（ca_suggest） |
-| `postPlan(data)` | `POST /api/plan` | 指定天数执行深度规划（VNS） |
-| `postChat(message, sessionId)` | `POST /api/chat` | Agent SSE 流式对话 |
-
-### 历史记录 API
-
-| 函数 | 端点 | 用途 |
-|------|------|------|
-| `getHistoryList(page, pageSize)` | `GET /api/history` | 分页获取历史记录摘要 |
-| `getHistoryDetail(id)` | `GET /api/history/{id}` | 获取完整规划结果及请求参数 |
-| `postHistory(data)` | `POST /api/history` | 保存当前方案到分享站 |
-| `deleteHistory(id, deviceId)` | `DELETE /api/history/{id}` | 删除记录（device_id 鉴权） |
-| `getDeviceId()` | 纯前端 | 生成/读取匿名设备标识 |
-
-## 8. 类型定义
-
-类型体系分两层：
-
-```
-api/types.generated.ts     ← openapi-typescript 自动生成（后端 schema 驱动）
-types.ts                   ← 手工补充（前端专用类型 + 生成类型的扩展）
-```
-
-| 类型 | 来源 | 说明 |
-|------|------|------|
-| `PlanRequestPayload` | types.ts | 扩展生成的 PlanRequest，增加 cost_matrix/dist_matrix |
-| `POILookupItem` | types.ts | 从 generated 重新导出 |
-| `SuggestionItem` | types.ts | 手工维护（ca_suggest 返回结构） |
-| `PlanResult` | types.ts | 完整规划结果（含 solution/schedules/commentary/polylines） |
-| `PlanResultSolution` | types.ts | routes / total_cost / total_dist / valid |
-| `ScheduleItem` | types.ts | 单日行程项（到达/离开/状态） |
-| `SpotFormItem` | types.ts | 纯前端表单景点项（twStart/twEnd/expectedArrival） |
-| `SpotDictItem` | types.ts | 后端返回的景点字典项（x/y/tw/original_tw） |
-| `ChatMessage` | types.ts | 聊天消息（user/assistant） |
-
-## 9. 构建与配置
-
-| 配置文件 | 说明 |
-|---------|------|
-| `vite.config.js` | Vite 构建：Vue 插件、@ 别名、devServer → `/api` 代理到 localhost:8000 |
-| `tsconfig.json` | TypeScript 严格模式配置 |
-| `eslint.config.js` | ESLint 扁平化配置（Flat Config） |
-| `.prettierrc` | Prettier 格式化规则 |
-| `.npmrc` | npm registry 镜像配置 |
-
-开发命令（通过根目录 Makefile）：
-
-```bash
-make dev      # 启动 Vite 开发服务器（port 5173）
-make build    # 生产构建到 dist/
-make lint     # ESLint 检查
-make typecheck # vue-tsc 类型检查
-```
-
-## 10. 数据流图
-
-### 页面间数据流转
-
-```
-HomePage                          SuggestPage                     PlanPage
-   |                                  |                              |
-   |-- POST /api/suggest -----------> |                              |
-   |   ← suggestions + spots          |                              |
-   |   + cost_matrix + dist_matrix    |                              |
-   |   + polylines + amap keys        |                              |
-   |                                  |                              |
-   |-- router.push(/suggest) -------> |                              |
-   |                                  |                              |
-   |                                  |--- fast: 点击卡片 ---------> |
-   |                                  |   onCardClick(s)             |
-   |                                  |   buildPlanResult(s)         |
-   |                                  |   store.planResult = ...     |
-   |                                  |   router.push(/plan)         |
-   |                                  |                              |
-   |                                  |--- deep: 点"获取规划" ----> |
-   |                                  |   POST /api/plan (mode=deep) |
-   |                                  |   ← PlanResult               |
-   |                                  |   store.deepResults.push(r)  |
-   |                                  |   再点卡片 → router.push     |
-   |                                  |                              |
-   |                                  |                   PlanPage  |
-   |                                  |                   只读 store |
-   |                                  |                   不调 API   |
-   |                                  |                              |
-HistoryPage                           |                              |
-   |                                  |                              |
-   |-- GET /api/history --------------|                              |
-   |-- 点击: GET /api/history/{id} --|                              |
-   |   store.planResult = detail      |                              |
-   |   router.push(/plan) ----------->|                              |
-```
-
-### 状态流向
-
-```
-buildRequest() → POST /api/suggest → store.suggestions + suggestSpots
-                                            + suggestCostMatrix + suggestPolylines
-                                                    ↓
-                                     SuggestPage 分组展示卡片
-                                                    ↓
-                                     onCardClick → buildPlanResultFromSuggestion
-                                         + store.suggestSpots  ← sugget 响应缓存
-                                         + store.suggestPolylines
-                                                    ↓
-                                          store.planResult
-                                                    ↓
-                                          PlanPage 渲染
-```
-
-详见 [`backend.md`](./backend.md) 第 8 章的引擎链路与规划流程。
-
-## 11. 与后端交叉引用
-
-- **HomePage → POST /api/suggest**
-  `routes.py suggest` → `pipeline.run_planning(n_days=None)`
-  后端参考：[`backend.md#7.3`](./backend.md#73)
-
-- **SuggestPage → POST /api/plan**
-  `routes.py plan` → `pipeline.run_planning(n_days` 指定`)`
-  后端参考：[`backend.md#7.4`](./backend.md#74)
-
-- **AgentPage → POST /api/chat**
-  `routes.py chat` → `agent.planner.PlannerAgent`
-  后端参考：[`backend.md#5`](./backend.md#5)
-
-- **PlanPage 渲染数据**
-  `pipeline.run_planning` 返回 `PlanResult`
-  后端参考：[`backend.md#8.3`](./backend.md#83)
-
-- **历史记录 POST /api/history**
-  `routes.py create_history`
-  后端参考：[`backend.md#7.5`](./backend.md#75)
+- **改 API 契约**：`schemas.py` 变更需跑 `make gen-api` 重新生成 `api/types.generated.ts`，同步 [data.md](data.md)。
+- **加路由页面**：更新 `router/index.ts` + 本页「页面路由」表。
+- **加组件**：在 `components/` 下实现，按需更新本页「目录结构」。
+- **改 store 字段**：同步 [data.md](data.md) 数据字典与 [backend.md](backend.md) 接口约定。
+- **改 Agent 面板**：同步 [agent.md](agent.md) 的 SSE 协议与工具行为。

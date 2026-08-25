@@ -1,6 +1,6 @@
 """mcp 层契约测试：锁定 MCP Server 工具暴露契约。
 
-ADR-010 #7（契约测试）：纯单元验证 backend/mcp/server.py 的 build_server()
+契约测试：纯单元验证 backend/mcp/server.py 的 build_server()
 与 TOOL_REGISTRY 保持一致的契约，防止工具注册演进时静默破坏外部 MCP 客户端：
 - list_tools 工具名集合 == TOOL_REGISTRY.keys()（单一事实来源）
 - 每工具含 name/description/input_schema（schema 从函数注解自动生成）

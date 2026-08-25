@@ -1,10 +1,10 @@
 /**
  * suggest 响应缓存：HomePage 写入、SuggestPage 消费的跨页临时数据。
  *
- * 从 plan store 独立出来（ADR-011 #2）：这三项是「首页 fetchSuggest → 建议页
+ * 从 plan store 独立出来（前端架构评估与技术债清单，已归档）：这三项是「首页 fetchSuggest → 建议页
  * 复用」的页面间临时数据，不属于全局规划状态，放 store 表面膨胀。
  * 模块级 ref 即单例，多个页面共享同一份数据，无需各自初始化。
- * 矩阵已由后端驾车快照缓存托管（ADR-008 轴 4），前端不再持有/复用矩阵。
+ * 矩阵已由后端驾车快照缓存托管（架构演进路线图 design/architecture.md 轴 4），前端不再持有/复用矩阵。
  */
 import { ref } from 'vue'
 import type { SpotDictItem } from '@/types'

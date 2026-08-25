@@ -1,7 +1,7 @@
 """DSPy prompt 优化占位。
 
 DSPy（Declarative Self-improving Language Programs）用于 prompt 自动编译与优化。
-当前仅保留目录占位（ADR-008 轴7），具体实现统一 TODO，按需引入，不提前依赖。
+当前仅保留目录占位（架构演进路线图 design/architecture.md 轴7），具体实现统一 TODO，按需引入，不提前依赖。
 """
 
 

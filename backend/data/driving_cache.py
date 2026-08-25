@@ -1,6 +1,6 @@
 """驾车路径缓存：点对基元 + 整矩阵快照。
 
-两层设计（对齐 ADR-008 轴 4 缓存策略）：
+两层设计（对齐架构演进路线图 design/architecture.md 轴 4 缓存策略）：
 - 点对缓存（本文件下半部）：键 `tp:driving:{city}:{start_fp}:{end_fp}`，TTL 600s，
   增量操作层（add_poi 场景按点对命中/过期）。驾车 A→B 与 B→A 耗时不同，方向敏感。
 - 矩阵快照（本文件上半部）：键 `tp:matrix:{city}:{points_fp}`，TTL 7200s 滑动续期，

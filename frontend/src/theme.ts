@@ -1,6 +1,6 @@
 /** 品牌色板（单一事实来源）：翡翠绿主色 + 靛蓝点缀 + 语义/中性 token。
  * 修改本文件，Naive UI（themeOverrides）与手写 CSS（--tp-* 变量）全站同步生效。
- * light 为当前生效主题；dark 组为深色模式预留（未启用，见 ADR-009 §4）。
+ * light 为当前生效主题；dark 组为深色模式预留（未启用，见 ADR-007 §4）。
  */
 export const brandColors = {
   // 主色系（低饱和翡翠绿）

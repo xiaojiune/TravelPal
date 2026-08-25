@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 /**
- * Schema 驱动表单卡片（ADR-009 §5 路线 A：JSON Schema 驱动表单）。
+ * Schema 驱动表单卡片（ADR-007 §5 路线 A：JSON Schema 驱动表单）。
  *
  * 输入为 OpenAI function parameters 片段（properties + required），按字段
  * type 分发渲染 Naive UI 控件（string→n-input / integer|number→n-input-number

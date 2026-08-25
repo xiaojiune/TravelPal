@@ -17,17 +17,9 @@ version: ""
 - 3. **design/ 文档改英文名**（`ea36683`）：architecture.md / ui-ux.md / memory.md。
 - 4. **product/ 分层**（`6da8081`）：slogan(使命) / philosophy(原则) / roadmap(计划)。
 - 5. **structure/ 模板化重写**（`d81958c`、`6a8dfd2`）：agent.md 及 project/backend/frontend/data/tools 共 6 篇，按 project-docs 的 structure 模板重写，对齐实际代码结构。
-
-### 后续提交（本次会话，commit 0e1775c）
-
-- **docs/index.rst 收敛**：所有 toctree 加 `:hidden:`（主页正文不再渲染目录块/ADR 索引表）；新增「文件导航」表格（ADR/design/product/structure/handoff 六类）；文档状态说明改写（以「修改记录」最新日期为准 + 落后≠失效 + 目录定位速览）；删除副标题「旅行伴侣——基于双引擎 + LLM Agent…」。
-- **docs/conf.py**：`exclude_patterns` 调整为 `["_build", ".DS_Store", "feedback", "handoff/archive", "inbox.md"]`，排除内部 feedback、待办 inbox.md 与历史归档 handoff/archive（归档文件仍进 git 跟踪，但不进文档站）。
-- **docs/handoff/CURRENT_CODE.md / CURRENT_DOC.md**：补主标题（`# 代码会话交接` / `# 文档会话交接`）+ 内部章节从 `#` 降为 `##`，修复此前 YAML frontmatter 未消费导致正文章节被渲染成 h1 的展示 bug（已 `make docs` 验证 h1 主标题 + h2 章节、frontmatter 不泄漏）。
-- **docs/handoff/archive/.gitkeep**（新）：占位文件，写入归档约定说明，让空 archive/ 目录被 git 跟踪（符合 session-handoff 规范：旧 CURRENT_* 移入此处按日期命名）。
-
-### 已修复的其它问题
-
-- project.md 文档索引移除已不存在的 `runbooks/` 目录、移除内部 `feedback/` 目录（feedback 被 .gitignore 忽略、不对外）。
+- 6. **index.rst 收敛 + handoff 修复与归档占位**（`0e1775c`）：所有 toctree 加 `:hidden:`（主页正文不再渲染目录块/ADR 索引表）；新增「文件导航」表格（ADR/design/product/structure/handoff 六类）；文档状态说明改写（以「修改记录」最新日期为准 + 落后≠失效 + 目录定位速览）；删除副标题「旅行伴侣——基于双引擎 + LLM Agent…」；`conf.py` 的 `exclude_patterns` 改为 `["_build", ".DS_Store", "feedback", "handoff/archive", "inbox.md"]`（排除内部 feedback、待办 inbox.md 与历史归档）；CURRENT_CODE.md / CURRENT_DOC.md 补主标题 + 章节降级修复展示 bug；新增 `archive/.gitkeep` 占位。
+- 7. **更新 CURRENT_DOC 交接为已提交状态**（`a49b6db`）：把上述提交收入「已提交」清单并置 status=done。
+- 8. **project.md 文档索引修正**（`94fdcab`、`9bbc636`）：移除已不存在的 `runbooks/` 目录、移除内部 `feedback/` 目录（feedback 被 .gitignore 忽略、不对外）。
 
 ## 决定 / 已知坑
 
@@ -40,7 +32,7 @@ version: ""
 
 ## 下一步目标
 
-1. **文档相关工作已全部提交**（最近一笔 `0e1775c`），工作区干净。
+1. **文档相关工作已全部提交**（最近一笔 `a49b6db`），工作区干净。
 2. **若继续文档工作**：可把「文件导航」表格的 ADR 索引（当前以注释保留在 index.rst）按需恢复为正文表格，或保持收敛到 toctree 单一来源（当前做法）。
-3. **可选**：`git push origin dev`（当前 dev 领先 origin/dev，已含全部待提交改动）。
+3. **可选**：`git push origin dev`（当前 dev 领先 origin/dev，已含全部本次改动）。
 4. 若用户后续要新增/修改文档，沿用 project-docs skill 的 ADR/design/product/structure 模板；交接文档读写走 session-handoff，勿改其规范。

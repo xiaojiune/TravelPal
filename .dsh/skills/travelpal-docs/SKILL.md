@@ -1,6 +1,6 @@
 ---
 name: travelpal-docs
-description: 项目文档维护方法论——管理 TravelPal 全项目所有 .md 文档（不只是 docs/）：根入口文档（README/AGENTS/ARCHITECTURE）、docs/ 体系（ADR/structure/product/handoff/inbox）、以及散落的 md。当你要新增/修改/更新任何 .md 文档、写一份 ADR、改入口文档、更新 docs/index.rst 导航、判断某篇文档该不该更新/标注过时、或构建文档站（make docs / gen-api）时使用。核心是"文档是独立生命体，靠修改记录日期标注生命，落后≠失效"；并建立"入口文档=接口、本 skill 是唯一修改者、其他 skill 只引用"的单一维护原则。与 session-handoff（管交接文档）、skill-authoring（管技能文档）分工，本 skill 管全项目非技能的 md 文档。
+description: 项目文档维护方法论——管理 TravelPal 全项目所有 .md 文档（不只是 docs/）：根入口文档（README/AGENTS/ARCHITECTURE）、docs/ 体系（ADR/structure/product/handoff/inbox）、以及散落的 md。**仅当用户明确要做文档变更**时使用：新增/修改/更新一篇文档、写一份 ADR、改入口文档、更新 docs/index.rst 导航、构建文档站（make docs / gen-api）。核心是"文档是独立生命体，靠修改记录日期标注生命，落后≠失效"；并建立"入口文档=接口、本 skill 是唯一修改者、其他 skill 只引用"的单一维护原则。与 session-handoff（管交接文档）、skill-authoring（管技能文档）分工，本 skill 管全项目非技能的 md 文档。注意：**代码变动不自动触发本文档维护**——除非用户明确说"改文档/更新文档/写篇文档"，否则不加载；不要每次改代码就主动去想"要不要顺带改文档"。
 ---
 
 # 项目文档维护方法论

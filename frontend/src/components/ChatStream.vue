@@ -52,6 +52,7 @@ import { useTaskPolling } from '@/composables/useTaskPolling'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
 import type { SuggestResult } from '@/services/api'
+import { streamChat } from '@/services/agent'
 
 interface Props {
   apiPath?: string
@@ -128,10 +129,10 @@ function sayHello() {
 }
 
 /**
- * 发送用户消息，读取 SSE 流式响应并逐字打字机渲染。
+ * 发送用户消息，经 services/agent.ts 读取 SSE 流式响应并逐字打字机渲染。
  *
- * 使用 fetch + ReadableStream 而非 EventSource，因为需要 POST 方法传递消息体。
- * 后端返回 SSE text/event-stream，前端手动 parse 'data: ' 前缀。
+ * SSE 的接口接入与流解析（fetch + ReadableStream 手动 parse 'data: '）已收敛到
+ * services/agent.ts，本组件仅通过 onContent/onToolResult/onDone/onError 订阅事件。
  * tool_result 事件数据经 emit 抛给宿主，本组件不持有待选栏状态。
  */
 async function send() {
@@ -154,97 +155,58 @@ async function send() {
   try {
     // form_context：首页表单当前输入快照（供 submit_plan_form 等工具感知用户已填内容）
     const formContext = store.buildRequest(null)
-    const resp = await fetch(props.apiPath, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    await streamChat(
+      {
         message: text,
-        plan_result: store.planResult ?? null,
-        form_context: formContext,
-      }),
-      signal: abortController.signal,
-    })
-    if (!resp.ok) {
-      messages.value[msgIndex].content = '请求失败，请重试'
-      loading.value = false
-      return
-    }
-    // SSE 手动解析：逐 chunk 读取字节流，拼行长尾后按 \n 分割
-    const body = resp.body
-    if (!body) {
-      messages.value[msgIndex].content = '响应体为空'
-      loading.value = false
-      return
-    }
-    const reader = body.getReader()
-    const decoder = new TextDecoder()
-    let partial = ''
-    let streamDone = false
-    while (!streamDone) {
-      const { done, value } = await reader.read()
-      if (done) break
-      partial += decoder.decode(value, { stream: true })
-      const lines = partial.split('\n')
-      partial = lines.pop() || ''
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6)
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.type === 'done') {
-            // 优雅收尾：不调用 stop()（否则剩余缓冲一次性蹦出，打字机效果丢失），
-            // 让打字机按节奏弹完剩余缓冲后复位 streamingIndex 并解锁 loading。
-            // 注意此回调异步触发（缓冲弹空后），期间不能提前复位 streamingIndex
-            gracefulDone = true
-            finish(() => {
-              messages.value[msgIndex].content = displayText.value
-              streamingIndex = -1
-              loading.value = false
-              forceScrollBottom()
-            })
-            streamDone = true
-            break
-          }
-          if (parsed.type === 'error' && parsed.data) {
-            stop()
-            messages.value[msgIndex].content = String(parsed.data)
-            streamingIndex = -1
-            streamDone = true
-            break
-          }
-          if (parsed.type === 'content' && parsed.data) {
-            append(parsed.data)
-            messages.value[msgIndex].content = displayText.value
-          }
-          if (parsed.type === 'tool_result' && parsed.data) {
-            // 结构化 tool_result：{ tool, result, city? }。富卡片交由左侧查询面板
-            // （store.queryResults）渲染，对话内仅回显「🛠️ 已查询 {tool}」状态行，
-            // 同时整包 emit 供宿主（AgentPanel）写入查询结果区
-            const tool = String(parsed.data.tool ?? 'tool')
-            const result = parsed.data.result ?? parsed.data
-            messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
-            // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
-            // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
-            if (tool === 'submit_plan_form' && typeof result === 'object' && result !== null && 'task_id' in result) {
-              void handlePlanTask(String((result as { task_id: string }).task_id))
-            } else {
-              emit('tool-result', { tool, result, city: parsed.data.city })
-            }
-            scrollToBottom()
-          }
-        } catch {
-          append(data)
+        planResult: store.planResult ?? null,
+        formContext,
+      },
+      props.apiPath,
+      {
+        onContent: (chunk) => {
+          // SSE content 事件：追加给打字机并回写当前气泡（displayText watch 会触发滚底）
+          append(chunk)
           messages.value[msgIndex].content = displayText.value
-        }
-      }
-      await nextTick()
-      scrollToBottom()
-    }
+        },
+        onToolResult: ({ tool, result, city }) => {
+          // 工具结果富卡片内嵌消息流，同时整包 emit 供宿主（AgentPanel）写入查询结果区
+          messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
+          // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
+          // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
+          if (tool === 'submit_plan_form' && typeof result === 'object' && result !== null && 'task_id' in result) {
+            void handlePlanTask(String((result as { task_id: string }).task_id))
+          } else {
+            emit('tool-result', { tool, result, city })
+          }
+          scrollToBottom()
+        },
+        onDone: () => {
+          // 优雅收尾：不调用 stop()（否则剩余缓冲一次性蹦出，打字机效果丢失），
+          // 让打字机按节奏弹完剩余缓冲后复位 streamingIndex 并解锁 loading。
+          // 注意此回调异步触发（缓冲弹空后），期间不能提前复位 streamingIndex
+          gracefulDone = true
+          finish(() => {
+            messages.value[msgIndex].content = displayText.value
+            streamingIndex = -1
+            loading.value = false
+            forceScrollBottom()
+          })
+        },
+        onError: (errMsg) => {
+          // error 事件：停止打字机并把错误写入气泡；loading 由统一收尾复位
+          stop()
+          messages.value[msgIndex].content = errMsg
+        },
+      },
+      { signal: abortController.signal },
+    )
   } catch (e) {
     // 组件卸载主动 abort 时静默退出，不覆盖消息内容
     if (e instanceof DOMException && e.name === 'AbortError') return
     stop()
-    messages.value[msgIndex].content = '网络错误，请检查连接'
+    // HTTP/响应体错误（services 抛中文 message）直接展示；网络层失败（TypeError）给统一提示
+    messages.value[msgIndex].content =
+      e instanceof TypeError ? '网络错误，请检查连接' : e instanceof Error ? e.message : '网络错误，请检查连接'
   }
 
   abortController = null

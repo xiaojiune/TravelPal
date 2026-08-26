@@ -60,6 +60,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 - **文件名 = tag 名**：`v<X.Y.Z>.md` 或 `v<X.Y.Z>-beta.md`，严格与 pyproject 的 version 及要打的 tag 一致。
 - **每版本一份**，人工精炼。正文分两层：**「主要变化」**（面向读者，这版带来什么价值，偏 feat）+ **「主要修改」**（面向技术，具体改动明细，偏 fix）。**不逐条列 commit**。
+- **frontmatter 规范**（与 docs/handoff 及各 md 模板一致）：开头用 `---`，其中 **date 必须**，`version`/`status` 可选。date 是 GitHub Release 原材料解析所需，也标注文档"生命"。
 
 **内容模板**：用 `assets/release-template.md`（不留在 docs/，收敛于 skill；发布时复制为 `docs/releases/<tag>.md`）。
 

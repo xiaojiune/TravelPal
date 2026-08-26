@@ -15,7 +15,7 @@
 - 🏗️ 架构总览：[ARCHITECTURE.md](ARCHITECTURE.md)（C4 图）
 - 📦 版本记录：[Releases](https://github.com/xiaojiune/TravelPal/releases)（tag 驱动自动生成）
 
-📌 **版本状态**：🟠 新功能预发布 · 🔵 稳定版已部署（[dev 预览](https://github.com/xiaojiune/TravelPal/tree/dev) · [在线体验](https://trippal.site)）
+📌 （[dev 预览](https://github.com/xiaojiune/TravelPal/tree/dev) · [在线体验](https://trippal.site)）
 
 🏷️ `AI 行程决策引擎 · AI 辅助规划 · 全栈工程化`
 

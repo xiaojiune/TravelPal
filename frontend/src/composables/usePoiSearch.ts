@@ -58,6 +58,8 @@ export function usePoiSearch() {
       const existingNames = new Set(store.spots.map((s) => s.name))
       for (const item of data.items) {
         if (!existingNames.has(item.name)) {
+          // TODO：此处与 plan store 的 addPoiToForm 共用 PoiItem(tw_start/tw_end)→SpotFormItem(twStart/twEnd)
+          // 映射，第 3 次出现时抽取公共 toSpotForm() 纯函数（Rule of Three）。
           store.spots.push({
             name: item.name,
             lon: item.lon,

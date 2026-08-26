@@ -131,6 +131,8 @@ export const usePlanStore = defineStore('plan', () => {
   /** 将待选 POI 添加到首页输入列表，然后从待选栏移除。 */
   function addPoiToForm(poi: PoiItem) {
     if (!poi.name || poi.lon == null || poi.lat == null) return
+    // TODO：此处与 usePoiSearch.searchSpots 共用 PoiItem(tw_start/tw_end)→SpotFormItem(twStart/twEnd)
+    // 映射，第 3 次出现时抽取公共 toSpotForm() 纯函数（Rule of Three）。
     const base: SpotFormItem = {
       name: poi.name,
       lon: poi.lon,

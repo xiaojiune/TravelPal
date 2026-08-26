@@ -28,6 +28,21 @@ export type ScheduleItem = components['schemas']['ScheduleItem']
 /** 规划结果中的景点字典项（result.spots 值） */
 export type SpotDictItem = components['schemas']['SpotDictItem']
 
+/** suggest 任务完成时的完整响应（TaskDetail.result，由 OpenAPI 生成）。 */
+export type SuggestResult = components['schemas']['SuggestResult']
+
+/** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed）。 */
+export type TaskDetail = components['schemas']['TaskDetail']
+
+/** 历史记录列表项（摘要，由 OpenAPI 生成）。 */
+export type HistorySummary = components['schemas']['HistorySummary']
+
+/** 历史记录分页响应（由 OpenAPI 生成）。 */
+export type HistoryListResponse = components['schemas']['HistoryListResponse']
+
+/** 历史记录完整详情（由 OpenAPI 生成）。 */
+export type HistoryDetail = components['schemas']['HistoryDetail']
+
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 
 /** 前端输入表单中的景点项 */

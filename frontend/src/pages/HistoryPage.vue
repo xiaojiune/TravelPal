@@ -50,7 +50,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { getHistoryList, getHistoryDetail, deleteHistory, getDeviceId } from '@/services/api'
-import type { HistorySummary } from '@/services/api'
+import type { HistorySummary } from '@/types'
 import type { PlanResult } from '@/types'
 
 const router = useRouter()

@@ -51,7 +51,7 @@ import { useTypewriter } from '@/composables/useTypewriter'
 import { useTaskPolling } from '@/composables/useTaskPolling'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
-import type { SuggestResult } from '@/services/api'
+import type { SuggestResult } from '@/types'
 import { streamChat } from '@/services/agent'
 
 interface Props {

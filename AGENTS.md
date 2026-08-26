@@ -26,3 +26,5 @@
 | 任务执行（plan/build 行为） | `plan-build-protocol` | 响应节奏 |
 
 > 规范原文不在此注入常驻，涉及相应场景时加载对应 skill 即可；"遗忘时加载"，不随 AGENTS.md 常驻。
+
+> 技能位置：`travelpal-*` 前缀的 skill 是项目级（`.dsh/skills/` 下、git 跟踪）；其余是用户级（`.dsh/skills/` 下为软链、实际在 `~/.dsh/skills/`）。

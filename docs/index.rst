@@ -23,6 +23,8 @@
    ADR/007
    ADR/008
    ADR/009
+   ADR/010
+   ADR/011
 
 .. toctree::
    :hidden:
@@ -80,8 +82,8 @@
      - 职责
      - 入口
    * - ``ADR/``
-     - 决策记录（选了什么、为什么、代价），共 9 篇
-     - :doc:`ADR/001` ～ :doc:`ADR/009`
+     - 决策记录（选了什么、为什么、代价），共 11 篇
+     - :doc:`ADR/001` ～ :doc:`ADR/011`
    * - ``design/``
      - 规划蓝图（往哪走：演进路线 / UI-UX / 记忆 / 用户系统），共 4 篇
      - :doc:`design/architecture`、:doc:`design/ui-ux`、:doc:`design/memory`、:doc:`design/user-system`

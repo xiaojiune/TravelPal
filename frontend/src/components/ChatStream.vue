@@ -2,7 +2,7 @@
   <div class="chat-stream">
     <div ref="historyRef" class="chat-history">
       <div v-if="messages.length === 0" class="welcome">
-        我不懂你的全部，但我懂你的旅途。
+        今天想聊点什么？
       </div>
       <template v-for="(msg, i) in messages" :key="i">
         <!-- 工具调用状态行：详情富卡片由左侧查询面板渲染，对话内仅回显工具名 -->

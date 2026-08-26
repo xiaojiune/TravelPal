@@ -26,7 +26,7 @@
 - **账号**：注册/登录，历史、任务、反馈归属账号，可跨设备查询。
 - **会话记忆（地基）**：LangGraph checkpointer + session_id + Redis，上下文可追溯、不串（inbox 想法15）。
 - **RBAC**：普通用户 + 管理员（role 字段），Admin 操作台只对 admin 开放。
-- **兼容**：未登录访客保留可用（user_id 可空 + device_id 保留），不破坏现有匿名/分享站。
+- **兼容**：未登录访客零门槛可用（背后是 role=guest 的匿名 user），归属键仅 user_id，不破坏现有匿名/分享站。
 - **克制**：只做用户名/邮箱 + 密码注册登录；不做找回密码 / 邮箱验证 / OAuth / 多租户（inbox 想法24 后置）。
 
 ## 分阶段路线图
@@ -49,9 +49,9 @@
 
 ### 轴 2：数据模型（Alembic 迁移）
 
-- **目标**：新增 users 表 + 关联表 user_id 外键（可空）+ conversations 会话表；user_id 可空并保留 device_id，兼容匿名。
+- **目标**：新增 users 表 + 关联表 user_id 外键（归属键唯一，不设可空）+ conversations 会话表；device_id 降级为匿名凭据（device_token → user_id 映射），不再作为业务归属键；未登录访客对应一条 role=guest 的匿名 user。
 - **实现状态**：⏸ 待实施
-- **依赖**：Alembic（已有）；生产关 DB_INIT_MODE=create，避免 create_all 与 alembic 双轨 schema 漂移。
+- **依赖**：Alembic（已有，schema 单一来源）；create_all 已移除（DB_INIT_MODE 废弃），变更走 alembic revision --autogenerate（make dc-migration）+ upgrade head（make migrate），并用 alembic check 防漂移。
 
 ### 轴 3：鉴权接入
 
@@ -103,7 +103,7 @@
 
 - 认证选型：**httpOnly Cookie + Redis 服务端 session**（SSE 兼容 + 可撤销）；第三方走 API Key 双轨。
 - **当前栈** = Cookie+Session 搭配 SSE（认证见 ADR-010、实时通道见 ADR-011），两者可各自独立演进。
-- user_id **可空**，保留 device_id，不破坏匿名/分享站。
+- user_id **单一归属**；device_id 降级为匿名凭据（匿名 user = role=guest），不破坏匿名/分享站。
 - **会话/记忆 = 地基**，与用户系统同批做（修正原「上层构筑」标注）。
 - 第一版**克制**：只做密码注册登录 + RBAC + 数据归属，不做找回密码/OAuth/邮箱验证/多租户。
 - 认证**不引 Django**，只用轻量库（自写优先，ADR-008）。
@@ -114,14 +114,20 @@
 |------|---------|
 | 安全（key/token/爆破/越权） | HTTPS、密码哈希、SECRET_KEY 走 .env、登录限流、RBAC 二次校验 |
 | scope creep（用户系统易膨胀） | 第一版严格克制，红线清单明确不做项 |
-| 破坏匿名/分享站 | user_id 可空 + device_id 保留，迁移不丢无主记录 |
+| 匿名 user 记录膨胀 | 未激活匿名 user 定期清理（TTL）；登录时升级/合并，防重复与冲突 |
 | 会话/记忆比认证易踩坑 | 把它当独立地基认真做，不当认证附属 |
-| DB_INIT_MODE=create 与 alembic 双轨漂移 | 加表时开发关 create，生产走 alembic |
+| schema 漂移（create_all 双轨） | 已收敛为 Alembic 单一来源（create_all 移除），alembic check 防漂移 |
 | 依赖选择 | 只用轻量库（pwdlib/bcrypt + pyjwt），评估版本/依赖 |
 
 ## 交叉引用
 
-- 关联 ADR：ADR-008（自写优先/轻量库，认证不引 Django）、ADR-009（LangGraph 编排，会话持久化复用 checkpointer）。
+- 关联 ADR：ADR-008（自写优先/轻量库，认证不引 Django）、ADR-009（LangGraph 编排，会话持久化复用 checkpointer）、ADR-010（认证通道选型）。
 - 相关 design/ 文档：docs/design/architecture.md（中期会话记忆）、docs/design/memory.md（用户记忆参数形态）。
 - 结构文档：docs/structure/backend.md（后端分层）、docs/structure/data.md（数据字典）。
 - 来源：docs/inbox.md（想法5/12/15/21/27 主线与地基）。
+
+## 修改记录
+
+| 日期 | 变更 |
+|------|------|
+| 2026-08-27 | 收敛 user 身份单一来源（user_id 归属 + 匿名 user）；create_all 移除，schema 单一来源为 Alembic。

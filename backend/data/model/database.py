@@ -26,12 +26,6 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def init_db():
-    """创建所有 ORM 模型对应的数据库表（幂等，CREATE TABLE IF NOT EXISTS）。"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
 async def close_db():
     """关闭数据库连接池，释放所有连接。"""
     await engine.dispose()

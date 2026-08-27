@@ -1,6 +1,7 @@
 ---
 name: travelpal-architecture
-description: TravelPal 架构编排哲学与决策框架——判断"代码该放哪层、模块怎么组织、公共逻辑怎么抽、文件要不要拆"，而不是业务逻辑怎么写。当你要新增功能（如引用户系统）、改动/升级/重构目录结构、抽取公共模块、不确定某段代码该放 backend 哪一层（api/domain/agent/infrastructure/engine/data/tasks）、或犹豫某个文件是否太长该不该拆时使用。核心是"先探索现有结构+需求，再决策，后动手"；它承载的是项目的架构思想而非操作步骤，具体做法见 references/。与 travelpal-coding（管注释/风格/接口写法）互补，本 skill 只管分层与编排。
+description: TravelPal 架构编排：判断代码放哪层、模块怎么组织、公共逻辑怎么抽、文件该不该拆。只管分层与编排，不涉注释/风格。
+whenToUse: 新增功能（如引用户系统）、升级/重构目录结构、抽公共模块、犹豫一段代码该放 backend 哪层（api/domain/agent/infrastructure/engine/data/tasks）、或文件太长不知拆不拆时使用。
 ---
 
 # TravelPal 架构编排哲学

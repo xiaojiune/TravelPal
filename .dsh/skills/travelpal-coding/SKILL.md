@@ -1,7 +1,7 @@
 ---
 name: travelpal-coding
-description: TravelPal 编码规范。涉及写/改代码、注释、docstring、接口清单、暴露 API 或数据模型时使用。它按域拆分：后端（backend）与前端（frontend）各自成 reference，VNS 优化引擎（engine）单独一份。进入编码任务时先加载本 SKILL.md 掌握通用注释四级体系与导航，再按任务域加载对应 reference。
-whenToUse: 用户要写/改/重构代码、补充注释/docstring、改 API 签名或 schemas、加数据模型、调整 VNS 引擎参数时使用。涉及注释规范、接口清单、类型注解、依赖归属、导入顺序时尤其要用。
+description: TravelPal 编码规范：四级注释体系、docstring 格式、接口清单、数据模型与 VNS 引擎写法约定。
+whenToUse: 写/改/重构代码、补注释或 docstring、改 API 签名或 schemas、加数据模型、调 VNS 引擎参数时使用；不确定注释几级、接口怎么列时尤其要用。
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 

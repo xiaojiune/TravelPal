@@ -1,7 +1,7 @@
 ---
 name: travelpal-testing
-description: TravelPal 测试规范。涉及跑测试、写测试、判断测试何时该跑、确定测试范围时使用。它规定何时跑测试（用户要求/改测试/验证功能）、如何划改动范围（git status 定本次改动、只跑对应模块）、依赖外部环境的测试要先探测端口、新增依赖按生产/开发分组、以及项目的测试风格（三档数据 fixture、纯函数测试、slow marker）。把 AGENTS.md 里的测试边界与项目实际测试约定固化于此。
-whenToUse: 用户要跑测试、写/改测试、判断某个改动是否需要测试、排测试失败、或涉及仓库集/数据 fixture/外部环境测试时使用。用户提到 pytest、conftest、fixture、测试范围、环境探测时尤其要用。
+description: TravelPal 测试规范：测试范围约定（git status 划改动、只跑对应模块）与测试风格（三档数据 fixture、纯函数、slow marker）。
+whenToUse: 要跑/写/改测试、判断"这次改动要不要测"、排测试失败、涉及测试范围/数据 fixture/外部环境（探测端口）时使用；提 pytest、conftest、fixture 时尤其要用。
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 

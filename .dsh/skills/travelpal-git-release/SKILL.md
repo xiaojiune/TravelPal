@@ -1,7 +1,7 @@
 ---
 name: travelpal-git-release
-description: TravelPal 版本发布与 git 操作规范。涉及推送 GitHub（打 tag）、本地同步 main、或版本一致性核验时使用。它把项目 git 操作分成几层：日常开发只 commit；推送 GitHub 时打 tag 到 dev 触发自动 Release；本地同步走"切 main → 拉取 → 切 dev → merge"流程。发布前会先核验版本同步（pyproject/footer/README 三处），确保可推送再动手。
-whenToUse: 用户说"推送 / 打 tag / 发布 v某版本 / 同步 main / 拉取 origin / 版本核验"或涉及 git commit、tag、push、merge、PR 时使用，用于规范发布、同步与 PR 流程。
+description: TravelPal 版本发布与 git 操作规范：日常只 commit、打 tag 到 dev 触发 Release、本地同步流程。
+whenToUse: 用户说推送/打 tag/发布 v某版本/同步 main/拉取 origin/版本核验，或涉及 git commit、tag、push、merge、PR 时使用。
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 

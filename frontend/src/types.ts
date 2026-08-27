@@ -43,6 +43,9 @@ export type ShareListResponse = components['schemas']['ShareListResponse']
 /** 方案分享完整详情（由 OpenAPI 生成）。 */
 export type ShareDetail = components['schemas']['ShareDetail']
 
+/** 当前登录用户（由 OpenAPI 生成；id/role/email/nickname/is_active）。 */
+export type UserOut = components['schemas']['UserOut']
+
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 
 /** 前端输入表单中的景点项 */

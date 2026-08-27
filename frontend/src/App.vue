@@ -26,6 +26,21 @@
                 🆕 新建规划
               </n-button>
             </div>
+            <div class="nav-user">
+              <n-dropdown
+                v-if="userStore.isLoggedIn"
+                :options="userMenuOptions"
+                @select="onUserMenu"
+              >
+                <n-button text>
+                  <span class="nav-user-name">{{ userStore.displayName }}</span>
+                </n-button>
+              </n-dropdown>
+              <template v-else>
+                <router-link to="/login" class="nav-login">登录</router-link>
+                <router-link to="/register" class="nav-register">注册</router-link>
+              </template>
+            </div>
             <!-- 全局 Agent 入口：文字按钮自我解释，首访自动弹 tooltip + bounce 提醒（永久一次），之后 hover 提示 -->
             <n-tooltip placement="bottom-end" :show="attention">
               <template #trigger>
@@ -34,7 +49,7 @@
                   :class="{ 'agent-attention': attention }"
                   secondary
                   :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
-                  @click="agentOpen = !agentOpen; attention = undefined"
+                  @click="toggleAgent"
                 >
                   🤖 AI 助手
                 </n-button>
@@ -67,7 +82,14 @@
               >
                 <svg class="beian-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z" fill="#2E6FE0" />
-                  <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+                  <path
+                    d="M9 12l2 2 4-4"
+                    stroke="#fff"
+                    stroke-width="1.6"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
                 粤公网安备 44030002015955号
               </a>
@@ -90,6 +112,7 @@ import { useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
 import { usePlanStore } from '@/stores/plan'
+import { useUserStore } from '@/stores/user'
 import ToolRail from '@/components/ToolRail.vue'
 import ToolPanel from '@/components/ToolPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
@@ -97,6 +120,7 @@ import FeedbackModal from '@/components/FeedbackModal.vue'
 
 const router = useRouter()
 const store = usePlanStore()
+const userStore = useUserStore()
 
 /** 移动端检测（CSS 媒体查询，含竖屏平板）；true 时整页渲染桌面端降级提示，隐藏主应用。 */
 const isMobile = ref(false)
@@ -136,6 +160,12 @@ function startNewPlan() {
 /** 全局 Agent 面板显隐（导航栏按钮 / 遮罩点击 / Esc 三路控制）。 */
 const agentOpen = ref(false)
 
+/** 切换 AI 助手面板：打开/收起，并清除首访引导提示（undefined 恢复为 hover 提示）。 */
+function toggleAgent() {
+  agentOpen.value = !agentOpen.value
+  attention.value = undefined
+}
+
 /**
  * 首访引导（永久一次，localStorage 标记）：AI 按钮自动弹 tooltip + bounce 提醒。
  * 点击按钮立即关闭；3s 后自动收起并回退为 hover 提示（undefined 恢复默认行为）。
@@ -150,6 +180,20 @@ onMounted(() => {
       attention.value = undefined
     }, 3000)
   }
+})
+
+/** 用户下拉菜单项（当前仅退出登录）。 */
+const userMenuOptions = [{ label: '退出登录', key: 'logout' }]
+
+/** 用户下拉菜单选中：退出登录 → 清会话并回首页。 */
+function onUserMenu(key: string | number) {
+  if (key === 'logout') {
+    void userStore.logout().then(() => router.push('/'))
+  }
+}
+
+onMounted(() => {
+  void userStore.fetchMe()
 })
 
 /** Esc 收起 Agent 面板。 */
@@ -186,5 +230,31 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   font-size: 14px;
   line-height: 1.7;
   color: var(--tp-text-2);
+}
+/* 导航用户区：未登录双链 / 已登录昵称（触发下拉菜单） */
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 8px;
+}
+.nav-user-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-login,
+.nav-register {
+  font-size: 13px;
+  color: var(--tp-text-2);
+}
+.nav-login:hover,
+.nav-register:hover {
+  color: var(--tp-primary);
+}
+.nav-register {
+  padding-left: 12px;
+  border-left: 1px solid var(--tp-border-light);
 }
 </style>

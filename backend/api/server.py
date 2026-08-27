@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
+from backend.api.auth import router as auth_router
 from backend.api.routes import router
 from backend.config import settings
 from backend.data.model.database import close_db
@@ -101,6 +102,7 @@ def create_app() -> FastAPI:
         return Response(content=body, media_type=content_type)
 
     app.include_router(router)
+    app.include_router(auth_router)
 
     return app
 

@@ -358,3 +358,31 @@ class FeedbackCreate(BaseModel):
     content: str = Field(min_length=1, max_length=2000, description="反馈内容（必填）")
     rating: int | None = Field(default=None, ge=1, le=5, description="评分 1-5（可选）")
     page: str | None = Field(default=None, max_length=50, description="来源页面路径，如 /about")
+
+
+# ================== 认证（用户系统） ==================
+
+
+class AuthRegister(BaseModel):
+    """注册请求体。"""
+
+    email: str = Field(min_length=3, max_length=255, description="邮箱")
+    password: str = Field(min_length=6, max_length=128, description="密码，至少 6 位")
+    nickname: str | None = Field(default=None, max_length=100, description="昵称")
+
+
+class AuthLogin(BaseModel):
+    """登录请求体。"""
+
+    email: str = Field(min_length=3, max_length=255, description="邮箱")
+    password: str = Field(min_length=1, max_length=128, description="密码")
+
+
+class UserOut(BaseModel):
+    """当前用户信息响应。"""
+
+    id: str
+    email: str | None = None
+    nickname: str | None = None
+    role: str
+    is_active: bool

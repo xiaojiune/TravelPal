@@ -46,7 +46,13 @@ class SharedPlan(Base):
     __tablename__ = "share_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空=存量匿名；单一归属键）")
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True,
+        comment="归属用户（可空=存量匿名；单一归属键）",
+    )
     device_id = Column(String(64), nullable=True, index=True, comment="匿名设备标识，仅用于删除鉴权")
     note = Column(Text, nullable=True, comment="用户可选的备注")
     city = Column(String(100), nullable=False)

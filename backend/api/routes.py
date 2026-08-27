@@ -11,24 +11,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agent.chat import build_chat_messages, stream_orchestrator
 from backend.agent.tools import parse_biz_hours
+from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
     ChatRequest,
     FeedbackCreate,
+    PlanRequest,
+    POILookupItem,
+    POILookupRequest,
+    POILookupResponse,
     ShareCreate,
     ShareDeleteRequest,
     ShareDetail,
     ShareListResponse,
     ShareSummary,
-    PlanRequest,
-    POILookupItem,
-    POILookupRequest,
-    POILookupResponse,
     TaskDetail,
     TaskSubmitResponse,
 )
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
-from backend.data.model.models import FeedbackRecord, SharedPlan, PlanTask
+from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -89,7 +90,10 @@ async def poi_lookup(req: POILookupRequest):
 
 
 @router.post("/api/suggest", response_model=TaskSubmitResponse)
-async def suggest(req: PlanRequest):
+async def suggest(
+    req: PlanRequest,
+    current: User | None = Depends(get_current_user_optional),
+):
     """提交方案建议任务（异步执行）。
 
     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
@@ -98,6 +102,7 @@ async def suggest(req: PlanRequest):
 
     Args:
         req: 规划请求，n_days 不指定，mode 固定走建议模式。
+        current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -106,7 +111,7 @@ async def suggest(req: PlanRequest):
         HTTPException 500: 任务创建失败。
     """
     try:
-        task_id = await submit_task("suggest", req.model_dump())
+        task_id = await submit_task("suggest", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
@@ -114,7 +119,10 @@ async def suggest(req: PlanRequest):
 
 
 @router.post("/api/plan", response_model=TaskSubmitResponse)
-async def plan(req: PlanRequest):
+async def plan(
+    req: PlanRequest,
+    current: User | None = Depends(get_current_user_optional),
+):
     """提交完整规划任务（异步执行）。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
@@ -124,6 +132,7 @@ async def plan(req: PlanRequest):
 
     Args:
         req: 规划请求，含 n_days 与求解模式。
+        current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -135,7 +144,7 @@ async def plan(req: PlanRequest):
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
     try:
-        task_id = await submit_task("plan", req.model_dump())
+        task_id = await submit_task("plan", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
@@ -270,17 +279,20 @@ async def get_share_detail(record_id: UUID, session: AsyncSession = Depends(get_
 
 
 @router.post("/api/shares", status_code=201)
-async def create_share(req: ShareCreate, session: AsyncSession = Depends(get_session)):
+async def create_share(
+    req: ShareCreate,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
     """保存一条方案分享（到分享站）。
 
-    设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
-    这是软鉴权设计。核心考量：
-    1. 不引入注册/登录系统，保持访客零门槛
-    2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
-    3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+    设计说明：登录用户归属 user_id；未登录访客仍零门槛可用（user_id 为 None），
+    device_id 由前端 localStorage 生成，仅用于匿名删除鉴权。
 
     Args:
         req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
+        session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）；登录时写 user_id，匿名则为 None。
 
     Returns:
         dict: { id: str } 新创建的记录 UUID。
@@ -289,6 +301,7 @@ async def create_share(req: ShareCreate, session: AsyncSession = Depends(get_ses
         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
     """
     record = SharedPlan(
+        user_id=current.id if current else None,
         device_id=req.device_id,
         note=req.note,
         city=req.city,
@@ -305,12 +318,17 @@ async def create_share(req: ShareCreate, session: AsyncSession = Depends(get_ses
 
 
 @router.post("/api/feedback", status_code=201)
-async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(get_session)):
+async def create_feedback(
+    req: FeedbackCreate,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
     """保存一条用户反馈（/about 页面问卷）。
 
     Args:
         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
         session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）；登录时归属该 user_id，匿名则为 None。
 
     Returns:
         dict: { id: str } 新创建的反馈 UUID。
@@ -319,6 +337,7 @@ async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(g
         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
     """
     record = FeedbackRecord(
+        user_id=current.id if current else None,
         name=req.name,
         contact=req.contact,
         content=req.content,
@@ -335,25 +354,35 @@ async def delete_share(
     record_id: UUID,
     req: ShareDeleteRequest,
     session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
 ):
-    """删除一条方案分享（需 device_id 匹配创建者）。
+    """删除一条方案分享（登录按 user_id，匿名按 device_id）。
+
+    设计说明：登录用户只能删除归属自己（user_id 匹配）的记录，无法删除匿名记录；
+    未登录访客按 device_id 校验（软鉴权），与创建时一致。
 
     Args:
         record_id: 记录 UUID。
         req: ShareDeleteRequest，包含 device_id。
+        session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）。
 
     Returns:
         dict: { ok: true }
 
     Raises:
         HTTPException 404: 记录不存在。
-        HTTPException 403: device_id 不匹配，无权删除。
+        HTTPException 403: 无权删除（user_id 或 device_id 不匹配）。
     """
     r = await session.get(SharedPlan, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
-        raise HTTPException(status_code=403, detail="无权删除此记录")
+    if current is not None:
+        if r.user_id != current.id:  # pyright: ignore[reportGeneralTypeIssues]
+            raise HTTPException(status_code=403, detail="无权删除此记录")
+    else:
+        if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
+            raise HTTPException(status_code=403, detail="无权删除此记录")
     await session.delete(r)
     await session.commit()
     return {"ok": True}

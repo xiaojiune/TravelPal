@@ -25,7 +25,11 @@ _SESSION_COOKIE = "session_id"
 def _to_user_out(user: User) -> UserOut:
     """User ORM → UserOut。"""
     return UserOut(
-        id=str(user.id), email=user.email, nickname=user.nickname, role=user.role, is_active=user.is_active
+        id=str(user.id),
+        email=user.email,  # pyright: ignore[reportArgumentType]
+        nickname=user.nickname,  # pyright: ignore[reportArgumentType]
+        role=user.role,  # pyright: ignore[reportArgumentType]
+        is_active=user.is_active,  # pyright: ignore[reportArgumentType]
     )
 
 
@@ -53,6 +57,24 @@ async def _load_user(session: AsyncSession, user_id: str | None) -> User | None:
     return await session.get(User, uid)
 
 
+async def _resolve_user_from_request(request: Request, session: AsyncSession) -> User | None:
+    """从请求会话 Cookie 解析当前用户；未登录/停用/会话失效返回 None。
+
+    Args:
+        request: 当前请求（读取会话 Cookie）。
+        session: 数据库会话。
+
+    Returns:
+        User | None: 当前登录用户；未登录、会话失效或用户已停用返回 None。
+    """
+    sid = request.cookies.get(_SESSION_COOKIE)
+    user_id = get_session(sid)  # Redis 会话（同步）
+    user = await _load_user(session, user_id)
+    if user is None or not user.is_active:  # pyright: ignore[reportGeneralTypeIssues]
+        return None
+    return user
+
+
 async def get_current_user(request: Request, session: AsyncSession = Depends(get_db_session)) -> User:
     """FastAPI 依赖：从 httpOnly cookie 解析会话，返回当前登录用户。
 
@@ -66,12 +88,46 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
     Raises:
         HTTPException 401: 未登录、会话失效或用户已停用。
     """
-    sid = request.cookies.get(_SESSION_COOKIE)
-    user_id = get_session(sid)  # Redis 会话（同步）
-    user = await _load_user(session, user_id)
-    if user is None or not user.is_active:
+    user = await _resolve_user_from_request(request, session)
+    if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未登录")
     return user
+
+
+async def get_current_user_optional(request: Request, session: AsyncSession = Depends(get_db_session)) -> User | None:
+    """FastAPI 依赖：可选鉴权——从 httpOnly cookie 解析会话，未登录返回 None 而非抛 401。
+
+    供「登录则归属、未登录则匿名」的端点使用（/api/shares、/api/feedback、/api/suggest、/api/plan），
+    不强锁全站，保障访客零门槛可用（user-system.md 轴3）。
+
+    Args:
+        request: 当前请求（读取会话 Cookie）。
+        session: 数据库会话。
+
+    Returns:
+        User | None: 当前登录用户；未登录、会话失效或用户已停用返回 None。
+    """
+    return await _resolve_user_from_request(request, session)
+
+
+async def require_admin(current: User = Depends(get_current_user)) -> User:
+    """FastAPI 依赖：要求当前用户为 admin 角色，否则拒绝（RBAC）。
+
+    供 Admin 操作台等管理端点使用（user-system.md 轴5）；admin 端点接入属轴5，
+    本次仅提供本依赖。
+
+    Args:
+        current: 当前登录用户（依赖注入）。
+
+    Returns:
+        User: 当前用户（已确认具备 admin 权限）。
+
+    Raises:
+        HTTPException 403: 当前用户非 admin 角色。
+    """
+    if current.role != "admin":  # pyright: ignore[reportGeneralTypeIssues]
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+    return current
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserOut)
@@ -127,8 +183,11 @@ async def login(req: AuthLogin, response: Response, session: AsyncSession = Depe
     """
     email = req.email.strip().lower()
     user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    if user is None or not user.is_active or not user.password_hash or not verify_password(
-        req.password, user.password_hash
+    if (
+        user is None
+        or not user.is_active  # pyright: ignore[reportGeneralTypeIssues]
+        or not user.password_hash  # pyright: ignore[reportGeneralTypeIssues]
+        or not verify_password(req.password, user.password_hash)  # pyright: ignore[reportArgumentType]
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="邮箱或密码错误")
     sid = create_session(str(user.id))

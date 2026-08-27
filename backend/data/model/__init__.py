@@ -4,6 +4,6 @@ from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan
 
 __all__ = [
     "FeedbackRecord",
-    "SharedPlan",
     "PlanTask",
+    "SharedPlan",
 ]

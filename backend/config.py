@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     PROMETHEUS_MULTIPROC_DIR: str = "/tmp/travelpal_metrics"
     # uvicorn 开发热重载开关
     DEV_RELOAD: bool = False
+    # 认证：服务端会话签名/CSRF 用密钥（走 .env，不进 git）
+    SECRET_KEY: str = ""
+    # 服务端会话有效期（秒），默认 7 天
+    SESSION_TTL_SECONDS: int = 60 * 60 * 24 * 7
 
 
 

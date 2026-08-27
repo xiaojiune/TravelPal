@@ -6,7 +6,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas import AuthLogin, AuthRegister, UserOut
-from backend.auth import create_session, get_session, hash_password, revoke_session, verify_password
+from backend.auth import (
+    create_session,
+    get_session,
+    hash_password,
+    revoke_session,
+    verify_password,
+)
 from backend.config import settings
 from backend.data.model.database import get_session as get_db_session
 from backend.data.model.models import User
@@ -48,7 +54,18 @@ async def _load_user(session: AsyncSession, user_id: str | None) -> User | None:
 
 
 async def get_current_user(request: Request, session: AsyncSession = Depends(get_db_session)) -> User:
-    """FastAPI 依赖：从 httpOnly cookie 解析会话，返回当前登录用户（未登录 401）。"""
+    """FastAPI 依赖：从 httpOnly cookie 解析会话，返回当前登录用户。
+
+    Args:
+        request: 当前请求（读取会话 Cookie）。
+        session: 数据库会话。
+
+    Returns:
+        User: 当前登录用户。
+
+    Raises:
+        HTTPException 401: 未登录、会话失效或用户已停用。
+    """
     sid = request.cookies.get(_SESSION_COOKIE)
     user_id = get_session(sid)  # Redis 会话（同步）
     user = await _load_user(session, user_id)
@@ -59,7 +76,19 @@ async def get_current_user(request: Request, session: AsyncSession = Depends(get
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserOut)
 async def register(req: AuthRegister, response: Response, session: AsyncSession = Depends(get_db_session)):
-    """注册并自动登录（写会话 Cookie）。"""
+    """注册用户并自动登录。
+
+    Args:
+        req: 注册请求（邮箱/密码/昵称）。
+        response: 响应对象，登录后写入会话 Cookie。
+        session: 数据库会话。
+
+    Returns:
+        UserOut: 新注册用户信息。
+
+    Raises:
+        HTTPException 409: 邮箱已注册。
+    """
     email = req.email.strip().lower()
     existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if existing:
@@ -82,7 +111,20 @@ async def register(req: AuthRegister, response: Response, session: AsyncSession 
 
 @router.post("/login", response_model=UserOut)
 async def login(req: AuthLogin, response: Response, session: AsyncSession = Depends(get_db_session)):
-    """登录：校验密码，创建会话并写 Cookie。"""
+    """登录：校验密码并创建会话。
+
+    Args:
+        req: 登录请求（邮箱/密码）。
+        response: 响应对象，成功后写入会话 Cookie。
+        session: 数据库会话。
+
+    Returns:
+        UserOut: 当前用户信息。
+
+    Raises:
+        HTTPException 401: 邮箱或密码错误。
+        HTTPException 503: 会话创建失败（会话不可用）。
+    """
     email = req.email.strip().lower()
     user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None or not user.is_active or not user.password_hash or not verify_password(
@@ -98,7 +140,15 @@ async def login(req: AuthLogin, response: Response, session: AsyncSession = Depe
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
-    """登出：撤销会话并清除 Cookie。"""
+    """登出：撤销会话并清除 Cookie。
+
+    Args:
+        request: 当前请求（读取会话 Cookie）。
+        response: 响应对象，用于清除 Cookie。
+
+    Returns:
+        dict: {"ok": True}。
+    """
     sid = request.cookies.get(_SESSION_COOKIE)
     if sid:
         revoke_session(sid)
@@ -108,5 +158,12 @@ async def logout(request: Request, response: Response):
 
 @router.get("/me", response_model=UserOut)
 async def me(current: User = Depends(get_current_user)):
-    """返回当前登录用户信息。"""
+    """返回当前登录用户信息。
+
+    Args:
+        current: 当前登录用户（依赖注入）。
+
+    Returns:
+        UserOut: 当前用户信息。
+    """
     return _to_user_out(current)

@@ -16,7 +16,7 @@ _SESSION_PREFIX = "tp:session:"
 _client: Any | None = None
 
 
-def _get_redis():
+def _get_redis() -> Any | None:
     """懒初始化同步 Redis 客户端（与 driving_cache 一致，decode_responses=True）。
 
     Returns:
@@ -25,7 +25,7 @@ def _get_redis():
     global _client
     if _client is None:
         try:
-            import redis
+            import redis  # 延迟导入：避免非认证路径引入 redis 依赖
 
             _client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
         except Exception:

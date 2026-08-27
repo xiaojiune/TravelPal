@@ -364,7 +364,13 @@ class FeedbackCreate(BaseModel):
 
 
 class AuthRegister(BaseModel):
-    """注册请求体。"""
+    """注册请求体。
+
+    Attributes:
+        email: 登录邮箱。
+        password: 密码，至少 6 位。
+        nickname: 昵称（可选）。
+    """
 
     email: str = Field(min_length=3, max_length=255, description="邮箱")
     password: str = Field(min_length=6, max_length=128, description="密码，至少 6 位")
@@ -372,14 +378,27 @@ class AuthRegister(BaseModel):
 
 
 class AuthLogin(BaseModel):
-    """登录请求体。"""
+    """登录请求体。
+
+    Attributes:
+        email: 登录邮箱。
+        password: 密码。
+    """
 
     email: str = Field(min_length=3, max_length=255, description="邮箱")
     password: str = Field(min_length=1, max_length=128, description="密码")
 
 
 class UserOut(BaseModel):
-    """当前用户信息响应。"""
+    """当前用户信息响应。
+
+    Attributes:
+        id: 用户 UUID。
+        email: 邮箱。
+        nickname: 昵称。
+        role: 角色（user/guest/admin）。
+        is_active: 是否启用。
+    """
 
     id: str
     email: str | None = None

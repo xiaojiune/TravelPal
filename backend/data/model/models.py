@@ -2,11 +2,33 @@
 
 import uuid
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from backend.data.model.database import Base
+
+
+class User(Base):
+    """用户 ORM 模型：实名账号 + 匿名访客（role=guest）。
+
+    设计说明：
+    - role：user（实名）/ guest（匿名访客，无密码）/ admin（管理员）。
+    - user_id 是业务数据（history/plan_tasks/feedback）的唯一归属键。
+    - 匿名访客首次访问由鉴权层生成 guest 记录，登录后可升级/合并为实名 user。
+    - email/password_hash 对 guest 为 NULL。
+    """
+
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    role = Column(String(16), nullable=False, default="user", comment="user/guest/admin")
+    email = Column(String(255), nullable=True, comment="登录邮箱（guest 为 NULL）")
+    password_hash = Column(String(255), nullable=True, comment="密码哈希（guest 为 NULL）")
+    nickname = Column(String(100), nullable=True, comment="昵称")
+    is_active = Column(Boolean, nullable=False, default=True, comment="是否启用")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
 class HistoryRecord(Base):
@@ -24,6 +46,7 @@ class HistoryRecord(Base):
     __tablename__ = "history_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空=存量匿名；单一归属键）")
     device_id = Column(String(64), nullable=True, index=True, comment="匿名设备标识，仅用于删除鉴权")
     note = Column(Text, nullable=True, comment="用户可选的备注")
     city = Column(String(100), nullable=False)
@@ -53,6 +76,7 @@ class PlanTask(Base):
     __tablename__ = "plan_tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空）")
     task_type = Column(String(16), nullable=False, comment="任务类型：suggest 或 plan")
     status = Column(String(16), nullable=False, default="pending", comment="pending/running/done/failed")
     request_params = Column(JSONB, nullable=False, comment="提交的完整请求参数（PlanRequest 结构）")
@@ -76,6 +100,7 @@ class FeedbackRecord(Base):
     __tablename__ = "feedback_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空）")
     name = Column(String(100), nullable=True, comment="可选：用户称呼")
     contact = Column(String(200), nullable=True, comment="可选：联系方式（邮箱/微信等）")
     content = Column(Text, nullable=False, comment="反馈内容（必填）")

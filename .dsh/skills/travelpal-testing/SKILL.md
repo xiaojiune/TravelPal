@@ -1,7 +1,7 @@
 ---
 name: travelpal-testing
-description: TravelPal 测试规范：测试范围约定（git status 划改动、只跑对应模块）与测试风格（三档数据 fixture、纯函数、slow marker）。
-whenToUse: 要跑/写/改测试、判断"这次改动要不要测"、排测试失败、涉及测试范围/数据 fixture/外部环境（探测端口）时使用；提 pytest、conftest、fixture 时尤其要用。
+description: TravelPal 测试规范：测试范围约定与测试风格。
+whenToUse: 要跑/写/改测试、判断"这次改动要不要测"、用 git status 划改动范围、只跑对应模块、排测试失败、涉及数据 fixture（三档）/纯函数/slow marker/外部环境（探测端口）时使用；提 pytest、conftest、fixture 时尤其要用。
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 

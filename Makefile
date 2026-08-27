@@ -53,7 +53,8 @@ dev: ## 启动前端开发服务器（Vite HMR）
 lint: ## 前端 lint 自动修复（ESLint --fix）
 	cd frontend && npm run lint:fix
 
-format: ## 前端代码格式化（Prettier）
+format: ## 前端代码格式化（Prettier，全量 --write；慎用）
+	@echo '==> 警示：format 全量 --write 会重排不符合 prettier 规则的文件、破坏 Vue 内联多语句表达式；改动后请跑前端编译验证（make build）确认无破坏'
 	cd frontend && npx prettier --write src/
 
 typecheck: ## 前端 TypeScript 类型检查
@@ -92,6 +93,8 @@ check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类�
 	cd frontend && npx prettier --check src/
 	@echo '==> vue-tsc（前端类型）'
 	cd frontend && npx vue-tsc --noEmit
+	@echo '==> vite build（前端编译验证：抓 prettier 破坏的模板表达式）'
+	cd frontend && npm run build
 	@echo '==> OpenAPI 类型同步'
 	cd frontend && npm run gen:api && git diff --exit-code -- src/api/types.generated.ts
 

@@ -72,8 +72,8 @@
 
 ### 历史与反馈
 
-- `HistoryCreate`：device_id/note/city/hotel/n_days/cost/spot_count/plan_result/request_params。
-- `HistorySummary`、`HistoryDetail`：列表/详情字段（后者含全量 plan_result）。
+- `ShareCreate`：device_id/note/city/hotel/n_days/cost/spot_count/plan_result/request_params。
+- `ShareSummary`、`ShareDetail`：列表/详情字段（后者含全量 plan_result）。
 - `FeedbackCreate`：name?/contact?/content(必填)/rating?/page?。
 
 ## 引擎内部模型（typedefs.py）

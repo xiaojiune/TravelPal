@@ -40,7 +40,7 @@ backend/
 │
 ├── api/                 HTTP 接口层
 │   ├── server.py        FastAPI 工厂 + lifespan + MetricsMiddleware + /api/metrics
-│   ├── routes.py        端点：poi-lookup/suggest/plan/chat/history/feedback/tasks
+│   ├── routes.py        端点：poi-lookup/suggest/plan/chat/shares/feedback/tasks
 │   └── schemas.py       Pydantic 请求/响应模型（OpenAPI 驱动）
 │
 ├── agent/               LLM Agent 层（详见 agent.md）
@@ -60,7 +60,7 @@ backend/
 ├── data/                数据层
 │   ├── amap_loader.py   高德 API：POI 搜索/营业时间解析/驾车路径/成本矩阵
 │   ├── driving_cache.py 驾车路径缓存（点对基元 + 整矩阵快照，Redis/内存）
-│   └── model/           SQLAlchemy ORM（HistoryRecord / PlanTask / FeedbackRecord）
+│   └── model/           SQLAlchemy ORM（SharedPlan / PlanTask / FeedbackRecord）
 │
 ├── domain/              领域层（防腐层接口定义）
 │   ├── llm_service.py   LLMService 协议（ToolCallResult/LLMResult）
@@ -103,9 +103,9 @@ backend/
 
 `POST /api/chat` → `chat.py` 组装消息（CHAT_SYSTEM + 规划上下文 + 表单上下文）→ `orchestrator.stream_orchestrator`（LangGraph 循环）→ SSE 事件流（tool_status/tool_result/content/error/done）。详细见 [agent.md](agent.md)。
 
-### 历史记录与反馈
+### 方案分享与反馈
 
-`POST /api/history` 保存方案到分享站；`GET /api/history` 分页；`GET /api/history/{id}` 详情；`DELETE /api/history/{id}` 需 device_id 匹配。`POST /api/feedback` 保存 /about 问卷反馈。
+`POST /api/shares` 保存方案到分享站；`GET /api/shares` 分页；`GET /api/shares/{id}` 详情；`DELETE /api/shares/{id}` 需 device_id 匹配。`POST /api/feedback` 保存 /about 问卷反馈。
 
 ## 术语表
 

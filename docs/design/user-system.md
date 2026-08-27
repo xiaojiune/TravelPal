@@ -18,7 +18,7 @@
 
 ## 背景
 
-- 现状：history_records 用 device_id 软鉴权（前端 localStorage 生成，仅用于删除校验）；feedback / plan_tasks / chat 均无用户归属；后端无状态（localStorage 存最近 10 次规划）；认证依赖一个都没装（无 passlib / pyjwt）。
+- 现状：share_records 用 device_id 软鉴权（前端 localStorage 生成，仅用于删除校验）；feedback / plan_tasks / chat 均无用户归属；后端无状态（localStorage 存最近 10 次规划）；认证依赖一个都没装（无 passlib / pyjwt）。
 - 触发原因：用户系统撑起 roadmap 第四阶段「记忆与复访 / 个性化」；业务数据归属账号、可跨设备；Admin 操作台用于运维侧用户/任务/反馈查看；为个性化内容（inbox 想法27）提供第一方语料。
 
 ## 总体目标

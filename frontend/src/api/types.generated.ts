@@ -157,7 +157,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/history": {
+    "/api/shares": {
         parameters: {
             query?: never;
             header?: never;
@@ -165,8 +165,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List History
-         * @description 获取历史记录分页列表。
+         * List Shares
+         * @description 获取方案分享分页列表。
          *
          *     仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
          *     不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
@@ -176,13 +176,13 @@ export interface paths {
          *         page_size: 每页条数，最大 100。
          *
          *     Returns:
-         *         HistoryListResponse: { items, total, page, page_size }。
+         *         ShareListResponse: { items, total, page, page_size }。
          */
-        get: operations["list_history_api_history_get"];
+        get: operations["list_shares_api_shares_get"];
         put?: never;
         /**
-         * Create History
-         * @description 保存一条历史记录（分享方案到分享站）。
+         * Create Share
+         * @description 保存一条方案分享（到分享站）。
          *
          *     设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
          *     这是软鉴权设计。核心考量：
@@ -191,7 +191,7 @@ export interface paths {
          *     3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
          *
          *     Args:
-         *         req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+         *         req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
          *
          *     Returns:
          *         dict: { id: str } 新创建的记录 UUID。
@@ -199,14 +199,14 @@ export interface paths {
          *     Raises:
          *         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
          */
-        post: operations["create_history_api_history_post"];
+        post: operations["create_share_api_shares_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/history/{record_id}": {
+    "/api/shares/{record_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -214,28 +214,28 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get History Detail
-         * @description 获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+         * Get Share Detail
+         * @description 获取单条方案分享的完整数据（含 plan_result 全量 JSONB）。
          *
          *     Args:
          *         record_id: 记录 UUID。
          *
          *     Returns:
-         *         HistoryDetail: 含 plan_result/request_params 等完整字段。
+         *         ShareDetail: 含 plan_result/request_params 等完整字段。
          *
          *     Raises:
          *         HTTPException 404: 记录不存在。
          */
-        get: operations["get_history_detail_api_history__record_id__get"];
+        get: operations["get_share_detail_api_shares__record_id__get"];
         put?: never;
         post?: never;
         /**
-         * Delete History
-         * @description 删除一条历史记录（需 device_id 匹配创建者）。
+         * Delete Share
+         * @description 删除一条方案分享（需 device_id 匹配创建者）。
          *
          *     Args:
          *         record_id: 记录 UUID。
-         *         req: HistoryDeleteRequest，包含 device_id。
+         *         req: ShareDeleteRequest，包含 device_id。
          *
          *     Returns:
          *         dict: { ok: true }
@@ -244,7 +244,7 @@ export interface paths {
          *         HTTPException 404: 记录不存在。
          *         HTTPException 403: device_id 不匹配，无权删除。
          */
-        delete: operations["delete_history_api_history__record_id__delete"];
+        delete: operations["delete_share_api_shares__record_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -329,10 +329,172 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description 注册用户并自动登录。
+         *
+         *     Args:
+         *         req: 注册请求（邮箱/密码/昵称）。
+         *         response: 响应对象，登录后写入会话 Cookie。
+         *         session: 数据库会话。
+         *
+         *     Returns:
+         *         UserOut: 新注册用户信息。
+         *
+         *     Raises:
+         *         HTTPException 409: 邮箱已注册。
+         */
+        post: operations["register_api_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description 登录：校验密码并创建会话。
+         *
+         *     Args:
+         *         req: 登录请求（邮箱/密码）。
+         *         response: 响应对象，成功后写入会话 Cookie。
+         *         session: 数据库会话。
+         *
+         *     Returns:
+         *         UserOut: 当前用户信息。
+         *
+         *     Raises:
+         *         HTTPException 401: 邮箱或密码错误。
+         *         HTTPException 503: 会话创建失败（会话不可用）。
+         */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description 登出：撤销会话并清除 Cookie。
+         *
+         *     Args:
+         *         request: 当前请求（读取会话 Cookie）。
+         *         response: 响应对象，用于清除 Cookie。
+         *
+         *     Returns:
+         *         dict: {"ok": True}。
+         */
+        post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description 返回当前登录用户信息。
+         *
+         *     Args:
+         *         current: 当前登录用户（依赖注入）。
+         *
+         *     Returns:
+         *         UserOut: 当前用户信息。
+         */
+        get: operations["me_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AuthLogin
+         * @description 登录请求体。
+         *
+         *     Attributes:
+         *         email: 登录邮箱。
+         *         password: 密码。
+         */
+        AuthLogin: {
+            /**
+             * Email
+             * @description 邮箱
+             */
+            email: string;
+            /**
+             * Password
+             * @description 密码
+             */
+            password: string;
+        };
+        /**
+         * AuthRegister
+         * @description 注册请求体。
+         *
+         *     Attributes:
+         *         email: 登录邮箱。
+         *         password: 密码，至少 6 位。
+         *         nickname: 昵称（可选）。
+         */
+        AuthRegister: {
+            /**
+             * Email
+             * @description 邮箱
+             */
+            email: string;
+            /**
+             * Password
+             * @description 密码，至少 6 位
+             */
+            password: string;
+            /**
+             * Nickname
+             * @description 昵称
+             */
+            nickname?: string | null;
+        };
         /**
          * ChatRequest
          * @description LLM Agent 对话请求。
@@ -401,118 +563,6 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
-        };
-        /**
-         * HistoryCreate
-         * @description 保存历史记录的请求体。
-         *
-         *     device_id 由前端 localStorage 生成，仅用于删除鉴权。
-         *     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
-         *     request_params 为用户输入参数，方便复现。
-         */
-        HistoryCreate: {
-            /**
-             * Device Id
-             * @description 匿名设备标识
-             */
-            device_id?: string | null;
-            /**
-             * Note
-             * @description 用户备注
-             */
-            note?: string | null;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Plan Result */
-            plan_result: {
-                [key: string]: unknown;
-            };
-            /** Request Params */
-            request_params?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * HistoryDeleteRequest
-         * @description 删除历史记录的请求体，需与创建时的 device_id 一致。
-         */
-        HistoryDeleteRequest: {
-            /** Device Id */
-            device_id: string;
-        };
-        /**
-         * HistoryDetail
-         * @description 历史记录完整信息，含全量 plan_result。
-         */
-        HistoryDetail: {
-            /** Id */
-            id: string;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Note */
-            note?: string | null;
-            /** Plan Result */
-            plan_result: {
-                [key: string]: unknown;
-            };
-            /** Request Params */
-            request_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** Created At */
-            created_at: string;
-        };
-        /**
-         * HistoryListResponse
-         * @description 历史记录分页列表响应。
-         */
-        HistoryListResponse: {
-            /** Items */
-            items: components["schemas"]["HistorySummary"][];
-            /** Total */
-            total: number;
-            /** Page */
-            page: number;
-            /** Page Size */
-            page_size: number;
-        };
-        /**
-         * HistorySummary
-         * @description 历史记录列表中的摘要信息。
-         */
-        HistorySummary: {
-            /** Id */
-            id: string;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Note */
-            note?: string | null;
-            /** Created At */
-            created_at: string;
         };
         /**
          * POIItem
@@ -797,6 +847,118 @@ export interface components {
             departure_status: string;
         };
         /**
+         * ShareCreate
+         * @description 保存方案分享的请求体。
+         *
+         *     device_id 由前端 localStorage 生成，仅用于删除鉴权。
+         *     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
+         *     request_params 为用户输入参数，方便复现。
+         */
+        ShareCreate: {
+            /**
+             * Device Id
+             * @description 匿名设备标识
+             */
+            device_id?: string | null;
+            /**
+             * Note
+             * @description 用户备注
+             */
+            note?: string | null;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ShareDeleteRequest
+         * @description 删除方案分享的请求体，需与创建时的 device_id 一致。
+         */
+        ShareDeleteRequest: {
+            /** Device Id */
+            device_id: string;
+        };
+        /**
+         * ShareDetail
+         * @description 方案分享完整信息，含全量 plan_result。
+         */
+        ShareDetail: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * ShareListResponse
+         * @description 方案分享分页列表响应。
+         */
+        ShareListResponse: {
+            /** Items */
+            items: components["schemas"]["ShareSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ShareSummary
+         * @description 方案分享列表中的摘要信息。
+         */
+        ShareSummary: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
          * SpotDictItem
          * @description 规划结果中的景点/酒店字典项（result.spots 字段值）。
          *
@@ -907,6 +1069,29 @@ export interface components {
         TaskSubmitResponse: {
             /** Task Id */
             task_id: string;
+        };
+        /**
+         * UserOut
+         * @description 当前用户信息响应。
+         *
+         *     Attributes:
+         *         id: 用户 UUID。
+         *         email: 邮箱。
+         *         nickname: 昵称。
+         *         role: 角色（user/guest/admin）。
+         *         is_active: 是否启用。
+         */
+        UserOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email?: string | null;
+            /** Nickname */
+            nickname?: string | null;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -1082,7 +1267,7 @@ export interface operations {
             };
         };
     };
-    list_history_api_history_get: {
+    list_shares_api_shares_get: {
         parameters: {
             query?: {
                 page?: number;
@@ -1100,7 +1285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HistoryListResponse"];
+                    "application/json": components["schemas"]["ShareListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1114,7 +1299,7 @@ export interface operations {
             };
         };
     };
-    create_history_api_history_post: {
+    create_share_api_shares_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1123,7 +1308,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HistoryCreate"];
+                "application/json": components["schemas"]["ShareCreate"];
             };
         };
         responses: {
@@ -1147,7 +1332,7 @@ export interface operations {
             };
         };
     };
-    get_history_detail_api_history__record_id__get: {
+    get_share_detail_api_shares__record_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1164,7 +1349,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HistoryDetail"];
+                    "application/json": components["schemas"]["ShareDetail"];
                 };
             };
             /** @description Validation Error */
@@ -1178,7 +1363,7 @@ export interface operations {
             };
         };
     };
-    delete_history_api_history__record_id__delete: {
+    delete_share_api_shares__record_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1189,7 +1374,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HistoryDeleteRequest"];
+                "application/json": components["schemas"]["ShareDeleteRequest"];
             };
         };
         responses: {
@@ -1304,6 +1489,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_api_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthRegister"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    me_api_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
                 };
             };
         };

@@ -125,7 +125,7 @@ import AmapMap from '@/components/AmapMap.vue'
 import SchedulePanel from '@/components/SchedulePanel.vue'
 import type { PlanResultSolution } from '@/types'
 import { fmtMinutes } from '@/utils/time'
-import { postHistory, getDeviceId } from '@/services/api'
+import { postShare, getDeviceId } from '@/services/api'
 
 const store = usePlanStore()
 const router = useRouter()
@@ -180,7 +180,7 @@ async function doShare() {
   if (!r || sharing.value) return
   sharing.value = true
   try {
-    await postHistory({
+    await postShare({
       device_id: getDeviceId(),
       city: store.city,
       hotel: store.hotelName,

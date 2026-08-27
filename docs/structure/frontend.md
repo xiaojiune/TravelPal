@@ -44,7 +44,7 @@ frontend/
     │   ├── HomePage.vue     首页：城市/酒店/景点输入 + 参数配置
     │   ├── SuggestPage.vue  方案建议列表（异步任务结果）
     │   ├── PlanPage.vue     规划结果展示（地图 + 行程 + 评语）
-    │   ├── HistoryPage.vue  历史记录分享站
+    │   ├── SharePage.vue  方案分享分享站
     │   └── AboutPage.vue    关于页面 + 用户反馈问卷
     │
     ├── components/       可复用组件
@@ -86,7 +86,7 @@ frontend/
 | `/` | HomePage | 输入参数，触发 suggest 任务 |
 | `/suggest` | SuggestPage | 展示方案建议（异步任务轮询），可触发布局 |
 | `/plan` | PlanPage | 只读展示规划结果 |
-| `/history` | HistoryPage | 历史记录分享站 |
+| `/shares` | SharePage | 方案分享分享站 |
 | `/about` | AboutPage | 关于 + 反馈问卷 |
 
 ### suggest / plan 异步流程

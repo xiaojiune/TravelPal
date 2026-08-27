@@ -44,13 +44,13 @@
 </template>
 
 <script setup lang="ts">
-/** 历史记录页：方案分享站，支持分页列表、查看详情、删除（device_id 鉴权）。 */
+/** 方案分享页：方案分享站，支持分页列表、查看详情、删除（device_id 鉴权）。 */
 import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
-import { getHistoryList, getHistoryDetail, deleteHistory, getDeviceId } from '@/services/api'
-import type { HistorySummary } from '@/types'
+import { getShareList, getShareDetail, deleteShare, getDeviceId } from '@/services/api'
+import type { ShareSummary } from '@/types'
 import type { PlanResult } from '@/types'
 
 const router = useRouter()
@@ -59,7 +59,7 @@ const store = usePlanStore()
 const message = useMessage()
 const dialog = useDialog()
 
-const items = ref<HistorySummary[]>([])
+const items = ref<ShareSummary[]>([])
 const loading = ref(true)
 const page = ref(1)
 const total = ref(0)
@@ -76,7 +76,7 @@ function formatTime(iso: string) {
 async function loadList() {
   loading.value = true
   try {
-    const res = await getHistoryList(page.value, pageSize)
+    const res = await getShareList(page.value, pageSize)
     items.value = res.items
     total.value = res.total
   } catch {
@@ -91,9 +91,9 @@ function goPage(p: number) {
   loadList()
 }
 
-async function viewRecord(r: HistorySummary) {
+async function viewRecord(r: ShareSummary) {
   try {
-    const detail = await getHistoryDetail(r.id)
+    const detail = await getShareDetail(r.id)
     store.planResult = detail.plan_result as PlanResult
     store.historyRecordId = r.id
     store.historyRequestParams = detail.request_params as Record<string, unknown> | null
@@ -103,7 +103,7 @@ async function viewRecord(r: HistorySummary) {
   }
 }
 
-function deleteRecord(r: HistorySummary) {
+function deleteRecord(r: ShareSummary) {
   dialog.warning({
     title: '删除分享',
     content: `确定删除 ${r.city} ${r.n_days} 日游的分享？`,
@@ -111,7 +111,7 @@ function deleteRecord(r: HistorySummary) {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await deleteHistory(r.id, getDeviceId())
+        await deleteShare(r.id, getDeviceId())
         items.value = items.value.filter((x) => x.id !== r.id)
         total.value--
         // 删除当前页最后一条记录后页码回退，避免落到空页
@@ -129,7 +129,7 @@ function deleteRecord(r: HistorySummary) {
 watch(
   () => route.path,
   (path) => {
-    if (path === '/history') loadList()
+    if (path === '/shares') loadList()
   },
   { immediate: true },
 )

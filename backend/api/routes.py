@@ -1,4 +1,4 @@
-"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话、历史记录、异步任务。"""
+"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话、方案分享、异步任务。"""
 
 import json
 import traceback
@@ -14,11 +14,11 @@ from backend.agent.tools import parse_biz_hours
 from backend.api.schemas import (
     ChatRequest,
     FeedbackCreate,
-    HistoryCreate,
-    HistoryDeleteRequest,
-    HistoryDetail,
-    HistoryListResponse,
-    HistorySummary,
+    ShareCreate,
+    ShareDeleteRequest,
+    ShareDetail,
+    ShareListResponse,
+    ShareSummary,
     PlanRequest,
     POILookupItem,
     POILookupRequest,
@@ -28,7 +28,7 @@ from backend.api.schemas import (
 )
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
-from backend.data.model.models import FeedbackRecord, HistoryRecord, PlanTask
+from backend.data.model.models import FeedbackRecord, SharedPlan, PlanTask
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -196,16 +196,16 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ================== 历史记录（分享站） ==================
+# ================== 方案分享 ==================
 
 
-@router.get("/api/history", response_model=HistoryListResponse)
-async def list_history(
+@router.get("/api/shares", response_model=ShareListResponse)
+async def list_shares(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ):
-    """获取历史记录分页列表。
+    """获取方案分享分页列表。
 
     仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
     不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
@@ -215,16 +215,16 @@ async def list_history(
         page_size: 每页条数，最大 100。
 
     Returns:
-        HistoryListResponse: { items, total, page, page_size }。
+        ShareListResponse: { items, total, page, page_size }。
     """
-    count_q = select(func.count(HistoryRecord.id))
+    count_q = select(func.count(SharedPlan.id))
     total = (await session.execute(count_q)).scalar() or 0
 
-    q = select(HistoryRecord).order_by(HistoryRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    q = select(SharedPlan).order_by(SharedPlan.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(q)).scalars().all()
 
     items = [
-        HistorySummary(
+        ShareSummary(
             id=str(r.id),
             city=r.city,  # type: ignore[arg-type]
             hotel=r.hotel,  # type: ignore[arg-type]
@@ -236,26 +236,26 @@ async def list_history(
         )
         for r in rows
     ]
-    return HistoryListResponse(items=items, total=total, page=page, page_size=page_size)
+    return ShareListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.get("/api/history/{record_id}", response_model=HistoryDetail)
-async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
-    """获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+@router.get("/api/shares/{record_id}", response_model=ShareDetail)
+async def get_share_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
+    """获取单条方案分享的完整数据（含 plan_result 全量 JSONB）。
 
     Args:
         record_id: 记录 UUID。
 
     Returns:
-        HistoryDetail: 含 plan_result/request_params 等完整字段。
+        ShareDetail: 含 plan_result/request_params 等完整字段。
 
     Raises:
         HTTPException 404: 记录不存在。
     """
-    r = await session.get(HistoryRecord, record_id)
+    r = await session.get(SharedPlan, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    return HistoryDetail(
+    return ShareDetail(
         id=str(r.id),
         city=r.city,  # type: ignore[arg-type]
         hotel=r.hotel,  # type: ignore[arg-type]
@@ -269,9 +269,9 @@ async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(ge
     )
 
 
-@router.post("/api/history", status_code=201)
-async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get_session)):
-    """保存一条历史记录（分享方案到分享站）。
+@router.post("/api/shares", status_code=201)
+async def create_share(req: ShareCreate, session: AsyncSession = Depends(get_session)):
+    """保存一条方案分享（到分享站）。
 
     设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
     这是软鉴权设计。核心考量：
@@ -280,7 +280,7 @@ async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get
     3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
 
     Args:
-        req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+        req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
 
     Returns:
         dict: { id: str } 新创建的记录 UUID。
@@ -288,7 +288,7 @@ async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get
     Raises:
         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
     """
-    record = HistoryRecord(
+    record = SharedPlan(
         device_id=req.device_id,
         note=req.note,
         city=req.city,
@@ -330,17 +330,17 @@ async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(g
     return {"id": str(record.id)}
 
 
-@router.delete("/api/history/{record_id}")
-async def delete_history(
+@router.delete("/api/shares/{record_id}")
+async def delete_share(
     record_id: UUID,
-    req: HistoryDeleteRequest,
+    req: ShareDeleteRequest,
     session: AsyncSession = Depends(get_session),
 ):
-    """删除一条历史记录（需 device_id 匹配创建者）。
+    """删除一条方案分享（需 device_id 匹配创建者）。
 
     Args:
         record_id: 记录 UUID。
-        req: HistoryDeleteRequest，包含 device_id。
+        req: ShareDeleteRequest，包含 device_id。
 
     Returns:
         dict: { ok: true }
@@ -349,7 +349,7 @@ async def delete_history(
         HTTPException 404: 记录不存在。
         HTTPException 403: device_id 不匹配，无权删除。
     """
-    r = await session.get(HistoryRecord, record_id)
+    r = await session.get(SharedPlan, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
     if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]

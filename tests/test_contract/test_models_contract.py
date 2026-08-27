@@ -2,7 +2,7 @@
 
 覆盖轴2：User 模型字段齐全；三张业务表均挂 user_id 外键（可空=存量匿名兼容）。
 """
-from backend.data.model.models import FeedbackRecord, HistoryRecord, PlanTask, User
+from backend.data.model.models import FeedbackRecord, SharedPlan, PlanTask, User
 
 
 class TestUserModel:
@@ -27,7 +27,7 @@ class TestBusinessUserIdForeignKey:
     """三张业务表的 user_id 外键与可空契约（存量匿名记录兼容）。"""
 
     def test_user_id_column_nullable_and_fk(self):
-        for model in (HistoryRecord, PlanTask, FeedbackRecord):
+        for model in (SharedPlan, PlanTask, FeedbackRecord):
             col = model.__table__.c.user_id
             assert col.nullable is True, f"{model.__tablename__}.user_id 应为可空"
             assert len(col.foreign_keys) == 1, f"{model.__tablename__}.user_id 应有 1 个外键"

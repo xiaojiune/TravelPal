@@ -34,14 +34,14 @@ export type SuggestResult = components['schemas']['SuggestResult']
 /** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed）。 */
 export type TaskDetail = components['schemas']['TaskDetail']
 
-/** 历史记录列表项（摘要，由 OpenAPI 生成）。 */
-export type HistorySummary = components['schemas']['HistorySummary']
+/** 方案分享列表项（摘要，由 OpenAPI 生成）。 */
+export type ShareSummary = components['schemas']['ShareSummary']
 
-/** 历史记录分页响应（由 OpenAPI 生成）。 */
-export type HistoryListResponse = components['schemas']['HistoryListResponse']
+/** 方案分享分页响应（由 OpenAPI 生成）。 */
+export type ShareListResponse = components['schemas']['ShareListResponse']
 
-/** 历史记录完整详情（由 OpenAPI 生成）。 */
-export type HistoryDetail = components['schemas']['HistoryDetail']
+/** 方案分享完整详情（由 OpenAPI 生成）。 */
+export type ShareDetail = components['schemas']['ShareDetail']
 
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 

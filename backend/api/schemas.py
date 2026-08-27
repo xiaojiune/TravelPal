@@ -149,11 +149,11 @@ class PlanAdjustRequest(BaseModel):
     adjustments: dict = Field(default_factory=lambda: {"balance": True}, description="调整指令，如 {'balance': true}")
 
 
-# ================== 历史记录（分享站） ==================
+# ================== 方案分享 ==================
 
 
-class HistoryCreate(BaseModel):
-    """保存历史记录的请求体。
+class ShareCreate(BaseModel):
+    """保存方案分享的请求体。
 
     device_id 由前端 localStorage 生成，仅用于删除鉴权。
     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
@@ -171,8 +171,8 @@ class HistoryCreate(BaseModel):
     request_params: dict | None = None
 
 
-class HistorySummary(BaseModel):
-    """历史记录列表中的摘要信息。"""
+class ShareSummary(BaseModel):
+    """方案分享列表中的摘要信息。"""
 
     id: str
     city: str
@@ -184,8 +184,8 @@ class HistorySummary(BaseModel):
     created_at: str
 
 
-class HistoryDetail(BaseModel):
-    """历史记录完整信息，含全量 plan_result。"""
+class ShareDetail(BaseModel):
+    """方案分享完整信息，含全量 plan_result。"""
 
     id: str
     city: str
@@ -199,17 +199,17 @@ class HistoryDetail(BaseModel):
     created_at: str
 
 
-class HistoryListResponse(BaseModel):
-    """历史记录分页列表响应。"""
+class ShareListResponse(BaseModel):
+    """方案分享分页列表响应。"""
 
-    items: list[HistorySummary]
+    items: list[ShareSummary]
     total: int
     page: int
     page_size: int
 
 
-class HistoryDeleteRequest(BaseModel):
-    """删除历史记录的请求体，需与创建时的 device_id 一致。"""
+class ShareDeleteRequest(BaseModel):
+    """删除方案分享的请求体，需与创建时的 device_id 一致。"""
 
     device_id: str
 

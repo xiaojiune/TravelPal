@@ -31,8 +31,8 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
-class HistoryRecord(Base):
-    """历史记录 ORM 模型，存储完整规划结果至 PostgreSQL。
+class SharedPlan(Base):
+    """方案分享 ORM 模型，存储分享的规划结果至 PostgreSQL。
 
     设计说明：
     - plan_result 使用 JSONB 而非关系化展开——前端展示「分享站」时按 ID 整条读取，
@@ -43,7 +43,7 @@ class HistoryRecord(Base):
       不引入真实用户系统，对访客零门槛。
     """
 
-    __tablename__ = "history_records"
+    __tablename__ = "share_records"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空=存量匿名；单一归属键）")
@@ -67,7 +67,7 @@ class PlanTask(Base):
       改为提交任务后轮询本表状态，避免 HTTP 长连接挂起。
     - 任务执行由 Celery worker 承担（broker=redis），任务内部自写本表状态
       （方案 A：不依赖 Celery result backend，复用现有 async SQLAlchemy）。
-    - result 存完整结果 JSONB（suggest 响应或完整 PlanResult），与 HistoryRecord
+    - result 存完整结果 JSONB（suggest 响应或完整 PlanResult），与 SharedPlan
       的 plan_result 同构；删除由用户主动发起，暂不做软删除/归档。
     - task_type 区分 "suggest"（CA 建议）与 "plan"（指定天数求解），
       未来 OR+AI/ML 架构演进时可为不同类型任务配置不同队列/worker。

@@ -18,6 +18,11 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 **执行前先 `git status`** 确定本次改动范围，**只跑本次改动对应模块的测试**，不跑无关测试。
 
+### 前端改动何时验证
+
+- 只改前端、想快速确认模板没被破坏 → 用 `make build`（vite 编译验证），**不必跑全量 `make check`**。
+- 全量检查（`make check`，已含 `vite build`，后端+前端一整套）太大，交给 CI / 明确要求时跑；本地前端改动用 `make build` 即可。
+
 ## 二、外部环境测试（边界判断）
 
 - 执行**依赖外部环境**的操作前（PostgreSQL/Redis/Celery worker 的端到端验证、前后端联调），**先探测端口**（如 5432/6379）。

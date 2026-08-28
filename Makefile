@@ -72,7 +72,7 @@ ruff-format: ## 后端 Python 代码格式化（ruff）
 pyright: ## 后端 Python 类型检查
 	.venv/bin/pyright backend/
 
-check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类型 + 测试 + 一致性）
+check: ## 全量检查（明确要求时使用：格式 + lint + 类型 + 测试 + 一致性）
 	@echo '==> ruff format --check（后端格式）'
 	.venv/bin/ruff format --check backend/
 	@echo '==> ruff check（后端 lint）'

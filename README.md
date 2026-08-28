@@ -1,8 +1,6 @@
 # TravelPal
 
-**不占有的陪伴，不缺席的可靠。**
-
-> 基于约束求解的可执行旅行规划工具——你提需求，它算行程。
+> 基于约束求解 + LLM 的可执行旅行规划Agent——你提需求，它算行程。
 
 [![在线体验](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)

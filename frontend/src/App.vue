@@ -14,7 +14,6 @@
           <nav class="nav-bar">
             <div class="nav-brand-area">
               <router-link to="/" class="nav-brand">TravelPal</router-link>
-              <span class="nav-slogan">不占有的陪伴，不缺席的可靠</span>
             </div>
             <div class="nav-links">
               <router-link to="/">首页</router-link>

@@ -23,7 +23,7 @@
   - 推荐：内部私有函数；简单单行函数可豁免
   - NumPy：数组标 `np.ndarray`，关键矩阵在 docstring 补维度
 - **命名**：变量/函数 `snake_case`，类 `PascalCase`，常量 `UPPER_CASE`。
-- **行宽**：≤100 字符。
+- **行宽**：≤120 字符。
 - **依赖分组**：按「生产镜像或部署流程是否需要它」判定。
   - `main` 组：生产运行/部署需要（FastAPI/Celery/alembic/redis）
   - `dev` 组：纯开发工具（pytest/ruff/pyright）

@@ -1,3 +1,15 @@
+# ============================================================================
+# 依赖安装注意事项
+# - langgraph-checkpoint-postgres 依赖 psycopg；psycopg 需 psycopg-binary（提供
+#   libpq），否则 import 报 "no pq wrapper available"——故 main 组同时含两者。
+# - 国内网络下 poetry 默认连 pypi.org 可能失败（PermissionError / ReadTimeout，
+#   且本机 python 联网可能被沙箱拦截）。若 poetry add/install 联网失败：
+#   a) 用 pip + 清华源装包（--index-url https://pypi.tuna.tsinghua.edu.cn/simple）；
+#   b) 再在可联网处跑 `poetry lock` 落锁（lock 只解析 metadata，不拉大 wheel，
+#      比 poetry add 的下载阶段更稳）。Dockerfile 构建亦走清华源。
+# - langgraph checkpoint 内部表由 AsyncPostgresSaver.setup() 托管，不进 Alembic；
+#   alembic/env.py 用 include_object 排除，保持 alembic check 无漂移。
+# ============================================================================
 [project]
 name = "travelpal"
 version = "0.1.0"

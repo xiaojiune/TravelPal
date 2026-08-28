@@ -40,6 +40,8 @@ export const useUserStore = defineStore('user', () => {
    */
   async function login(email: string, password: string) {
     user.value = await postAuthLogin({ email, password })
+    // 登录切换身份：清空当前（游客/上一位）界面数据，进入本用户干净工作区
+    usePlanStore().reset()
   }
 
   /**
@@ -50,16 +52,18 @@ export const useUserStore = defineStore('user', () => {
    */
   async function register(email: string, password: string, nickname?: string) {
     user.value = await postAuthRegister({ email, password, nickname })
+    // 新账号注册：默认干净工作区
+    usePlanStore().reset()
   }
 
-  /** 登出：清后端会话 + 本地 user + 当前会话 id（不清本地规划数据）。 */
+  /** 登出：清后端会话 + 本地 user + 覆盖所有界面数据（每个身份有自己干净界面）。 */
   async function logout() {
     try {
       await postAuthLogout()
     } finally {
       user.value = null
-      // 清会话 id：避免再次登录/切用户时串到上一用户的对话
-      usePlanStore().chatConversationId = null
+      // 登出即"遗忘"：清空全部规划/对话数据，回到游客干净界面（游客数据不保存）
+      usePlanStore().reset()
     }
   }
 

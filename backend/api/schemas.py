@@ -405,3 +405,93 @@ class UserOut(BaseModel):
     nickname: str | None = None
     role: str
     is_active: bool
+
+
+# ================== 管理员操作台 ==================
+
+
+class AdminUser(BaseModel):
+    """管理人员：用户列表项。
+
+    Attributes:
+        id: 用户 UUID。
+        email: 邮箱。
+        nickname: 昵称。
+        role: 角色（user/admin/super_admin）。
+        is_active: 是否启用。
+        created_at: 创建时间（ISO 字符串）。
+    """
+
+    id: str
+    email: str | None = None
+    nickname: str | None = None
+    role: str
+    is_active: bool
+    created_at: str = ""
+
+
+class AdminTask(BaseModel):
+    """管理人员：异步任务列表项。
+
+    Attributes:
+        id: 任务 UUID。
+        task_type: 任务类型（suggest/plan）。
+        status: 状态（pending/running/done/failed）。
+        created_at: 创建时间（ISO 字符串）。
+        finished_at: 结束时间（ISO 字符串；未结束为空）。
+    """
+
+    id: str
+    task_type: str
+    status: str
+    created_at: str = ""
+    finished_at: str | None = None
+
+
+class AdminFeedback(BaseModel):
+    """管理人员：用户反馈列表项。
+
+    Attributes:
+        id: 反馈 UUID。
+        name: 用户称呼（可选）。
+        contact: 联系方式（可选）。
+        content: 反馈内容。
+        rating: 评分 1-5（可选）。
+        page: 来源页面路径（可选）。
+        created_at: 创建时间（ISO 字符串）。
+    """
+
+    id: str
+    name: str | None = None
+    contact: str | None = None
+    content: str
+    rating: int | None = None
+    page: str | None = None
+    created_at: str = ""
+
+
+class AdminUsersResponse(BaseModel):
+    """用户列表分页响应。"""
+
+    items: list[AdminUser]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminTasksResponse(BaseModel):
+    """任务列表分页响应。"""
+
+    items: list[AdminTask]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminFeedbackResponse(BaseModel):
+    """反馈列表分页响应。"""
+
+    items: list[AdminFeedback]
+    total: int
+    page: int
+    page_size: int

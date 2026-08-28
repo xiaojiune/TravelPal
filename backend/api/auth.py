@@ -111,21 +111,22 @@ async def get_current_user_optional(request: Request, session: AsyncSession = De
 
 
 async def require_admin(current: User = Depends(get_current_user)) -> User:
-    """FastAPI 依赖：要求当前用户为 admin 角色，否则拒绝（RBAC）。
+    """FastAPI 依赖：要求当前用户具备管理员权限，否则拒绝（RBAC）。
 
-    供 Admin 操作台等管理端点使用（user-system.md 轴5）；admin 端点接入属轴5，
-    本次仅提供本依赖。
+    放行 role 为 admin 或 super_admin 的登录用户：后端管理 API 对两者均就绪
+    （普通 admin 可经脚本/HTTP 调用，前端界面暂仅 super_admin 激活——见 user-system.md 轴5）。
+    普通 user（含 guest）返回 403。
 
     Args:
         current: 当前登录用户（依赖注入）。
 
     Returns:
-        User: 当前用户（已确认具备 admin 权限）。
+        User: 当前用户（已确认具备管理员权限）。
 
     Raises:
-        HTTPException 403: 当前用户非 admin 角色。
+        HTTPException 403: 当前用户非 admin/super_admin 角色。
     """
-    if current.role != "admin":  # pyright: ignore[reportGeneralTypeIssues]
+    if current.role not in ("admin", "super_admin"):  # pyright: ignore[reportGeneralTypeIssues]
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
     return current
 

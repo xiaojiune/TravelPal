@@ -104,6 +104,11 @@ class TestAuthzDeps:
         admin = User(id=uuid.uuid4(), role="admin", is_active=True)
         assert asyncio.run(require_admin(current=admin)) is admin
 
+    def test_require_admin_passes_for_super_admin(self):
+        """super_admin 角色同样通过 require_admin（后端管理 API 对两者就绪）。"""
+        sa = User(id=uuid.uuid4(), role="super_admin", is_active=True)
+        assert asyncio.run(require_admin(current=sa)) is sa
+
     def test_require_admin_rejects_non_admin(self):
         """非 admin 角色触发 403。"""
         user = User(id=uuid.uuid4(), role="user", is_active=True)

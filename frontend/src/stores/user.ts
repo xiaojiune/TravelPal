@@ -7,6 +7,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getAuthMe, postAuthLogin, postAuthLogout, postAuthRegister } from '@/services/auth'
+import { usePlanStore } from '@/stores/plan'
 import type { UserOut } from '@/types'
 
 export const useUserStore = defineStore('user', () => {
@@ -51,12 +52,14 @@ export const useUserStore = defineStore('user', () => {
     user.value = await postAuthRegister({ email, password, nickname })
   }
 
-  /** 登出：清后端会话 + 清本地 user（不清本地规划数据）。 */
+  /** 登出：清后端会话 + 本地 user + 当前会话 id（不清本地规划数据）。 */
   async function logout() {
     try {
       await postAuthLogout()
     } finally {
       user.value = null
+      // 清会话 id：避免再次登录/切用户时串到上一用户的对话
+      usePlanStore().chatConversationId = null
     }
   }
 

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from backend.agent.chat.checkpointer import psycopg_url
 from backend.api.schemas import ChatRequest
-from backend.domain.conversations import TTL_ANONYMOUS, TTL_LOGGED_IN, _expires_for
+from backend.domain.conversations import TTL_ANONYMOUS, TTL_LOGGED_IN, _belongs, _expires_for
 
 
 class TestChatRequestConversationId:
@@ -45,3 +45,23 @@ class TestCheckpointerUrl:
         url = psycopg_url()
         assert url.startswith("postgresql://")
         assert "+asyncpg" not in url
+
+
+class TestConversationBelongs:
+    """会话归属判断：登录会话仅登录用户可用，游客会话仅游客可用（防串）。"""
+
+    def test_guest_accesses_guest_conv(self):
+        assert _belongs(conv_user_id=None, current_user_id=None) is True
+
+    def test_guest_cannot_access_logged_conv(self):
+        assert _belongs(conv_user_id=uuid4(), current_user_id=None) is False
+
+    def test_user_accesses_own_conv(self):
+        uid = uuid4()
+        assert _belongs(conv_user_id=uid, current_user_id=uid) is True
+
+    def test_user_cannot_access_other_user_conv(self):
+        assert _belongs(conv_user_id=uuid4(), current_user_id=uuid4()) is False
+
+    def test_user_cannot_access_guest_conv(self):
+        assert _belongs(conv_user_id=None, current_user_id=uuid4()) is False

@@ -113,3 +113,30 @@ class FeedbackRecord(Base):
     rating = Column(Integer, nullable=True, comment="评分 1-5，可选")
     page = Column(String(50), nullable=True, comment="来源页面路径，如 /about")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class Conversation(Base):
+    """会话 ORM 模型：对话持久化的元数据（thread_id 绑定、归属、TTL）。
+
+    设计说明：
+    - id 即 LangGraph 的 thread_id：会话状态（含消息历史）由 AsyncPostgresSaver
+      托管在 checkpoint 表，本表只存会话元数据，避免双份存储（单一来源）。
+    - user_id 可空：登录用户绑定账号（跨设备可查），未登录访客为 None（匿名）。
+    - expires_at 是清理依据（登录 7 天/匿名 1 天），过期由清理逻辑删除本记录
+      并同步清理对应 checkpoint 状态。
+    """
+
+    __tablename__ = "conversations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id"),
+        nullable=True,
+        index=True,
+        comment="归属用户（可空=匿名）",
+    )
+    title = Column(String(200), nullable=True, comment="会话标题（可选，如首条消息摘要）")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True, comment="过期时间（登录7天/匿名1天）")

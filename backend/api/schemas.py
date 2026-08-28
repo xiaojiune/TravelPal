@@ -126,11 +126,13 @@ class ChatRequest(BaseModel):
     plan_result: 可选的规划结果上下文，供 Agent 参考。
     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
+    conversation_id: 可选会话 id（首条为空时后端懒建，后续携带以续接历史）。
     """
 
     message: str = Field(min_length=1, description="用户输入的消息")
     plan_result: dict | None = Field(default=None, description="规划结果上下文")
     form_context: dict | None = Field(default=None, description="表单输入快照（城市/酒店/景点）")
+    conversation_id: str | None = Field(default=None, description="会话 id（首条为空懒建，后续携带续接）")
 
 
 # ================== 方案调整 ==================

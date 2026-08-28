@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
+from backend.agent.chat.checkpointer import checkpointer_context
 from backend.api.admin import router as admin_router
 from backend.api.auth import router as auth_router
 from backend.api.routes import router
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
 
     schema 由 Alembic 迁移链管理（alembic upgrade / revision --autogenerate），
     启动不执行 create_all（已移除双轨），首次使用前请先 make migrate。
+    会话状态 checkpointer（AsyncPostgresSaver）在 lifespan 内建/关（同事件循环）。
 
     Args:
         app: FastAPI 应用实例。
@@ -28,8 +30,9 @@ async def lifespan(app: FastAPI):
     Yields:
         None: 应用运行期间 yield，退出后执行关闭逻辑。
     """
-    yield
-    await close_db()
+    async with checkpointer_context():
+        yield
+        await close_db()
 
 
 # ================== HTTP 指标中间件 ==================

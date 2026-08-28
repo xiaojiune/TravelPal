@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agent.chat import build_chat_messages, stream_orchestrator
+from backend.agent.chat.checkpointer import get_checkpointer
 from backend.agent.tools import parse_biz_hours
 from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
@@ -30,6 +31,7 @@ from backend.api.schemas import (
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
+from backend.domain.conversations import get_history_messages, get_or_create_conversation
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -155,32 +157,58 @@ async def plan(
 
 
 @router.post("/api/chat")
-async def chat(req: ChatRequest):
-    """LLM Agent 对话接口，SSE 流式输出。
+async def chat(
+    req: ChatRequest,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """LLM Agent 对话接口，SSE 流式输出（含会话记忆）。
 
     编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
+    会话（conversation）懒创建：首条消息不带 conversation_id 时新建，SSE 首事件返回
+    会话 id 供前端存下续接；后续携带 conversation_id 时读取历史续接（跨轮次记忆）。
 
     Args:
-        req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
+        req: 聊天请求，含 message 和可选的 plan_result / form_context / conversation_id。
+        session: 数据库会话（会话记录存取）。
+        current: 当前登录用户（可选）；登录时会话归属该 user_id。
 
     Returns:
-        StreamingResponse: SSE 流式响应，逐 token 推送内容。
+        StreamingResponse: SSE 流式响应，逐 token 推送内容（首事件为 conversation id）。
 
     Raises:
         HTTPException 500: LLM 调用异常或数据格式错误。
     """
     try:
-        messages = build_chat_messages(req.message, req.plan_result, req.form_context)
+        conv, created = await get_or_create_conversation(
+            session, req.conversation_id, current.id if current else None  # pyright: ignore[reportArgumentType]
+        )
+        if created:
+            # 新建会话（首条/过期重建）：build_chat_messages（system + 当前消息）
+            messages = build_chat_messages(req.message, req.plan_result, req.form_context)
+        else:
+            history = await get_history_messages(str(conv.id))
+            messages = (
+                list(history) + [{"role": "user", "content": req.message}]
+                if history
+                else build_chat_messages(req.message, req.plan_result, req.form_context)
+            )
+        thread_id = str(conv.id)
+        checkpointer = get_checkpointer()
 
         async def _stream():
-            """SSE 生成器：LangGraph 编排产出事件，映射为 SSE 事件流。"""
+            """SSE 生成器：先发会话 id，再映射 LangGraph 编排事件流。"""
+            # 懒建/复用的会话 id 通知前端（前端存下后后续轮携带续接）
+            yield f"data: {json.dumps({'type': 'conversation', 'conversation_id': thread_id})}\n\n"
             try:
                 async for event_type, data in stream_orchestrator(
                     messages,
                     exclude=_CHAT_EXCLUDE_TOOLS,
                     plan_result=req.plan_result,
                     form_context=req.form_context,
+                    checkpointer=checkpointer,
+                    thread_id=thread_id,
                 ):
                     if event_type == "content":
                         yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"

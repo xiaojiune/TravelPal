@@ -46,6 +46,26 @@ export type ShareDetail = components['schemas']['ShareDetail']
 /** 当前登录用户（由 OpenAPI 生成；id/role/email/nickname/is_active）。 */
 export type UserOut = components['schemas']['UserOut']
 
+// ==================== 管理员操作台（轴5） ====================
+
+/** 管理人员：用户列表项（由 OpenAPI 生成）。 */
+export type AdminUser = components['schemas']['AdminUser']
+
+/** 管理人员：异步任务列表项（由 OpenAPI 生成）。 */
+export type AdminTask = components['schemas']['AdminTask']
+
+/** 管理人员：用户反馈列表项（由 OpenAPI 生成）。 */
+export type AdminFeedback = components['schemas']['AdminFeedback']
+
+/** 用户列表分页响应（由 OpenAPI 生成）。 */
+export type AdminUsersResponse = components['schemas']['AdminUsersResponse']
+
+/** 任务列表分页响应（由 OpenAPI 生成）。 */
+export type AdminTasksResponse = components['schemas']['AdminTasksResponse']
+
+/** 反馈列表分页响应（由 OpenAPI 生成）。 */
+export type AdminFeedbackResponse = components['schemas']['AdminFeedbackResponse']
+
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 
 /** 前端输入表单中的景点项 */

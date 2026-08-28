@@ -76,6 +76,7 @@ export interface paths {
          *
          *     Args:
          *         req: 规划请求，n_days 不指定，mode 固定走建议模式。
+         *         current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -110,6 +111,7 @@ export interface paths {
          *
          *     Args:
          *         req: 规划请求，含 n_days 与求解模式。
+         *         current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -184,14 +186,13 @@ export interface paths {
          * Create Share
          * @description 保存一条方案分享（到分享站）。
          *
-         *     设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
-         *     这是软鉴权设计。核心考量：
-         *     1. 不引入注册/登录系统，保持访客零门槛
-         *     2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
-         *     3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+         *     设计说明：登录用户归属 user_id；未登录访客仍零门槛可用（user_id 为 None），
+         *     device_id 由前端 localStorage 生成，仅用于匿名删除鉴权。
          *
          *     Args:
          *         req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
+         *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）；登录时写 user_id，匿名则为 None。
          *
          *     Returns:
          *         dict: { id: str } 新创建的记录 UUID。
@@ -231,18 +232,23 @@ export interface paths {
         post?: never;
         /**
          * Delete Share
-         * @description 删除一条方案分享（需 device_id 匹配创建者）。
+         * @description 删除一条方案分享（登录按 user_id，匿名按 device_id）。
+         *
+         *     设计说明：登录用户只能删除归属自己（user_id 匹配）的记录，无法删除匿名记录；
+         *     未登录访客按 device_id 校验（软鉴权），与创建时一致。
          *
          *     Args:
          *         record_id: 记录 UUID。
          *         req: ShareDeleteRequest，包含 device_id。
+         *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）。
          *
          *     Returns:
          *         dict: { ok: true }
          *
          *     Raises:
          *         HTTPException 404: 记录不存在。
-         *         HTTPException 403: device_id 不匹配，无权删除。
+         *         HTTPException 403: 无权删除（user_id 或 device_id 不匹配）。
          */
         delete: operations["delete_share_api_shares__record_id__delete"];
         options?: never;
@@ -266,6 +272,7 @@ export interface paths {
          *     Args:
          *         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
          *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）；登录时归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         dict: { id: str } 新创建的反馈 UUID。
@@ -445,10 +452,235 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description 分页列出全部用户（含 guest/user/admin/super_admin）。
+         *
+         *     Args:
+         *         page: 页码，从 1 开始。
+         *         page_size: 每页条数，最大 100。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminUsersResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_users_api_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tasks
+         * @description 分页列出全部异步规划任务（suggest/plan）。
+         *
+         *     Args:
+         *         page: 页码。
+         *         page_size: 每页条数。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminTasksResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_tasks_api_admin_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Feedback
+         * @description 分页列出全部用户反馈。
+         *
+         *     Args:
+         *         page: 页码。
+         *         page_size: 每页条数。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminFeedbackResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_feedback_api_admin_feedback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AdminFeedback
+         * @description 管理人员：用户反馈列表项。
+         *
+         *     Attributes:
+         *         id: 反馈 UUID。
+         *         name: 用户称呼（可选）。
+         *         contact: 联系方式（可选）。
+         *         content: 反馈内容。
+         *         rating: 评分 1-5（可选）。
+         *         page: 来源页面路径（可选）。
+         *         created_at: 创建时间（ISO 字符串）。
+         */
+        AdminFeedback: {
+            /** Id */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Contact */
+            contact?: string | null;
+            /** Content */
+            content: string;
+            /** Rating */
+            rating?: number | null;
+            /** Page */
+            page?: string | null;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+        };
+        /**
+         * AdminFeedbackResponse
+         * @description 反馈列表分页响应。
+         */
+        AdminFeedbackResponse: {
+            /** Items */
+            items: components["schemas"]["AdminFeedback"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * AdminTask
+         * @description 管理人员：异步任务列表项。
+         *
+         *     Attributes:
+         *         id: 任务 UUID。
+         *         task_type: 任务类型（suggest/plan）。
+         *         status: 状态（pending/running/done/failed）。
+         *         created_at: 创建时间（ISO 字符串）。
+         *         finished_at: 结束时间（ISO 字符串；未结束为空）。
+         */
+        AdminTask: {
+            /** Id */
+            id: string;
+            /** Task Type */
+            task_type: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * AdminTasksResponse
+         * @description 任务列表分页响应。
+         */
+        AdminTasksResponse: {
+            /** Items */
+            items: components["schemas"]["AdminTask"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * AdminUser
+         * @description 管理人员：用户列表项。
+         *
+         *     Attributes:
+         *         id: 用户 UUID。
+         *         email: 邮箱。
+         *         nickname: 昵称。
+         *         role: 角色（user/admin/super_admin）。
+         *         is_active: 是否启用。
+         *         created_at: 创建时间（ISO 字符串）。
+         */
+        AdminUser: {
+            /** Id */
+            id: string;
+            /** Email */
+            email?: string | null;
+            /** Nickname */
+            nickname?: string | null;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+        };
+        /**
+         * AdminUsersResponse
+         * @description 用户列表分页响应。
+         */
+        AdminUsersResponse: {
+            /** Items */
+            items: components["schemas"]["AdminUser"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
         /**
          * AuthLogin
          * @description 登录请求体。
@@ -1595,6 +1827,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserOut"];
+                };
+            };
+        };
+    };
+    list_users_api_admin_users_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_api_admin_tasks_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTasksResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_feedback_api_admin_feedback_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeedbackResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

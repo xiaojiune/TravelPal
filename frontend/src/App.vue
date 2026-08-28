@@ -21,6 +21,13 @@
               <router-link to="/plan">规划结果</router-link>
               <router-link to="/history">历史记录</router-link>
               <router-link to="/about" class="nav-about">关于项目 👈</router-link>
+              <router-link
+                v-if="userStore.user?.role === 'super_admin'"
+                to="/admin"
+                class="nav-admin"
+              >
+                管理台
+              </router-link>
               <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
                 🆕 新建规划
               </n-button>

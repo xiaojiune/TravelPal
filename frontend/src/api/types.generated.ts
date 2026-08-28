@@ -138,16 +138,20 @@ export interface paths {
         put?: never;
         /**
          * Chat
-         * @description LLM Agent 对话接口，SSE 流式输出。
+         * @description LLM Agent 对话接口，SSE 流式输出（含会话记忆）。
          *
          *     编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
          *     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
+         *     会话（conversation）懒创建：首条消息不带 conversation_id 时新建，SSE 首事件返回
+         *     会话 id 供前端存下续接；后续携带 conversation_id 时读取历史续接（跨轮次记忆）。
          *
          *     Args:
-         *         req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
+         *         req: 聊天请求，含 message 和可选的 plan_result / form_context / conversation_id。
+         *         session: 数据库会话（会话记录存取）。
+         *         current: 当前登录用户（可选）；登录时会话归属该 user_id。
          *
          *     Returns:
-         *         StreamingResponse: SSE 流式响应，逐 token 推送内容。
+         *         StreamingResponse: SSE 流式响应，逐 token 推送内容（首事件为 conversation id）。
          *
          *     Raises:
          *         HTTPException 500: LLM 调用异常或数据格式错误。
@@ -735,6 +739,7 @@ export interface components {
          *     plan_result: 可选的规划结果上下文，供 Agent 参考。
          *     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
          *         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
+         *     conversation_id: 可选会话 id（首条为空时后端懒建，后续携带以续接历史）。
          */
         ChatRequest: {
             /**
@@ -756,6 +761,11 @@ export interface components {
             form_context?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Conversation Id
+             * @description 会话 id（首条为空懒建，后续携带续接）
+             */
+            conversation_id?: string | null;
         };
         /**
          * FeedbackCreate

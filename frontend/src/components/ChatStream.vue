@@ -1,9 +1,7 @@
 <template>
   <div class="chat-stream">
     <div ref="historyRef" class="chat-history">
-      <div v-if="messages.length === 0" class="welcome">
-        今天想聊点什么？
-      </div>
+      <div v-if="messages.length === 0" class="welcome">今天想聊点什么？</div>
       <template v-for="(msg, i) in messages" :key="i">
         <!-- 工具调用状态行：详情富卡片由左侧查询面板渲染，对话内仅回显工具名 -->
         <div v-if="msg.role === 'tool'" class="msg-tool-line">
@@ -160,9 +158,14 @@ async function send() {
         message: text,
         planResult: store.planResult ?? null,
         formContext,
+        conversation_id: store.chatConversationId,
       },
       props.apiPath,
       {
+        onConversation: (conversationId) => {
+          // 会话 id 回填 store：后端懒建返回后存下，供后续轮携带续接历史
+          store.chatConversationId = conversationId
+        },
         onContent: (chunk) => {
           // SSE content 事件：追加给打字机并回写当前气泡（displayText watch 会触发滚底）
           append(chunk)
@@ -173,7 +176,12 @@ async function send() {
           messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
           // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
           // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
-          if (tool === 'submit_plan_form' && typeof result === 'object' && result !== null && 'task_id' in result) {
+          if (
+            tool === 'submit_plan_form' &&
+            typeof result === 'object' &&
+            result !== null &&
+            'task_id' in result
+          ) {
             void handlePlanTask(String((result as { task_id: string }).task_id))
           } else {
             emit('tool-result', { tool, result, city })
@@ -206,7 +214,11 @@ async function send() {
     stop()
     // HTTP/响应体错误（services 抛中文 message）直接展示；网络层失败（TypeError）给统一提示
     messages.value[msgIndex].content =
-      e instanceof TypeError ? '网络错误，请检查连接' : e instanceof Error ? e.message : '网络错误，请检查连接'
+      e instanceof TypeError
+        ? '网络错误，请检查连接'
+        : e instanceof Error
+          ? e.message
+          : '网络错误，请检查连接'
   }
 
   abortController = null

@@ -128,6 +128,9 @@ export const usePlanStore = defineStore('plan', () => {
   /** 是否处于 SSE 流式响应中（驱动输入禁用/发送按钮 loading）。 */
   const chatLoading = ref(false)
 
+  /** 当前会话 id（后端懒建，SSE conversation 事件回填；用于跨轮次续接历史）。 */
+  const chatConversationId = ref<string | null>(null)
+
   /** 将待选 POI 添加到首页输入列表，然后从待选栏移除。 */
   function addPoiToForm(poi: PoiItem) {
     if (!poi.name || poi.lon == null || poi.lat == null) return
@@ -237,6 +240,7 @@ export const usePlanStore = defineStore('plan', () => {
     queryResults.value = []
     chatMessages.value = []
     chatLoading.value = false
+    chatConversationId.value = null
     loading.value = false
     penaltyWeight.value = 100
     earlyWaitWeight.value = 0.1
@@ -271,6 +275,7 @@ export const usePlanStore = defineStore('plan', () => {
     queryResults,
     chatMessages,
     chatLoading,
+    chatConversationId,
     addQueryResult,
     removePendingPoi,
     removeQueryResult,

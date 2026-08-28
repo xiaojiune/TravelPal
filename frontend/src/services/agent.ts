@@ -5,7 +5,8 @@
  * 调用方组件只负责 UI 渲染（打字机/消息气泡/滚动），不直接 fetch。
  *
  * 使用 fetch + ReadableStream 而非 EventSource：需要 POST 携带 message/plan_result/
- * form_context。事件类型 content/tool_result/done/error 由回调分发。
+ * form_context/conversation_id。事件类型 conversation/content/tool_result/done/error
+ * 由回调分发（conversation 事件返回会话 id，供前端续接历史）。
  */
 import type { PlanRequestPayload } from '@/types'
 
@@ -22,6 +23,8 @@ export interface AgentStreamCallbacks {
   onContent?: (text: string) => void
   /** tool_result 事件：结构化工具结果，供宿主写入查询面板/待选栏。 */
   onToolResult?: (event: ToolResultEvent) => void
+  /** conversation 事件：后端懒建/复用的会话 id（前端存下后供后续轮续接）。 */
+  onConversation?: (conversationId: string) => void
   /** done 事件：流正常结束（调用方做优雅收尾）。 */
   onDone?: () => void
   /** error 事件：后端返回的错误消息（调用方写入气泡展示）。 */
@@ -33,6 +36,7 @@ export interface AgentStreamPayload {
   message: string
   planResult: unknown
   formContext: PlanRequestPayload
+  conversation_id?: string | null
 }
 
 /**
@@ -48,7 +52,7 @@ export async function streamChat(
   cb: AgentStreamCallbacks = {},
   opts: { signal?: AbortSignal } = {},
 ): Promise<void> {
-  const { onContent, onToolResult, onDone, onError } = cb
+  const { onContent, onToolResult, onConversation, onDone, onError } = cb
 
   const resp = await fetch(apiPath, {
     method: 'POST',
@@ -57,6 +61,7 @@ export async function streamChat(
       message: payload.message,
       plan_result: payload.planResult,
       form_context: payload.formContext,
+      conversation_id: payload.conversation_id ?? null,
     }),
     signal: opts.signal,
   })
@@ -85,6 +90,9 @@ export async function streamChat(
       const data = line.slice(6)
       try {
         const parsed = JSON.parse(data)
+        if (parsed.type === 'conversation' && parsed.conversation_id) {
+          onConversation?.(String(parsed.conversation_id))
+        }
         if (parsed.type === 'done') {
           onDone?.()
           streamDone = true

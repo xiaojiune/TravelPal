@@ -14,6 +14,7 @@ from backend.agent.chat.checkpointer import get_checkpointer
 from backend.agent.tools import parse_biz_hours
 from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
+    ChatHistoryResponse,
     ChatRequest,
     FeedbackCreate,
     PlanRequest,
@@ -31,7 +32,11 @@ from backend.api.schemas import (
 from backend.data.amap_loader import get_poi_details
 from backend.data.model.database import get_session
 from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
-from backend.domain.conversations import get_history_messages, get_or_create_conversation
+from backend.domain.conversations import (
+    get_history_messages,
+    get_or_create_conversation,
+    get_recent_conversation,
+)
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -154,6 +159,32 @@ async def plan(
 
 
 # ---------- Agent 对话 ----------
+
+
+@router.get("/api/chat/history", response_model=ChatHistoryResponse)
+async def chat_history(
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """取登录用户最近未过期会话的历史（不含 system），供打开 Agent 面板恢复上下文。
+
+    只读通道：**不创建会话**（避免只读访问落库）。返回最近会话 id 与该会话的
+    checkpoint 历史消息；游客或用户无历史时返回 { conversation_id: None, messages: [] }，
+    前端据此走新建会话路径。
+
+    Args:
+        session: 数据库会话（会话记录只读查询）。
+        current: 当前登录用户（可选）；仅登录用户可恢复历史，游客返回空。
+
+    Returns:
+        ChatHistoryResponse: { conversation_id, messages }。
+    """
+    conv = await get_recent_conversation(session, current.id if current else None)  # pyright: ignore[reportArgumentType]
+    if conv is None:
+        return ChatHistoryResponse()
+    history = await get_history_messages(str(conv.id))
+    messages = [m for m in history if m.get("role") != "system"]
+    return ChatHistoryResponse(conversation_id=str(conv.id), messages=messages)
 
 
 @router.post("/api/chat")

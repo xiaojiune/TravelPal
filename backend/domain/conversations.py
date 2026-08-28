@@ -99,6 +99,35 @@ async def get_or_create_conversation(
     return conv, True
 
 
+async def get_recent_conversation(
+    session: AsyncSession,
+    user_id: UUID | None,
+) -> Conversation | None:
+    """取该用户最近未过期会话（只查不建）；游客/无历史返回 None。
+
+    与 get_or_create_conversation 同源查询，但**不创建**：供「查看/恢复历史」
+    通道使用（打开 Agent 面板回显最近会话），避免只读访问也落库。
+
+    Args:
+        session: 数据库会话。
+        user_id: 归属用户 UUID（未登录为 None）。
+
+    Returns:
+        Conversation | None: 最近未过期会话；游客或用户无历史时为 None。
+    """
+    if user_id is None:
+        return None
+    now = datetime.now(timezone.utc)
+    return (
+        await session.execute(
+            select(Conversation)
+            .where(Conversation.user_id == user_id, Conversation.expires_at > now)
+            .order_by(Conversation.updated_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
 async def get_history_messages(thread_id: str) -> list[dict]:
     """从 checkpoint 读取该线程的历史消息（dict 列表）；无历史返回空。
 

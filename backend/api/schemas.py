@@ -135,6 +135,22 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = Field(default=None, description="会话 id（首条为空懒建，后续携带续接）")
 
 
+class ChatHistoryResponse(BaseModel):
+    """Agent 对话历史响应（GET /api/chat/history）。
+
+    用于登录用户打开 Agent 面板时恢复最近未过期会话的上下文：
+    - conversation_id：最近会话 id（无历史时为 None，前端据此新建）；
+    - messages：该会话的 checkpoint 历史消息（已过滤 system，OpenAI dict 形态）。
+
+    Attributes:
+        conversation_id: 最近会话 id；游客或无历史时为 None。
+        messages: 可回显的消息列表（user/assistant/tool），不含 system。
+    """
+
+    conversation_id: str | None = Field(default=None, description="最近会话 id；无历史为 None")
+    messages: list[dict] = Field(default_factory=list, description="历史消息（已过滤 system，OpenAI dict）")
+
+
 # ================== 方案调整 ==================
 
 

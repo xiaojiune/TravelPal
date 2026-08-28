@@ -8,7 +8,29 @@
  * form_context/conversation_id。事件类型 conversation/content/tool_result/done/error
  * 由回调分发（conversation 事件返回会话 id，供前端续接历史）。
  */
-import type { PlanRequestPayload } from '@/types'
+import type { HistoryMessage, PlanRequestPayload } from '@/types'
+
+/** 会话历史响应：最近会话 id + 可回显历史（后端已过滤 system）。 */
+export interface ChatHistoryResult {
+  conversation_id: string | null
+  messages: HistoryMessage[]
+}
+
+/**
+ * 取登录用户最近未过期会话的历史（GET /api/chat/history），供 Agent 面板打开时恢复上下文。
+ * 只读通道，不创建会话；游客/无历史时后端返回 { conversation_id: null, messages: [] }。
+ * 失败抛带中文 message 的 Error，调用方 catch 后静默处理。
+ */
+export async function fetchChatHistory(): Promise<ChatHistoryResult> {
+  const resp = await fetch('/api/chat/history', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  if (!resp.ok) {
+    throw new Error('历史加载失败，请重试')
+  }
+  return (await resp.json()) as ChatHistoryResult
+}
 
 /** 工具结果事件载荷（tool_result 事件由后端下发的结构化数据）。 */
 export interface ToolResultEvent {

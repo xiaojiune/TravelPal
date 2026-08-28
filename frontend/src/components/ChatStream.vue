@@ -49,8 +49,9 @@ import { useTypewriter } from '@/composables/useTypewriter'
 import { useTaskPolling } from '@/composables/useTaskPolling'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
-import type { SuggestResult } from '@/types'
-import { streamChat } from '@/services/agent'
+import { useUserStore } from '@/stores/user'
+import type { ChatMessage as ChatMessageType, HistoryMessage, SuggestResult } from '@/types'
+import { fetchChatHistory, streamChat } from '@/services/agent'
 
 interface Props {
   apiPath?: string
@@ -67,6 +68,7 @@ defineOptions({ name: 'ChatStream' })
 const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
 const emit = defineEmits<{ (e: 'tool-result', payload: ToolResultPayload): void }>()
 const store = usePlanStore()
+const userStore = useUserStore()
 const cache = useSuggestCache()
 const router = useRouter()
 const { startPolling } = useTaskPolling()
@@ -124,6 +126,43 @@ function sayHello() {
   if (loading.value) return
   inputText.value = '你好'
   send()
+}
+
+/**
+ * 将后端恢复的历史消息（OpenAI dict）映射为前端气泡格式。
+ * - user/assistant → 直接气泡；
+ * - tool → 简化提示行「🛠️ 工具结果」（不重建富卡片，与订阅端 tool 行一致的降级呈现）。
+ * 历史消息无 time 字段，气泡时间留空。
+ */
+function mapHistory(history: HistoryMessage[]): ChatMessageType[] {
+  const out: ChatMessageType[] = []
+  for (const m of history) {
+    if (m.role === 'user' || m.role === 'assistant') {
+      out.push({ role: m.role, content: String(m.content ?? '') })
+    } else if (m.role === 'tool') {
+      out.push({ role: 'tool', content: '', data: { tool: '工具' } })
+    }
+  }
+  return out
+}
+
+/**
+ * 打开 Agent 面板时恢复登录用户最近会话上下文。
+ * 仅当：已登录 + 当前无会话 id + 消息为空（避免覆盖同一次规划内已有对话态）时触发；
+ * 拉取成功后回填 messages 与 conversationId，使后续发送续接同一会话（记忆不断）。
+ * 失败静默（历史恢复是非阻塞的增强，不打扰用户）。
+ */
+async function loadHistory() {
+  if (!userStore.isLoggedIn || store.chatConversationId || messages.value.length > 0) return
+  try {
+    const { conversation_id, messages: history } = await fetchChatHistory()
+    if (!history.length) return
+    messages.value = mapHistory(history)
+    if (conversation_id) store.chatConversationId = conversation_id
+    nextTick(() => forceScrollBottom())
+  } catch {
+    // 历史恢复失败不阻断：保持空对话态，用户可直接发新消息
+  }
 }
 
 /**
@@ -273,6 +312,7 @@ function forceScrollBottom() {
 
 onMounted(() => {
   forceScrollBottom()
+  void loadHistory()
 })
 </script>
 

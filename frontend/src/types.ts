@@ -88,6 +88,13 @@ export interface ChatMessage {
   data?: unknown
 }
 
+/** 从后端恢复的历史消息（OpenAI dict 形态：user/assistant/tool；后端已过滤 system）。 */
+export interface HistoryMessage {
+  role: 'user' | 'assistant' | 'tool'
+  content: string
+  [key: string]: unknown
+}
+
 /** Agent 对话查询到的 POI（待选栏暂存项，tool_result 事件载荷） */
 export interface PoiItem {
   name?: string

@@ -127,6 +127,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chat/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chat History
+         * @description 取登录用户最近未过期会话的历史（不含 system），供打开 Agent 面板恢复上下文。
+         *
+         *     只读通道：**不创建会话**（避免只读访问落库）。返回最近会话 id 与该会话的
+         *     checkpoint 历史消息；游客或用户无历史时返回 { conversation_id: None, messages: [] }，
+         *     前端据此走新建会话路径。
+         *
+         *     Args:
+         *         session: 数据库会话（会话记录只读查询）。
+         *         current: 当前登录用户（可选）；仅登录用户可恢复历史，游客返回空。
+         *
+         *     Returns:
+         *         ChatHistoryResponse: { conversation_id, messages }。
+         */
+        get: operations["chat_history_api_chat_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat": {
         parameters: {
             query?: never;
@@ -730,6 +761,32 @@ export interface components {
              * @description 昵称
              */
             nickname?: string | null;
+        };
+        /**
+         * ChatHistoryResponse
+         * @description Agent 对话历史响应（GET /api/chat/history）。
+         *
+         *     用于登录用户打开 Agent 面板时恢复最近未过期会话的上下文：
+         *     - conversation_id：最近会话 id（无历史时为 None，前端据此新建）；
+         *     - messages：该会话的 checkpoint 历史消息（已过滤 system，OpenAI dict 形态）。
+         *
+         *     Attributes:
+         *         conversation_id: 最近会话 id；游客或无历史时为 None。
+         *         messages: 可回显的消息列表（user/assistant/tool），不含 system。
+         */
+        ChatHistoryResponse: {
+            /**
+             * Conversation Id
+             * @description 最近会话 id；无历史为 None
+             */
+            conversation_id?: string | null;
+            /**
+             * Messages
+             * @description 历史消息（已过滤 system，OpenAI dict）
+             */
+            messages?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * ChatRequest
@@ -1472,6 +1529,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_history_api_chat_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatHistoryResponse"];
                 };
             };
         };

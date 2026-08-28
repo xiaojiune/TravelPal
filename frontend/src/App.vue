@@ -19,7 +19,7 @@
               <router-link to="/">首页</router-link>
               <router-link to="/suggest">方案建议</router-link>
               <router-link to="/plan">规划结果</router-link>
-              <router-link to="/history">历史记录</router-link>
+              <router-link to="/shares">分享站</router-link>
               <router-link to="/about" class="nav-about">关于项目 👈</router-link>
               <router-link
                 v-if="userStore.user?.role === 'super_admin'"

@@ -6,10 +6,53 @@ import time
 
 import numpy as np
 import requests
+from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry_if_exception_type
 
 from backend.config import settings
 from backend.observability import driving_calls, driving_duration, matrix_build_duration
+from backend.utils.breaker import CircuitBreaker
 from backend.utils.decorators import legacy_only
+
+# ---------- 重试 + 熔断 ----------
+
+# 高德 API 全局熔断：连续失败 3 次 → 熔断 30s（含半开探测），防配额耗尽/高德故障时雪崩。
+# 熔断期间 allow()=False → _amap_get 抛"高德 API 熔断中，请稍后重试"，任务快速失败不拖垮。
+_AMAP_BREAKER = CircuitBreaker(fail_threshold=3, open_seconds=30, fail_fast_msg="高德 API 熔断中，请稍后重试")
+
+
+def _amap_get(url: str, params: dict, timeout: int = 10) -> dict:
+    """高德 GET 请求：熔断判断 + 指数退避重试 + 网络层失败上报熔断器。
+
+    - 熔断中（open）直接抛错，不打高德（快速失败，防雪崩）；
+    - 仅对**瞬时错误**（网络异常/超时/5xx）重试（指数退避 3 次）；
+    - 高德业务态（status!=1，如配额/参数错）不算瞬时错误，不重试（重试无意义）；
+    - 成功→上报 success（关熔断）；瞬时失败耗尽→上报 failure（累计熔断）。
+    """
+    if not _AMAP_BREAKER.allow():
+        raise RuntimeError(f"{_AMAP_BREAKER.fail_fast_msg}")
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5, max=5),
+        retry=retry_if_exception_type((requests.RequestException, TimeoutError)),
+        reraise=True,
+    )
+    def _do_get() -> dict:
+        resp = requests.get(url, params=params, timeout=timeout)
+        # 5xx 视为瞬时错误，重试
+        if resp.status_code >= 500:
+            raise requests.RequestException(f"高德 {resp.status_code} 服务器错误")
+        return resp.json()
+
+    try:
+        data = _do_get()
+    except Exception:
+        _AMAP_BREAKER.failure()
+        raise
+    _AMAP_BREAKER.success()
+    return data
+
 
 # ---------- 工具函数 ----------
 
@@ -155,8 +198,8 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
             "city_limit": True,
             "types": "风景名胜",
         }
-        resp = requests.get("https://restapi.amap.com/v3/place/text", params=params, timeout=10)
-        data = resp.json()
+        resp = _amap_get("https://restapi.amap.com/v3/place/text", params)
+        data = resp
         if data["status"] == "1" and int(data.get("count", 0)) > 0:
             poi = data["pois"][0]
             if _match_name(poi_name, poi.get("name", "")):
@@ -164,8 +207,8 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
 
         # 策略2：去掉 types，按关键词相关性自然排序（如岭南印象园→中山纪念堂的误配）
         params2 = {k: v for k, v in params.items() if k != "types"}
-        resp2 = requests.get("https://restapi.amap.com/v3/place/text", params=params2, timeout=10)
-        data2 = resp2.json()
+        resp2 = _amap_get("https://restapi.amap.com/v3/place/text", params2)
+        data2 = resp2
         if data2["status"] == "1" and int(data2.get("count", 0)) > 0:
             poi2 = data2["pois"][0]
             if _match_name(poi_name, poi2.get("name", "")):
@@ -173,8 +216,8 @@ def get_poi_details(poi_name: str, city: str) -> tuple[float, float, str, str, s
 
         # 策略3：全国搜索，仅用于判定跨城市（city_limit 排除了不在本市的景点）
         relax_params = {k: v for k, v in params2.items() if k != "city_limit"}
-        resp3 = requests.get("https://restapi.amap.com/v3/place/text", params=relax_params, timeout=10)
-        data3 = resp3.json()
+        resp3 = _amap_get("https://restapi.amap.com/v3/place/text", relax_params)
+        data3 = resp3
         if data3["status"] == "1" and int(data3.get("count", 0)) > 0:
             poi3 = data3["pois"][0]
             pname = poi3.get("pname", "")
@@ -202,13 +245,13 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
     Args:
         origin: (经度, 纬度) 起点坐标。
         destination: (经度, 纬度) 终点坐标。
-        max_retries: 失败重试次数，默认 3。
+        max_retries: 兼容参数（重试/熔断已由 _amap_get 封装统一处理，当前不直接用）。
 
     Returns:
         Tuple[float | None, int | None, str | None]: (距离 km, 耗时 秒, 折线字符串)。
 
     Raises:
-        Exception: 网络请求异常时重试，重试耗尽后返回 (None, None, None)。
+        Exception: 网络/熔断后仍失败时返回 (None, None, None)，不抛出。
     """
     url = "https://restapi.amap.com/v3/direction/driving"
     params = {
@@ -218,39 +261,33 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
         "strategy": "32",
     }
     start = time.monotonic()
-    for attempt in range(max_retries):
-        try:
-            resp = requests.get(url, params=params, timeout=10)
-            data = resp.json()
-            if data["status"] == "1" and "route" in data and data["route"].get("paths"):
-                path = data["route"]["paths"][0]
-                distance_km = int(path["distance"]) / 1000.0
-                duration = int(path["duration"])
-                polyline = ""
-                if "steps" in path:
-                    all_points = []
-                    for step in path["steps"]:
-                        step_poly = step.get("polyline", "")
-                        if step_poly:
-                            all_points.append(step_poly)
-                    polyline = ";".join(all_points)
-                driving_calls.labels(result="success").inc()
-                driving_duration.observe(time.monotonic() - start)
-                return distance_km, duration, polyline
-            else:
-                print(f"驾车API错误: {data.get('info', '未知错误')}, 状态码: {data.get('infocode', '无')}")
-                driving_calls.labels(result="fail").inc()
-                driving_duration.observe(time.monotonic() - start)
-                return None, None, None
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"驾车路径规划请求失败 (第{attempt + 1}次重试): {e}")
-                time.sleep(1)
-            else:
-                print(f"驾车路径规划请求失败（已重试{max_retries}次）: {e}")
-                driving_calls.labels(result="fail").inc()
-                driving_duration.observe(time.monotonic() - start)
-                return None, None, None
+    # 用统一封装：熔断判断 + 指数退避重试（网络/5xx 瞬时错误重试；业务态不重试）
+    try:
+        data = _amap_get(url, params)
+        if data["status"] == "1" and "route" in data and data["route"].get("paths"):
+            path = data["route"]["paths"][0]
+            distance_km = int(path["distance"]) / 1000.0
+            duration = int(path["duration"])
+            polyline = ""
+            if "steps" in path:
+                all_points = []
+                for step in path["steps"]:
+                    step_poly = step.get("polyline", "")
+                    if step_poly:
+                        all_points.append(step_poly)
+                polyline = ";".join(all_points)
+            driving_calls.labels(result="success").inc()
+            driving_duration.observe(time.monotonic() - start)
+            return distance_km, duration, polyline
+        print(f"驾车API错误: {data.get('info', '未知错误')}, 状态码: {data.get('infocode', '无')}")
+        driving_calls.labels(result="fail").inc()
+        driving_duration.observe(time.monotonic() - start)
+        return None, None, None
+    except Exception as e:
+        print(f"驾车路径规划请求失败（已重试或熔断）: {e}")
+        driving_calls.labels(result="fail").inc()
+        driving_duration.observe(time.monotonic() - start)
+        return None, None, None
 
 
 # ================== 批量构建成本矩阵 ==================

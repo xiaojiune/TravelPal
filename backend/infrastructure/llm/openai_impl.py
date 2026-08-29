@@ -8,10 +8,25 @@ import json
 from collections.abc import AsyncIterator
 
 from openai import OpenAI
+from openai import APIConnectionError, APITimeoutError, APIStatusError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from backend.config import settings
 from backend.domain.llm_service import LLMResult, LLMService, ToolCallResult
 from backend.observability import llm_calls, llm_tokens
+
+
+def _rtry_llm():
+    """LLM 调用重试装饰器：仅对瞬时错误（连接/超时/5xx）指数退避重试 2 次。
+
+    业务态错误（4xx 如 quota/鉴权）不重试——重试无意义。
+    """
+    return retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=0.5, max=3),
+        retry=retry_if_exception_type((APIConnectionError, APITimeoutError)),
+        reraise=True,
+    )
 
 
 class OpenAILLMService(LLMService):
@@ -19,6 +34,14 @@ class OpenAILLMService(LLMService):
 
     def __init__(self) -> None:
         self.client = OpenAI(api_key=settings.LLM_API_KEY, base_url=settings.LLM_BASE_URL)
+
+    @_rtry_llm()
+    def _create_completion(self, **kwargs):
+        """LLM 补全调用（含瞬时错误重试）。统一入口，供 complete/stream/complete_text 复用。
+
+        仅对连接/超时等瞬时错误指数退避重试（见 _rtry_llm），业务态错误原样抛出。
+        """
+        return self.client.chat.completions.create(**kwargs)
 
     async def complete(
         self,
@@ -38,7 +61,7 @@ class OpenAILLMService(LLMService):
         Returns:
             LLMResult: assistant 完整消息 + 解析后的工具调用列表。
         """
-        resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
+        resp = self._create_completion(  # pyright: ignore[reportCallIssue, reportArgumentType]
             model=settings.LLM_MODEL,
             messages=messages,  # pyright: ignore[reportArgumentType]
             tools=tools,  # pyright: ignore[reportArgumentType]
@@ -83,7 +106,7 @@ class OpenAILLMService(LLMService):
         Yields:
             str: 逐 token 的回复内容。
         """
-        resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
+        resp = self._create_completion(  # pyright: ignore[reportCallIssue, reportArgumentType]
             model=settings.LLM_MODEL,
             messages=messages,  # pyright: ignore[reportArgumentType]
             stream=True,
@@ -127,7 +150,7 @@ class OpenAILLMService(LLMService):
             str | None: assistant 内容（去首尾空白）；调用异常时返回 None。
         """
         try:
-            resp = self.client.chat.completions.create(  # pyright: ignore[reportCallIssue, reportArgumentType]
+            resp = self._create_completion(  # pyright: ignore[reportCallIssue, reportArgumentType]
                 model=settings.LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,

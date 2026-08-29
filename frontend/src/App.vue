@@ -47,31 +47,36 @@
               <ToolRail v-model:active="toolPanel" />
               <ToolPanel v-if="toolPanel" :active="toolPanel" />
               <main class="main-content">
-                <!-- 右上角 AI 助手（wrapper absolute，不占文档流、不推低内容） -->
-                <div class="content-float">
-                  <n-tooltip placement="bottom-end" :show="attention">
-                    <template #trigger>
-                      <button
-                        class="agent-round"
-                        :class="{ 'agent-attention': attention }"
-                        :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
-                        @click="toggleAgent"
-                      >
-                        🤖
-                      </button>
-                    </template>
-                    和 AI 旅行伴侣聊聊，帮你查景点、规划行程
-                  </n-tooltip>
+                <!-- 内容滚动区：右上 AI 助手 + 页面出口 -->
+                <div class="content-scroll">
+                  <!-- 右上角 AI 助手（wrapper absolute，不占文档流、不推低内容） -->
+                  <div class="content-float">
+                    <n-tooltip placement="bottom-end" :show="attention">
+                      <template #trigger>
+                        <button
+                          class="agent-round"
+                          :class="{ 'agent-attention': attention }"
+                          :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
+                          @click="toggleAgent"
+                        >
+                          🤖
+                        </button>
+                      </template>
+                      和 AI 旅行伴侣聊聊，帮你查景点、规划行程
+                    </n-tooltip>
+                  </div>
+                  <router-view v-slot="{ Component }">
+                    <keep-alive>
+                      <component :is="Component" />
+                    </keep-alive>
+                  </router-view>
                 </div>
-                <router-view v-slot="{ Component }">
-                  <keep-alive>
-                    <component :is="Component" />
-                  </keep-alive>
-                </router-view>
+                <!-- 备案页脚：挂载主内容区（随 Agent 右栏让宽），非全局整体 -->
+                <AppFooter />
               </main>
+              <!-- 右侧共创栏（Agent 固定右栏）：与主内容并排 flex 行，展开时主内容让宽度 -->
+              <AgentPanel v-model:show="agentOpen" />
             </div>
-            <AppFooter />
-            <AgentPanel v-model:show="agentOpen" />
           </template>
           <!-- 门户/认证/关于 极简布局：无导航/工具轨/Agent，但保留全局备案页脚 -->
           <template v-else>

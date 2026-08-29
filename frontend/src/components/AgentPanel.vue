@@ -1,44 +1,35 @@
 <template>
-  <teleport to="body">
-    <!-- 半透明遮罩：点击面板外区域收起（分层时序 B：关闭时先淡出，面板后收回） -->
-    <Transition name="agent-fade">
-      <div v-if="show" class="agent-overlay" @click="show = false" />
-    </Transition>
-    <!-- 对话面板：以 🤖 按钮为锚点等比扩散/收回（球式），宽度可拖拽，双击恢复默认 -->
-    <Transition name="agent-panel">
-      <div v-if="show" class="agent-panel" :style="{ width: panelWidth + 'px' }">
-        <div
-          class="resize-handle"
-          title="拖拽调整宽度，双击恢复默认"
-          @mousedown.prevent="onResizeStart"
-          @dblclick="resetPanelWidth"
-        >
-          <span class="handle-grip">⋮</span>
-        </div>
-        <div class="context-bar">
-          <div class="context-title">TravelPal</div>
-          <div class="context-status">{{ sessionStatus.dot }} {{ sessionStatus.text }}</div>
-        </div>
-        <ChatStream class="chat-stream-area" @tool-result="onToolResult" />
+  <!-- 右侧共创栏（固定右栏）：与主内容并排 flex 行，展开时主内容让宽度；无遮罩 -->
+  <Transition name="agent-slide">
+    <aside v-if="show" ref="panelRef" class="agent-panel" :style="{ width: panelWidth + 'px' }">
+      <div
+        class="resize-handle"
+        title="拖拽调整宽度，双击恢复默认"
+        @mousedown.prevent="onResizeStart"
+        @dblclick="resetPanelWidth"
+      >
+        <span class="handle-grip">⋮</span>
       </div>
-    </Transition>
-  </teleport>
+      <div class="context-bar">
+        <div class="context-title">TravelPal</div>
+        <div class="context-status">{{ sessionStatus.dot }} {{ sessionStatus.text }}</div>
+      </div>
+      <ChatStream class="chat-stream-area" @tool-result="onToolResult" />
+    </aside>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 /**
- * 全局 Agent 对话面板：导航栏右侧 🤖 图标点击后浮出。
+ * 全局 Agent 共创栏（固定右栏）：与主内容区并排，右侧常驻，收起时可整体滑出。
  *
- * - 覆盖页面内容但不遮导航栏（导航栏 z-index 高于遮罩）
- * - 底部延伸到页面底端，右侧贴窗口边缘，宽度可拖拽调节
- *   （最小 25vw、最大 50vw、默认 1/3 页面宽，双击左边缘手柄恢复默认）
- * - 动画为「球式」：以导航栏 🤖 按钮为锚点（transform-origin 指向球心）
- *   等比 scale 扩散展开/收回，分层时序 B——打开时面板先动、遮罩后淡入；
- *   关闭时遮罩先淡出、面板后收回
- * - 待选栏在左侧 PendingPanel（共享 plan store.pendingPois），
- *   查询结果经 tool-result 事件写入 store
+ * - 不覆盖内容/无遮罩：作为 .app-body 的 flex 子项，展开时主内容区自适应让出宽度。
+ * - 宽度可拖拽（25%~35vw，默认 28%），双击左缘恢复默认。
+ * - 动效：右侧滑入/滑出（translateX），配淡入淡出；打开时主内容随宽度过渡让出。
+ * - 对话/工具结果与左侧工具栏分工：本栏承载「对话共创」，结果的 POI 待选等进左侧
+ *   toolPanel（store.queryResults），供用户选用。
  */
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ChatStream from '@/components/ChatStream.vue'
 import { usePlanStore } from '@/stores/plan'
 
@@ -47,6 +38,20 @@ defineOptions({ name: 'AgentPanel' })
 const show = defineModel<boolean>('show', { default: false })
 
 const store = usePlanStore()
+
+/** 面板 DOM 引用：用于判断点击是否在面板内（外部点击收起）。 */
+const panelRef = ref<HTMLElement | null>(null)
+
+/** 点击面板外部（主内容区空白处）收起 Agent。 */
+function onDocMousedown(e: MouseEvent) {
+  if (!show.value) return
+  const el = panelRef.value
+  if (el && e.target instanceof Node && el.contains(e.target)) return
+  show.value = false
+}
+
+onMounted(() => document.addEventListener('mousedown', onDocMousedown))
+onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown))
 
 /** 接收 ChatStream 抛出的工具结果（{ tool, result, city }），写入 store 查询结果区。 */
 function onToolResult(payload: { tool: string; result: unknown; city?: string }) {
@@ -63,24 +68,24 @@ const sessionStatus = computed(() => {
   return { dot: '🟢', text: '准备出发' }
 })
 
-// ====== 面板宽度拖拽 ======
-/** 面板右侧固定偏移（与 .agent-panel 的 right 一致，贴窗口右缘）。 */
+// ====== 面板宽度拖拽（默认 28%，clamp 25%~40%） ======
+/** 面板右侧固定偏移（贴右缘，与 .agent-panel 的 right 对齐）。 */
 const RIGHT_OFFSET = 0
 
-const panelWidth = ref(window.innerWidth / 3)
+const panelWidth = ref(Math.round(window.innerWidth * 0.28))
 const dragging = ref(false)
 
-/** 最小宽度：页面 1/4。 */
+/** 最小宽度：页面 25%。 */
 function minPanelWidth() {
   return window.innerWidth * 0.25
 }
-/** 最大宽度：页面 1/2。 */
+/** 最大宽度：页面 35%。 */
 function maxPanelWidth() {
-  return window.innerWidth * 0.5
+  return window.innerWidth * 0.35
 }
-/** 默认宽度：页面 1/3。 */
+/** 默认宽度：页面 28%。 */
 function defaultPanelWidth() {
-  return window.innerWidth / 3
+  return window.innerWidth * 0.28
 }
 
 /** 按下手柄开始拖拽：注册全局监听，防止拖出面板后失去事件。 */
@@ -106,40 +111,25 @@ function onResizeEnd() {
   document.removeEventListener('mouseup', onResizeEnd)
 }
 
-/** 双击手柄恢复默认宽度（页面 1/3）。 */
+/** 双击手柄恢复默认宽度（页面 28%）。 */
 function resetPanelWidth() {
   panelWidth.value = defaultPanelWidth()
 }
 </script>
 
 <style scoped>
-/* 遮罩：覆盖页面内容，层级低于导航栏（2001）与面板（2000） */
-.agent-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1999;
-}
-/* 面板：右上角锚点（transform-origin 球按钮位置），顶部悬空圆角、底部贴底直角。
-   米白暖底 + 青绿细边框（卡片 token），浮层投影保留以承载悬浮层级语义 */
+/* 右侧共创栏：作为 .app-body 的 flex 子项，贴右缘、与内容并排；stretch 撑满高度至页底(footer 上方) */
 .agent-panel {
-  position: fixed;
-  top: 57px;
-  bottom: 0;
-  right: 0;
-  z-index: 2000;
+  position: relative;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   background: var(--tp-bg-card);
-  border: 1px solid var(--tp-card-border);
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-left: 1px solid var(--tp-card-border);
   overflow: hidden;
-  /* 以导航栏 🤖 按钮中心为锚点（右缘内 28px、顶缘上方 28px），等比扩散/收回 */
-  transform-origin: calc(100% - 28px) -28px;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.06);
 }
-/* 顶部上下文栏：全宽、上下高度减半（紧凑），标题左对齐大字，状态徽章居中靠下叠加在下半部分 */
+/* 顶部上下文栏：紧凑，标题左对齐大字，状态徽章居中靠下 */
 .context-bar {
   position: relative;
   min-height: 48px;
@@ -207,37 +197,16 @@ function resetPanelWidth() {
   flex: 1;
   min-height: 0;
 }
-/* 球式扩散动画（分层时序 B）：
-   打开——面板先从球按钮位置等比扩散，遮罩 0.1s 后淡入；
-   关闭——遮罩先淡出，面板 0.1s 后缩回球按钮位置 */
-.agent-panel-enter-active {
+/* 右侧滑入/滑出动效（过渡宽度+位移，主内容随 flex 自动让出） */
+.agent-slide-enter-active,
+.agent-slide-leave-active {
   transition:
-    opacity 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
 }
-.agent-panel-leave-active {
-  transition:
-    opacity 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1) 0.1s;
-}
-.agent-panel-enter-from,
-.agent-panel-leave-to {
-  opacity: 0;
-  transform: scale(0.3);
-}
-.agent-panel-enter-to,
-.agent-panel-leave-from {
-  opacity: 1;
-  transform: scale(1);
-}
-.agent-fade-enter-active {
-  transition: opacity 0.22s ease 0.1s;
-}
-.agent-fade-leave-active {
-  transition: opacity 0.18s ease;
-}
-.agent-fade-enter-from,
-.agent-fade-leave-to {
+.agent-slide-enter-from,
+.agent-slide-leave-to {
+  width: 0 !important;
   opacity: 0;
 }
 </style>

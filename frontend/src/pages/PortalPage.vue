@@ -21,19 +21,55 @@
       </div>
     </header>
 
-    <!-- Hero：品牌主张 + 主入口按钮（游客零门槛直接试用） -->
+    <!-- Hero：双栏（左文案+入口，右产品演示卡）+ 品牌渐变柔光背景 + 视差光晕 -->
     <section class="portal-hero">
-      <h1 class="hero-title">把计算交给机器，把决策留给你</h1>
-      <p class="hero-sub">
-        基于约束求解和大模型的旅行Agent。
-      </p>
-      <div class="hero-actions">
-        <!-- 主入口：游客零门槛直达工作区（/home）；居中做大 -->
-        <n-button type="primary" size="large" round class="hero-main-btn" @click="goWorkbench">
-          开始体验
-        </n-button>
+      <div class="hero-bg" aria-hidden="true">
+        <div class="hero-glow glow-1"></div>
+        <div class="hero-glow glow-2"></div>
       </div>
-      <p class="hero-hint">已有账号？点击右上角<router-link to="/login" class="hero-hint-link">登录</router-link> / <router-link to="/register" class="hero-hint-link">注册</router-link>继续</p>
+
+      <div class="hero-left">
+        <h1 class="hero-title">
+          把计算交给机器，<br />
+          <span class="hero-accent">把决策留给你</span>
+        </h1>
+        <p class="hero-sub">基于约束求解和大模型的旅行Agent，从一句话到每一程。</p>
+        <div class="hero-actions">
+          <n-button type="primary" size="large" round class="hero-main-btn" @click="goWorkbench">
+            开始体验
+          </n-button>
+        </div>
+        <p class="hero-trust">OR引擎 · 可编辑 · 陪伴 · 可靠</p>
+        <p class="hero-hint">想留下你的痕迹？点击右上角<router-link to="/login" class="hero-hint-link">登录</router-link> / <router-link to="/register" class="hero-hint-link">注册</router-link></p>
+      </div>
+
+      <!-- 产品演示卡：mock 简化版行程表单预览（透视阴影 + 微旋转，立体真机演示感） -->
+      <div class="hero-demo" aria-hidden="true">
+        <div class="demo-card">
+          <div class="demo-head">
+            <span class="demo-title">今日行程 · 生成中</span>
+            <span class="demo-badge">AI</span>
+          </div>
+          <div class="demo-step">
+            <span class="demo-dot">1</span> 选择城市
+          </div>
+          <div class="demo-poi">
+            <span class="poi-emoji">🏛️</span>
+            <div class="poi-info">
+              <span class="poi-name">故宫</span>
+              <span class="poi-meta">10:00-12:00 · 建议 90 分钟</span>
+            </div>
+          </div>
+          <div class="demo-poi">
+            <span class="poi-emoji">🌿</span>
+            <div class="poi-info">
+              <span class="poi-name">颐和园</span>
+              <span class="poi-meta">14:00-17:00 · 建议 150 分钟</span>
+            </div>
+          </div>
+          <div class="demo-cta">🚀 生成 行程</div>
+        </div>
+      </div>
     </section>
 
     <!-- 功能入口卡：分享站 / 关于项目（仅这些留在门户） -->
@@ -170,28 +206,78 @@ onMounted(() => {
   border: 1px solid var(--tp-primary);
 }
 
-/* Hero */
+/* Hero：双栏，relative 容器承载背景/演示卡 */
 .portal-hero {
   flex: 1;
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  padding: 72px 24px;
+  gap: 56px;
+  padding: 64px 48px;
+  overflow: hidden;
+}
+/* 背景渐变柔光 + 视差光晕（静态氛围，克制动效） */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 20% 10%, var(--tp-primary-soft) 0%, transparent 55%);
+  pointer-events: none;
+}
+.hero-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.glow-1 {
+  width: 340px;
+  height: 340px;
+  background: var(--tp-primary-soft);
+  top: -60px;
+  right: 8%;
+  animation: glow-drift 14s ease-in-out infinite alternate;
+}
+.glow-2 {
+  width: 260px;
+  height: 260px;
+  background: var(--tp-info-soft);
+  bottom: -40px;
+  left: 10%;
+  animation: glow-drift 18s ease-in-out infinite alternate-reverse;
+}
+@keyframes glow-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(30px, -20px);
+  }
+}
+/* 左栏：文案 + 入口 */
+.hero-left {
+  position: relative;
+  max-width: 520px;
+  animation: hero-rise 0.5s ease-out both;
 }
 .hero-title {
-  font-size: 34px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
   color: var(--tp-text);
-  margin: 0 0 16px;
+  margin: 0 0 20px;
+}
+/* 关键词品牌色强调：呼应产品哲学 */
+.hero-accent {
+  color: var(--tp-primary);
 }
 .hero-sub {
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.8;
   color: var(--tp-text-2);
-  margin: 0 0 36px;
+  margin: 0 0 32px;
 }
 .hero-actions {
   display: flex;
@@ -199,14 +285,22 @@ onMounted(() => {
   align-items: center;
 }
 .hero-main-btn {
-  min-width: 220px;
-  font-size: 18px;
+  min-width: 200px;
+  font-size: 17px;
   padding: 10px 0;
   font-weight: 600;
+  box-shadow: 0 8px 20px rgba(32, 201, 151, 0.3);
+}
+/* 信任锚：入口下方卖点小字 */
+.hero-trust {
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--tp-text-3);
+  letter-spacing: 0.5px;
 }
 /* 主入口下方小字：指引右上角登录/注册 */
 .hero-hint {
-  margin-top: 14px;
+  margin-top: 12px;
   font-size: 13px;
   color: var(--tp-text-3);
 }
@@ -218,6 +312,108 @@ onMounted(() => {
 .hero-hint-link:hover {
   text-decoration: underline;
 }
+/* 右栏：产品演示卡（mock 表单预览，透视阴影 + 微旋转立体感） */
+.hero-demo {
+  position: relative;
+  flex-shrink: 0;
+  animation: hero-rise 0.6s ease-out 0.12s both;
+}
+.demo-card {
+  width: 320px;
+  padding: 20px;
+  border: 1px solid var(--tp-card-border);
+  border-radius: 16px;
+  background: var(--tp-bg-card);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.18);
+  transform: rotate(2deg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.demo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.demo-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tp-text);
+}
+.demo-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tp-primary);
+  background: var(--tp-primary-soft);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+.demo-step {
+  font-size: 13px;
+  color: var(--tp-text-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.demo-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--tp-primary);
+  color: var(--tp-on-primary);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.demo-poi {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--tp-border-light);
+  border-radius: 10px;
+  background: var(--tp-surface);
+}
+.poi-emoji {
+  font-size: 22px;
+}
+.poi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.poi-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tp-text);
+}
+.poi-meta {
+  font-size: 12px;
+  color: var(--tp-text-3);
+}
+.demo-cta {
+  text-align: center;
+  margin-top: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--tp-primary);
+  color: var(--tp-on-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+/* 首屏入场微动效：文案/演示卡依次淡入上移 */
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* 功能入口卡 */
 .portal-cards {
@@ -240,13 +436,39 @@ onMounted(() => {
   text-decoration: none;
   box-shadow: var(--tp-card-shadow);
   transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+/* 顶部品牌色条：hover 时展开 */
+.portal-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--tp-primary);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.portal-card:hover::before {
+  opacity: 1;
 }
 .portal-card:hover {
   box-shadow: var(--tp-card-shadow-hover);
   transform: translateY(-2px);
 }
+/* 图标圆形底：提升入口识别度 */
 .card-icon {
-  font-size: 28px;
+  font-size: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--tp-primary-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
 }
 .card-title {
   font-size: 16px;

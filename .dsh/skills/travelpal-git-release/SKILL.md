@@ -1,7 +1,11 @@
 ---
 name: travelpal-git-release
-description: TravelPal 版本发布与 git 操作规范：日常只 commit、打 tag 到 dev 触发 Release、本地同步流程。
-whenToUse: 用户说推送/打 tag/发布 v某版本/同步 main/拉取 origin/版本核验，或涉及 git commit、tag、push、merge、PR 时使用。
+description: TravelPal 版本发布与 git 操作规范：日常只 commit、打 tag 到 dev 触发 Release、本地同步流程。涉及 git 操作或发布时使用。
+whenToUse:
+  - 用户明确指令：推送、打 tag、发布 v某版本、同步 main、拉取 origin、版本核验
+  - 特定场景：涉及 git commit、tag、push、merge、PR 时
+  - 关键词提及：git、push、tag、release、版本、PR、merge、commit
+  - 不触发：与 git/发布无关的编码或文档任务
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 
@@ -39,6 +43,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 用户说"推送 vX.Y.Z / 打 tag / 发布"时，按此流：
 
+0. **确认交接文档已更新并阅读**（联动 session-handoff）：`docs/handoff/CURRENT_CODE.md`（或 `CURRENT_DOC.md`，视本次改动类型）需**已更新到最新**、反映本会话至今的完整事件并已阅读。若过期/未反映最新 → **先更新 → 再读 → 再继续**。详见 session-handoff 的"何时读 / 何时写"。
 1. **核验版本同步**（单一事实源）：
    - 读 pyproject.toml 的 `version`，确定基准版本。
    - 比对前端 footer 版本 → 若缺失，**提示"前端未标记版本，需先补"（不阻断）**；若与基准不符，**阻断**并提醒。
@@ -86,6 +91,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 5. **不越权读**：只读与发布相关的版本/状态，不全量读取无关历史。
 6. **版本说明缺失即阻断**：`docs/releases/<tag>.md` 未就绪（不存在或空），不推送、不打 tag。
 7. **不擅自生成/落盘发布正文**：agent 可提炼草稿，但必须用户确认后才写入；正文分"主要变化"（读者价值）与"主要修改"（技术明细），不逐条列 commit。
+8. **发布前确认交接文档**：打 tag 前须确认 `docs/handoff/CURRENT_*.md` 已更新并阅读（联动 session-handoff），否则读到的是过期状态。
 
 ## assets
 
@@ -93,4 +99,4 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 ## 口诀
 
-> 日常只 commit；发布打 tag 到 dev、push 触发 Release；同步走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明。说明缺失就阻断，不硬推。
+> 日常只 commit；发布打 tag 到 dev、push 触发 Release；同步走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明 + 交接文档（CURRENT_*）已更新并阅读。说明缺失就阻断，不硬推。

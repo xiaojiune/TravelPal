@@ -1,7 +1,11 @@
 ---
 name: travelpal-ops
-description: TravelPal 运维与排障规范：分部署（deploy）与排障（troubleshooting）两类。
-whenToUse: 部署/配置服务器/看日志/重启服务/配域名或 HTTPS，或排查故障（容器起不来、任务失败、API key 失效、指标无数据、DB 迁移异常、本地联调）时使用。
+description: TravelPal 运维与排障规范：分部署（deploy）与排障（troubleshooting）两类。部署、排障、看日志时使用。
+whenToUse:
+  - 用户明确指令：部署、配置服务器、看日志、重启服务、配域名或 HTTPS
+  - 特定场景：排查故障（容器起不来、任务失败、API key 失效、指标无数据、DB 迁移异常、本地联调）
+  - 关键词提及：部署、deploy、日志、重启、域名、HTTPS、排障、故障
+  - 不触发：纯编码/文档/测试任务，不涉部署或排障
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 

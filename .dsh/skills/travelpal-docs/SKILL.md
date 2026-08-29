@@ -1,7 +1,11 @@
 ---
 name: travelpal-docs
-description: TravelPal 文档维护：全项目 .md 文档的组织、生命周期、导航与构建。核心"文档是独立生命体，靠修改日期标注生命"。
-whenToUse: 用户明确要做文档变更时——新增/改一篇 .md、写一份 ADR、改入口文档（README/AGENTS/ARCHITECTURE）、更新 docs/index.rst 导航、构建文档站（make docs / gen-api）。代码变动不自动触发，除非用户明确说"改文档/写篇文档"。
+description: TravelPal 文档维护：全项目 .md 文档的组织、生命周期、导航与构建。核心"文档是独立生命体，靠修改日期标注生命"。改文档、写 ADR、更新导航时使用。
+whenToUse:
+  - 用户明确指令：新增/改一篇 .md、写一份 ADR、改入口文档（README/AGENTS/ARCHITECTURE）、更新 docs/index.rst、构建文档站（make docs / gen-api）
+  - 特定场景：用户明确说"改文档/写篇文档"、涉文档生命周期/导航/构建
+  - 关键词提及：文档、docs、ADR、README、index.rst、make docs
+  - 不触发：纯代码改动（除非用户明确说要写文档）
 ---
 
 # 项目文档维护方法论

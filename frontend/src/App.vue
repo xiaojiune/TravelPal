@@ -14,6 +14,8 @@
           <!-- 工作区布局（二级界面）：完整导航 + 左侧工具轨 + Agent 助手 -->
           <template v-if="isWorkbench">
             <nav class="nav-bar">
+              <!-- 返回门户（非门户页）：Logo 左侧轻量链接 -->
+              <router-link to="/" class="nav-portal-link">⌂ 门户</router-link>
               <div class="nav-brand-area">
                 <router-link to="/home" class="nav-brand">TravelPal</router-link>
               </div>
@@ -227,14 +229,32 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   line-height: 1.7;
   color: var(--tp-text-2);
 }
+/* 返回门户（非门户页）：Logo 左侧，靛蓝色 outline 按钮（显眼） */
+.nav-portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--tp-info);
+  text-decoration: none;
+  padding: 5px 12px;
+  border: 1px solid var(--tp-info);
+  border-radius: 8px;
+  background: var(--tp-surface);
+  transition: background 0.2s, color 0.2s;
+}
+.nav-portal-link:hover {
+  background: var(--tp-info);
+  color: var(--tp-on-primary);
+}
 /* 导航用户区：未登录双链 / 已登录个人信息框（触发下拉菜单）；推至最右 */
 .nav-user {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-left: auto;
-}
-.nav-user-name {
+}.nav-user-name {
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -289,24 +309,26 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   align-items: center;
   gap: 12px;
 }
-/* AI 助手圆形按钮：无边框、品牌色底、圆形，仅 emoji（加大） */
+/* AI 助手圆形按钮：实心品牌色底 + 投影，更醒目 */
 .agent-round {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   border: none;
-  background: var(--tp-primary-soft);
+  background: var(--tp-primary);
   font-size: 22px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px var(--tp-primary);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 .agent-round:hover {
-  background: var(--tp-primary);
-  transform: scale(1.05);
+  background: var(--tp-primary-hover);
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px var(--tp-primary);
 }
 /* 门户/认证/关于 极简布局主区：无左侧 padding（门户全宽自绘布局）；flex:1 撑满高度，底部 AppFooter 贴底部 */
 .portal-main {

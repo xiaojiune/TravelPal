@@ -197,7 +197,8 @@ onMounted(() => {
 <style scoped>
 .page-admin {
   max-width: 960px;
-  margin: 0;
+  /* 水平居中 */
+  margin: 0 auto;
   padding: 0 16px;
 }
 .page-admin h2 {

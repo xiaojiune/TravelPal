@@ -1,42 +1,57 @@
 <template>
-  <div class="page-about">
-    <section class="intro">
-      <h2>关于 TravelPal</h2>
-      <p class="slogan">不占有的陪伴，不缺席的可靠。</p>
-      <p class="desc">
-        把计算交给机器，把决策留给你——对话式共创 + CA/VNS 双引擎，从一句话到每一程。
-      </p>
-    </section>
+  <div class="about-page-root">
+    <!-- 返回门户：悬浮整个内容区左上（靛蓝） -->
+    <button class="about-back" type="button" @click="goBack">
+      ← 返回门户
+    </button>
 
-    <section class="feedback-guide">
-      <span class="fb-icon">📮</span>
-      <div class="fb-text">
-        <p class="fb-title">遇到困难？</p>
-        <p class="fb-body">欢迎提交反馈，帮助 TravelPal 做得更好。</p>
-        <n-button size="small" type="primary" @click="feedbackOpen = true">提交反馈</n-button>
-      </div>
-    </section>
+    <div class="page-about">
+      <section class="intro">
+        <h2>关于 TravelPal</h2>
+        <p class="slogan">不占有的陪伴，不缺席的可靠。</p>
+        <p class="desc">
+          把计算交给机器，把决策留给你——对话式共创 + CA/VNS 双引擎，从一句话到每一程。
+        </p>
+      </section>
 
-    <FeedbackModal v-model:show="feedbackOpen" />
+      <section class="feedback-guide">
+        <span class="fb-icon">📮</span>
+        <div class="fb-text">
+          <p class="fb-title">遇到困难？</p>
+          <p class="fb-body">欢迎提交反馈，帮助 TravelPal 做得更好。</p>
+          <n-button size="small" type="primary" @click="feedbackOpen = true">提交反馈</n-button>
+        </div>
+      </section>
 
-    <section class="faq-section">
-      <h2>常见问题</h2>
-      <n-collapse>
-        <n-collapse-item v-for="item in faqs" :key="item.q" :title="item.q">
-          <!-- eslint-disable-next-line vue/no-v-html -- faq.md 为项目自管受信内容，Markdown 渲染结果可安全注入 -->
-          <div class="faq-answer" v-html="item.a"></div>
-        </n-collapse-item>
-      </n-collapse>
-    </section>
+      <FeedbackModal v-model:show="feedbackOpen" />
+
+      <section class="faq-section">
+        <h2>常见问题</h2>
+        <n-collapse>
+          <n-collapse-item v-for="item in faqs" :key="item.q" :title="item.q">
+            <!-- eslint-disable-next-line vue/no-v-html -- faq.md 为项目自管受信内容，Markdown 渲染结果可安全注入 -->
+            <div class="faq-answer" v-html="item.a"></div>
+          </n-collapse-item>
+        </n-collapse>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 /** 关于页：项目介绍 + 反馈入口（内嵌 FeedbackModal，问卷入口已从工具栏迁至本页）+ FAQ 手风琴。 */
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import FeedbackModal from '@/components/FeedbackModal.vue'
 import faqRaw from '@/content/faq.md?raw'
+
+const router = useRouter()
+
+/** 返回门户：直接跳根路径 /（不再 back 回退）。 */
+function goBack() {
+  router.push('/')
+}
 
 /** 反馈弹窗显隐：由本页「提交反馈」按钮控制。 */
 const feedbackOpen = ref(false)
@@ -80,12 +95,40 @@ const faqs = parseFaqs(faqRaw)
 </script>
 
 <style scoped>
+/* 外层：全宽，作为返回按钮悬浮锚点 */
+.about-page-root {
+  position: relative;
+  width: 100%;
+  flex: 1;
+}
 .page-about {
   max-width: 860px;
   /* 水平居中：与工作区其它页一致 */
   margin: 0 auto;
   /* 极简布局（无导航/工具轨）下需顶部间距，避免内容紧贴页顶 */
   padding: 48px 16px 24px;
+}
+/* 返回门户：悬浮整个内容区左上角（靛蓝色 outline），不紧挨标题 */
+.about-back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--tp-info);
+  border-radius: 8px;
+  background: var(--tp-surface);
+  color: var(--tp-info);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.about-back:hover {
+  background: var(--tp-info);
+  color: var(--tp-on-primary);
 }
 .intro {
   margin-bottom: 28px;

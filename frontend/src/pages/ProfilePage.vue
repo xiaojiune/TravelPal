@@ -56,7 +56,8 @@ const roleLabel = computed(() => {
 <style scoped>
 .page-profile {
   max-width: 640px;
-  margin: 0;
+  /* 水平居中 */
+  margin: 0 auto;
   padding: 0 16px;
 }
 .profile-header {

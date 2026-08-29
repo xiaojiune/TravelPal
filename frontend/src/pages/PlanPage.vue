@@ -214,7 +214,8 @@ watch(
 <style scoped>
 .page-plan {
   max-width: 1200px;
-  margin: 0;
+  /* 水平居中 */
+  margin: 0 auto;
 }
 .empty-state {
   text-align: center;

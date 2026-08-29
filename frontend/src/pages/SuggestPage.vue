@@ -205,7 +205,8 @@ function viewDeepResult(r: PlanResult) {
 <style scoped>
 .page-suggest {
   max-width: 700px;
-  margin: 0;
+  /* 水平居中 */
+  margin: 0 auto;
 }
 .empty-state {
   text-align: center;

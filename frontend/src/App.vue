@@ -192,7 +192,11 @@ function onUserMenu(key: string | number) {
 }
 
 onMounted(() => {
-  void userStore.fetchMe()
+  // 仅在需要登录态的工作区布局探测用户（门户/认证/关于为公开页，不触发 /me，
+  // 避免未登录时后端 401 日志噪音）；守卫路由（/profile /admin）内部仍会按需 fetchMe。
+  if (isWorkbench.value) {
+    void userStore.fetchMe()
+  }
 })
 
 /** Esc 收起 Agent 面板。 */

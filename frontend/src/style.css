@@ -115,7 +115,8 @@ body {
 .main-content {
   flex: 1;
   min-width: 0;
-  /* 左侧约一个「TravelPal」标题宽的距离（160px），其余保持 24px */
-  padding: 24px 24px 24px 160px;
+  /* 对称内边距：页面容器（max-width + margin:0 auto）在剩余空间内水平居中，
+     不再偏置左侧（各页面容器已自己居中，工具轨/工具窗显隐不影响） */
+  padding: 24px;
   overflow-y: auto;
 }

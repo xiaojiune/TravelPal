@@ -138,7 +138,8 @@ watch(
 <style scoped>
 .page-history {
   max-width: 800px;
-  margin: 0;
+  /* 水平居中 */
+  margin: 0 auto;
 }
 .subtitle {
   font-size: 13px;

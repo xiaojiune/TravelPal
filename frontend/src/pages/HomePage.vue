@@ -530,7 +530,8 @@ async function fetchSuggest() {
 <style scoped>
 .page-home {
   max-width: 860px;
-  margin: 0;
+  /* 水平居中：无论左侧工具轨/工具窗口是否弹出，内容在剩余区域内居中 */
+  margin: 0 auto;
 }
 .subtitle {
   color: var(--tp-text-2);

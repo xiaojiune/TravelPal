@@ -28,8 +28,9 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "deepseek-chat"
     # PostgreSQL 数据库连接地址
     DATABASE_URL: str = "postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal"
-    # Celery 消息代理地址（redis），异步任务队列
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    # Celery 消息代理地址（LavinMQ / AMQP 0-9-1），异步任务队列。
+    # 默认 guest@localhost 兜底（LavinMQ 默认账号）；本地/生产用 .env 覆盖为独立账号。
+    CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
     # Redis 缓存地址（驾车成本点对缓存），默认与 broker 同实例
     REDIS_URL: str = "redis://localhost:6379/0"
     # Embedding API Key（预留，当前未使用）

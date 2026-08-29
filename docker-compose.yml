@@ -34,6 +34,20 @@ services:
     volumes:
       - redis_data:/data
 
+  # Celery 消息代理：LavinMQ（AMQP 0-9-1，超轻量高性能，替代 redis 作 broker）
+  lavinmq:
+    image: cloudamqp/lavinmq:latest
+    container_name: travelpal-lavinmq
+    logging: *default-logging
+    environment:
+      LAVINMQ_AMQP_PORT: "5672"
+      LAVINMQ_HTTP_PORT: "15672"
+    ports:
+      - "15672:15672" # 管理台
+      - "5672:5672" # AMQP（Celery broker）
+    volumes:
+      - lavinmq_data:/var/lib/lavinmq
+
   backend:
     build:
       context: .
@@ -45,7 +59,7 @@ services:
     logging: *default-logging
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
-      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -62,6 +76,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      lavinmq:
+        condition: service_started
 
   worker:
     build:
@@ -75,7 +91,7 @@ services:
     command: ["celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
-      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: amqp://guest:guest@localhost:5672//
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -89,6 +105,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      lavinmq:
         condition: service_started
 
   nginx:
@@ -115,3 +133,4 @@ volumes:
   postgres_data:
   redis_data:
   metrics_data:
+  lavinmq_data:

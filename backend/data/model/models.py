@@ -71,7 +71,7 @@ class PlanTask(Base):
     设计说明：
     - 前端不再同步等待长耗时规划（suggest 拉取驾车 API 成本矩阵可达 40s），
       改为提交任务后轮询本表状态，避免 HTTP 长连接挂起。
-    - 任务执行由 Celery worker 承担（broker=redis），任务内部自写本表状态
+    - 任务执行由 Celery worker 承担（broker=LavinMQ/AMQP），任务内部自写本表状态
       （方案 A：不依赖 Celery result backend，复用现有 async SQLAlchemy）。
     - result 存完整结果 JSONB（suggest 响应或完整 PlanResult），与 SharedPlan
       的 plan_result 同构；删除由用户主动发起，暂不做软删除/归档。

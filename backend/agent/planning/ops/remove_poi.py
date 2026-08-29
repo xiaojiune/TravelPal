@@ -1,6 +1,6 @@
 """移除景点调整：从方案移除指定景点并重新求解（单日/全局两种模式）。
 
-被 engine/pipeline.adjust_plan 分发调用（方案调整编排入口）。
+被 domain/pipeline.adjust_plan 分发调用（方案调整编排入口）。
 
 - remove_poi_from_day：单日重排——只对目标天重新求解，其余天路线原样
   保留。删除导致目标天空时废弃该天（best_days 减 1）并发出警告。

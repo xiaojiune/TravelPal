@@ -60,7 +60,7 @@ async def remove_poi(
     if day is not None:
         adjustments["day"] = day
 
-    from backend.engine.pipeline import adjust_plan
+    from backend.domain.pipeline import adjust_plan
 
     try:
         return cast(

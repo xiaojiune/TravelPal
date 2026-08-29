@@ -64,7 +64,7 @@ def _run_suggest(params: TaskParams) -> dict:
     Returns:
         dict: run_planning 建议分支完整结果（type="suggestion"，结构对应 schemas.SuggestResult）。
     """
-    from backend.engine.pipeline import run_planning
+    from backend.domain.pipeline import run_planning
 
     return run_planning(  # type: ignore[return-value]
         _build_poi_cache(params),
@@ -91,7 +91,7 @@ def _run_plan(params: TaskParams) -> PlanResult:
     Returns:
         PlanResult: run_planning 求解分支完整结果（type="solution"）。
     """
-    from backend.engine.pipeline import run_planning
+    from backend.domain.pipeline import run_planning
 
     return cast(
         PlanResult,
@@ -123,7 +123,7 @@ def _run_adjust(params: AdjustParams) -> PlanResult:
     Returns:
         PlanResult: 调整后的完整方案（mode="adjust"）。
     """
-    from backend.engine.pipeline import adjust_plan
+    from backend.domain.pipeline import adjust_plan
 
     return cast(
         PlanResult,

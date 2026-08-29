@@ -66,7 +66,7 @@ def reorder_from_cores(
     Raises:
         ValueError: only_day 越界，或 cores 天数与 routes 不一致。
     """
-    from backend.engine.pipeline import _rebuild_schedule
+    from backend.domain.pipeline import _rebuild_schedule
 
     n_days = len(routes)
     if len(cores) != n_days:

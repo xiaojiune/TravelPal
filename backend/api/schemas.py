@@ -238,7 +238,7 @@ class ShareDeleteRequest(BaseModel):
 class SpotDictItem(BaseModel):
     """规划结果中的景点/酒店字典项（result.spots 字段值）。
 
-    与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+    与 backend/domain/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
     (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
     """
 

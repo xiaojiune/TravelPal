@@ -1,6 +1,6 @@
 """添加景点调整：向方案添加新景点并重排（单日/全局两种模式）。
 
-被 engine/pipeline.adjust_plan 分发调用（方案调整编排入口）。
+被 domain/pipeline.adjust_plan 分发调用（方案调整编排入口）。
 
 - add_poi_to_day：单日重排——只对目标天重新求解，其余天路线原样保留。
   day 由编排层从对话明确提取。
@@ -74,7 +74,7 @@ def add_poi_to_plan(
     Returns:
         dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
     """
-    from backend.engine.pipeline import _rebuild_schedule
+    from backend.domain.pipeline import _rebuild_schedule
     from backend.engine.search import cluster_and_solve
 
     n_days = len(routes)

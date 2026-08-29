@@ -1,6 +1,6 @@
 """规划能力子包：方案调整操作（增删景点）+ 评语生成（agent-tool 待接入）。
 
-消费方：engine/pipeline.py（adjust_plan 分发方案调整）；
+消费方：domain/pipeline.py（adjust_plan 分发方案调整）；
 generate_commentary 已从流程剥离（返回 commentary=None），待 Agent 工具化后接入。
 子模块被 pipeline 延迟 import 调用（避免 engine → agent 顶层循环导入）。
 

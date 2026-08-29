@@ -112,7 +112,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
             "adjustments": {"add_poi": poi},
         }
         try:
-            from backend.engine.pipeline import adjust_plan
+            from backend.domain.pipeline import adjust_plan
 
             return cast(
                 dict,
@@ -143,7 +143,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
     all_hit = all(get_driving_pair(city, poi_point, t) is not None for t in check_points)
 
     if all_hit:
-        from backend.engine.pipeline import adjust_plan
+        from backend.domain.pipeline import adjust_plan
 
         try:
             return cast(

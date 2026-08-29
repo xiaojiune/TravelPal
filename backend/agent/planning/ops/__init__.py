@@ -1,6 +1,6 @@
 """方案调整操作子包：增删景点 + 均衡重排。
 
-被 planning/__init__.py 汇总导出，最终由 engine/pipeline.adjust_plan
+被 planning/__init__.py 汇总导出，最终由 domain/pipeline.adjust_plan
 分发调用（方案调整编排入口）。
 """
 

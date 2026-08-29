@@ -11,9 +11,12 @@ body {
 }
 
 #travelpal-app {
-  min-height: 100vh;
+  /* 视口高度锁定：nav / 标题栏 / footer 固定，.app-body(flex:1) 内 .main-content 滚动，
+     确保工具轨/工具面板顶部不被内容撑出裁切 */
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* 主体区：左侧待选栏 + 主内容，撑满导航栏与 footer 之间 */
@@ -21,6 +24,7 @@ body {
   display: flex;
   flex: 1;
   min-height: 0;
+  align-items: stretch;
 }
 
 .nav-bar {
@@ -38,8 +42,8 @@ body {
 
 .nav-brand-area {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 12px;
   line-height: 1.25;
 }
 
@@ -113,6 +117,7 @@ body {
 }
 
 .main-content {
+  position: relative;
   flex: 1;
   min-width: 0;
   /* 对称内边距：页面容器（max-width + margin:0 auto）在剩余空间内水平居中，

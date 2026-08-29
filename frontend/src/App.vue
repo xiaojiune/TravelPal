@@ -15,59 +15,52 @@
           <template v-if="isWorkbench">
             <nav class="nav-bar">
               <div class="nav-brand-area">
-                <router-link to="/" class="nav-brand">TravelPal</router-link>
+                <router-link to="/home" class="nav-brand">TravelPal</router-link>
               </div>
               <div class="nav-links">
                 <router-link to="/home">首页</router-link>
                 <router-link to="/suggest">方案建议</router-link>
                 <router-link to="/plan">规划结果</router-link>
                 <router-link to="/shares">分享站</router-link>
-                <router-link
-                  v-if="userStore.user?.role === 'super_admin'"
-                  to="/admin"
-                  class="nav-admin"
-                >
-                  管理台
-                </router-link>
-                <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
-                  🆕 新建规划
-                </n-button>
               </div>
               <div class="nav-user">
+                <!-- 个人信息（导航最右）：nav-link 同款框，完整显示昵称/邮箱 -->
                 <n-dropdown
                   v-if="userStore.isLoggedIn"
                   :options="userMenuOptions"
                   @select="onUserMenu"
                 >
-                  <n-button text class="nav-user-trigger">
+                  <button class="nav-user-link" type="button">
                     <span class="nav-user-name">{{ userStore.displayName }}</span>
-                  </n-button>
+                    <span class="nav-user-caret">▾</span>
+                  </button>
                 </n-dropdown>
                 <template v-else>
-                  <router-link to="/login" class="nav-login">登录</router-link>
-                  <router-link to="/register" class="nav-register">注册</router-link>
+                  <router-link to="/login" class="portal-link">登录</router-link>
+                  <router-link to="/register" class="portal-link portal-link-primary">注册</router-link>
                 </template>
               </div>
-              <!-- Agent 入口（仅二级界面）：首访自动弹 tooltip + bounce 提醒（永久一次），之后 hover 提示 -->
-              <n-tooltip placement="bottom-end" :show="attention">
-                <template #trigger>
-                  <n-button
-                    class="nav-agent"
-                    :class="{ 'agent-attention': attention }"
-                    secondary
-                    :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
-                    @click="toggleAgent"
-                  >
-                    🤖 AI 助手
-                  </n-button>
-                </template>
-                和 AI 旅行伴侣聊聊，帮你查景点、规划行程
-              </n-tooltip>
             </nav>
             <div class="app-body">
               <ToolRail v-model:active="toolPanel" />
               <ToolPanel v-if="toolPanel" :active="toolPanel" />
               <main class="main-content">
+                <!-- 右上角 AI 助手（wrapper absolute，不占文档流、不推低内容） -->
+                <div class="content-float">
+                  <n-tooltip placement="bottom-end" :show="attention">
+                    <template #trigger>
+                      <button
+                        class="agent-round"
+                        :class="{ 'agent-attention': attention }"
+                        :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
+                        @click="toggleAgent"
+                      >
+                        🤖
+                      </button>
+                    </template>
+                    和 AI 旅行伴侣聊聊，帮你查景点、规划行程
+                  </n-tooltip>
+                </div>
                 <router-view v-slot="{ Component }">
                   <keep-alive>
                     <component :is="Component" />
@@ -234,38 +227,93 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   line-height: 1.7;
   color: var(--tp-text-2);
 }
-/* 导航用户区：未登录双链 / 已登录昵称（触发下拉菜单） */
+/* 导航用户区：未登录双链 / 已登录个人信息框（触发下拉菜单）；推至最右 */
 .nav-user {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: 8px;
+  margin-left: auto;
 }
 .nav-user-name {
-  max-width: 120px;
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.nav-login,
-.nav-register {
-  font-size: 13px;
+/* 个人信息：nav-link 同款框样式（完整显示昵称/邮箱，不截断） */
+.nav-user-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--tp-border-light);
+  border-radius: 8px;
+  padding: 4px 12px;
+  background: var(--tp-surface);
   color: var(--tp-text-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
 }
-.nav-login:hover,
-.nav-register:hover {
+.nav-user-link:hover {
+  background: var(--tp-primary-soft);
   color: var(--tp-primary);
 }
-.nav-register {
-  padding-left: 12px;
-  border-left: 1px solid var(--tp-border-light);
+.nav-user-caret {
+  font-size: 10px;
+  color: var(--tp-text-3);
+}
+/* 登录/注册（未登录态）：复用门户页 portal-link 样式 */
+.portal-link {
+  font-size: 14px;
+  color: var(--tp-text-2);
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+.portal-link:hover {
+  color: var(--tp-primary);
+  background: var(--tp-primary-soft);
+}
+.portal-link-primary {
+  color: var(--tp-primary);
+  font-weight: 600;
+  border: 1px solid var(--tp-primary);
+}
+/* 内容区右上浮动工具栏（wrapper）：absolute 浮于内容区上方，不占文档流、不推低内容 */
+.content-float {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* AI 助手圆形按钮：无边框、品牌色底、圆形，仅 emoji（加大） */
+.agent-round {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--tp-primary-soft);
+  font-size: 22px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.agent-round:hover {
+  background: var(--tp-primary);
+  transform: scale(1.05);
 }
 /* 门户/认证/关于 极简布局主区：无左侧 padding（门户全宽自绘布局）；flex:1 撑满高度，底部 AppFooter 贴底部 */
 .portal-main {
   flex: 1;
   min-height: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 }

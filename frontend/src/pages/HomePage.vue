@@ -1,7 +1,15 @@
 <template>
   <div class="page-home">
-    <h1>TravelPal</h1>
-    <p class="subtitle">输入城市与景点，获取最优行程方案</p>
+    <!-- 标题行：左=品牌标题+副标题，右=新建规划（内容区标题行右侧，与右上角 AI 助手分离） -->
+    <div class="home-title-row">
+      <div class="home-title-block">
+        <h1>TravelPal</h1>
+        <p class="subtitle">输入城市与景点，获取最优行程方案</p>
+      </div>
+      <button class="btn-new-plan" type="button" @click="startNewPlan">
+        ➕ 新建规划
+      </button>
+    </div>
 
     <n-steps class="page-steps" size="small">
       <n-step v-for="(t, i) in steps" :key="t" :title="t" :status="stepStatus[i]" />
@@ -330,6 +338,12 @@ onMounted(() => {
   activeSection.value = nextUndone()
 })
 
+/** 新建规划：清空全部规划状态并留当前工作区首页（/home），不清空回到门户。 */
+function startNewPlan() {
+  store.reset()
+  router.push('/home')
+}
+
 // ====== 大文件夹（手风琴） ======
 /** 当前展开的卡片（手风琴：一次仅一张），null 表示全部收起。 */
 type CardKey = 'city' | 'hotel' | 'depart' | 'search' | 'minDays' | 'manage'
@@ -532,6 +546,37 @@ async function fetchSuggest() {
   max-width: 860px;
   /* 水平居中：无论左侧工具轨/工具窗口是否弹出，内容在剩余区域内居中 */
   margin: 0 auto;
+}
+/* 标题行：品牌标题+副标题（左）与新建规划（右）横向排版 */
+.home-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.home-title-block .subtitle {
+  margin-bottom: 24px;
+}
+/* 新建规划：内容区标题行右侧，干净品牌 outline 按钮 */
+.btn-new-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  border: 1px solid var(--tp-primary);
+  border-radius: 8px;
+  background: var(--tp-surface);
+  color: var(--tp-primary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-new-plan:hover {
+  background: var(--tp-primary);
+  color: var(--tp-on-primary);
 }
 .subtitle {
   color: var(--tp-text-2);

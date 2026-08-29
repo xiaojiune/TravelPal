@@ -82,7 +82,8 @@ const faqs = parseFaqs(faqRaw)
 <style scoped>
 .page-about {
   max-width: 860px;
-  margin: 0;
+  /* 水平居中：与工作区其它页一致 */
+  margin: 0 auto;
   /* 极简布局（无导航/工具轨）下需顶部间距，避免内容紧贴页顶 */
   padding: 48px 16px 24px;
 }

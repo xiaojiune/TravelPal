@@ -1,10 +1,20 @@
 <template>
   <div class="portal-page">
-    <!-- 顶部极简条：品牌 + 右上登录/注册（游客态；登录态隐藏，主入口在 hero） -->
+    <!-- 顶部极简条：品牌 + 右上登录态（登录=个人信息下拉，可跳三级界面；未登录=登录/注册） -->
     <header class="portal-header">
       <router-link to="/" class="portal-brand">TravelPal</router-link>
       <div class="portal-header-actions">
-        <template v-if="!userStore.isLoggedIn">
+        <n-dropdown
+          v-if="userStore.isLoggedIn"
+          :options="userMenuOptions"
+          @select="onUserMenu"
+        >
+          <button class="portal-user-link" type="button">
+            <span>{{ userStore.displayName }}</span>
+            <span class="portal-user-caret">▾</span>
+          </button>
+        </n-dropdown>
+        <template v-else>
           <router-link to="/login" class="portal-link">登录</router-link>
           <router-link to="/register" class="portal-link portal-link-primary">注册</router-link>
         </template>
@@ -52,6 +62,7 @@
  */
 defineOptions({ name: 'PortalPage' })
 
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -62,6 +73,32 @@ const userStore = useUserStore()
 function goWorkbench() {
   router.push('/home')
 }
+
+/** 门户顶部用户下拉：个人中心（三级）+ 管理台（仅超管）+ 退出登录。 */
+const userMenuOptions = computed(() => {
+  const opts: { label: string; key: string }[] = [{ label: '个人中心', key: 'profile' }]
+  if (userStore.user?.role === 'super_admin') {
+    opts.push({ label: '管理台', key: 'admin' })
+  }
+  opts.push({ label: '退出登录', key: 'logout' })
+  return opts
+})
+
+/** 用户在门户顶部下拉选中：三级界面跳转 / 退出登录回门户。 */
+function onUserMenu(key: string | number) {
+  if (key === 'profile') {
+    router.push('/profile')
+  } else if (key === 'admin') {
+    router.push('/admin')
+  } else if (key === 'logout') {
+    void userStore.logout().then(() => router.push('/'))
+  }
+}
+
+// 门户挂载时探测登录态，确保顶部正确显示个人信息(登录)或登录/注册(未登录)
+onMounted(() => {
+  void userStore.fetchMe()
+})
 </script>
 
 <style scoped>
@@ -93,6 +130,28 @@ function goWorkbench() {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+/* 门户顶部个人信息（登录态）：nav-link 同款框 + 下拉箭头 */
+.portal-user-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--tp-border-light);
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: var(--tp-surface);
+  color: var(--tp-text-2);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.portal-user-link:hover {
+  background: var(--tp-primary-soft);
+  color: var(--tp-primary);
+}
+.portal-user-caret {
+  font-size: 10px;
+  color: var(--tp-text-3);
 }
 .portal-link {
   font-size: 14px;

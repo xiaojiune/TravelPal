@@ -8,9 +8,8 @@
     <div class="page-about">
       <section class="intro">
         <h2>关于 TravelPal</h2>
-        <p class="slogan">不占有的陪伴，不缺席的可靠。</p>
         <p class="desc">
-          把计算交给机器，把决策留给你——对话式共创 + CA/VNS 双引擎，从一句话到每一程。
+          基于约束求解+LLM的旅游Agent
         </p>
       </section>
 

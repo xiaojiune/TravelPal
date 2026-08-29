@@ -65,7 +65,7 @@
               </n-tooltip>
             </nav>
             <div class="app-body">
-              <ToolRail v-model:active="toolPanel" @feedback="onFeedback" />
+              <ToolRail v-model:active="toolPanel" />
               <ToolPanel v-if="toolPanel" :active="toolPanel" />
               <main class="main-content">
                 <router-view v-slot="{ Component }">
@@ -89,7 +89,6 @@
             </main>
             <AppFooter />
           </template>
-          <FeedbackModal v-model:show="feedbackOpen" />
         </div>
       </n-dialog-provider>
     </n-message-provider>
@@ -108,7 +107,6 @@ import ToolRail from '@/components/ToolRail.vue'
 import ToolPanel from '@/components/ToolPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
 import AppFooter from '@/components/AppFooter.vue'
-import FeedbackModal from '@/components/FeedbackModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -137,14 +135,6 @@ onUnmounted(() => {
 
 /** 左侧工具面板当前激活项：query（查询）/ ops（操作）/ tasks（任务）；null 表示全部收起。 */
 const toolPanel = ref<'query' | 'ops' | 'tasks' | null>('query')
-
-/** 全局反馈弹窗显隐（由 ToolRail 📮 按钮触发）。 */
-const feedbackOpen = ref(false)
-
-/** ToolRail 反馈按钮事件：打开全局反馈弹窗（居中，可在任意页面）。 */
-function onFeedback() {
-  feedbackOpen.value = true
-}
 
 /**
  * 新建规划：清空全部规划状态并回工作区首页（/home）。
@@ -180,12 +170,23 @@ onMounted(() => {
   }
 })
 
-/** 用户下拉菜单项（当前仅退出登录）。 */
-const userMenuOptions = [{ label: '退出登录', key: 'logout' }]
+/** 用户下拉菜单项：个人中心（三级界面）+ 管理台（仅超管）+ 退出登录。 */
+const userMenuOptions = computed(() => {
+  const opts: { label: string; key: string }[] = [{ label: '个人中心', key: 'profile' }]
+  if (userStore.user?.role === 'super_admin') {
+    opts.push({ label: '管理台', key: 'admin' })
+  }
+  opts.push({ label: '退出登录', key: 'logout' })
+  return opts
+})
 
-/** 用户下拉菜单选中：退出登录 → 清会话并回首页。 */
+/** 用户下拉菜单选中：个人中心/管理台路由跳转；退出登录 → 清会话并回门户。 */
 function onUserMenu(key: string | number) {
-  if (key === 'logout') {
+  if (key === 'profile') {
+    router.push('/profile')
+  } else if (key === 'admin') {
+    router.push('/admin')
+  } else if (key === 'logout') {
     void userStore.logout().then(() => router.push('/'))
   }
 }

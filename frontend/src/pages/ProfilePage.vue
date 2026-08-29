@@ -20,16 +20,22 @@
       <span>个人中心</span>
       <p>这里将展示你的历史方案、收藏与偏好设置。（占位，待扩展）</p>
     </div>
+
+    <div class="profile-actions">
+      <n-button type="primary" @click="router.push('/home')">返回工作区</n-button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 /** 个人中心页（三级界面）：点击右上角头像进入。当前为占位——展示身份信息，功能待扩展。 */
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
 defineOptions({ name: 'ProfilePage' })
 
+const router = useRouter()
 const userStore = useUserStore()
 
 /** 头像首字符（昵称或邮箱首字母）。 */
@@ -119,5 +125,8 @@ const roleLabel = computed(() => {
 .profile-placeholder p {
   margin: 8px 0 0;
   font-size: 13px;
+}
+.profile-actions {
+  margin-top: 24px;
 }
 </style>

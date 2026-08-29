@@ -12,12 +12,12 @@
       <span class="fb-icon">📮</span>
       <div class="fb-text">
         <p class="fb-title">遇到困难？</p>
-        <p class="fb-body">
-          可在任意页面点击左侧工具栏的 📮 按钮进行反馈，提交时会自动附带当前页面，
-          帮助我们定位问题所在。
-        </p>
+        <p class="fb-body">欢迎提交反馈，帮助 TravelPal 做得更好。</p>
+        <n-button size="small" type="primary" @click="feedbackOpen = true">提交反馈</n-button>
       </div>
     </section>
+
+    <FeedbackModal v-model:show="feedbackOpen" />
 
     <section class="faq-section">
       <h2>常见问题</h2>
@@ -32,9 +32,14 @@
 </template>
 
 <script setup lang="ts">
-/** 关于页：项目介绍 + 反馈引导（指向左侧工具栏 📮）+ FAQ 手风琴（faq.md 经 markdown-it 切分）。 */
+/** 关于页：项目介绍 + 反馈入口（内嵌 FeedbackModal，问卷入口已从工具栏迁至本页）+ FAQ 手风琴。 */
+import { ref } from 'vue'
 import MarkdownIt from 'markdown-it'
+import FeedbackModal from '@/components/FeedbackModal.vue'
 import faqRaw from '@/content/faq.md?raw'
+
+/** 反馈弹窗显隐：由本页「提交反馈」按钮控制。 */
+const feedbackOpen = ref(false)
 
 const md = new MarkdownIt()
 
@@ -78,7 +83,8 @@ const faqs = parseFaqs(faqRaw)
 .page-about {
   max-width: 860px;
   margin: 0;
-  padding: 0 16px;
+  /* 极简布局（无导航/工具轨）下需顶部间距，避免内容紧贴页顶 */
+  padding: 48px 16px 24px;
 }
 .intro {
   margin-bottom: 28px;

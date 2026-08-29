@@ -11,99 +11,84 @@
     <n-message-provider>
       <n-dialog-provider>
         <div id="travelpal-app">
-          <nav class="nav-bar">
-            <div class="nav-brand-area">
-              <router-link to="/" class="nav-brand">TravelPal</router-link>
-            </div>
-            <div class="nav-links">
-              <router-link to="/">首页</router-link>
-              <router-link to="/suggest">方案建议</router-link>
-              <router-link to="/plan">规划结果</router-link>
-              <router-link to="/shares">分享站</router-link>
-              <router-link to="/about" class="nav-about">关于项目 👈</router-link>
-              <router-link
-                v-if="userStore.user?.role === 'super_admin'"
-                to="/admin"
-                class="nav-admin"
-              >
-                管理台
-              </router-link>
-              <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
-                🆕 新建规划
-              </n-button>
-            </div>
-            <div class="nav-user">
-              <n-dropdown
-                v-if="userStore.isLoggedIn"
-                :options="userMenuOptions"
-                @select="onUserMenu"
-              >
-                <n-button text>
-                  <span class="nav-user-name">{{ userStore.displayName }}</span>
-                </n-button>
-              </n-dropdown>
-              <template v-else>
-                <router-link to="/login" class="nav-login">登录</router-link>
-                <router-link to="/register" class="nav-register">注册</router-link>
-              </template>
-            </div>
-            <!-- 全局 Agent 入口：文字按钮自我解释，首访自动弹 tooltip + bounce 提醒（永久一次），之后 hover 提示 -->
-            <n-tooltip placement="bottom-end" :show="attention">
-              <template #trigger>
-                <n-button
-                  class="nav-agent"
-                  :class="{ 'agent-attention': attention }"
-                  secondary
-                  :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
-                  @click="toggleAgent"
+          <!-- 工作区布局（二级界面）：完整导航 + 左侧工具轨 + Agent 助手 -->
+          <template v-if="isWorkbench">
+            <nav class="nav-bar">
+              <div class="nav-brand-area">
+                <router-link to="/" class="nav-brand">TravelPal</router-link>
+              </div>
+              <div class="nav-links">
+                <router-link to="/home">首页</router-link>
+                <router-link to="/suggest">方案建议</router-link>
+                <router-link to="/plan">规划结果</router-link>
+                <router-link to="/shares">分享站</router-link>
+                <router-link
+                  v-if="userStore.user?.role === 'super_admin'"
+                  to="/admin"
+                  class="nav-admin"
                 >
-                  🤖 AI 助手
+                  管理台
+                </router-link>
+                <n-button size="small" secondary class="nav-reset" @click="startNewPlan">
+                  🆕 新建规划
                 </n-button>
-              </template>
-              和 AI 旅行伴侣聊聊，帮你查景点、规划行程
-            </n-tooltip>
-          </nav>
-          <div class="app-body">
-            <ToolRail v-model:active="toolPanel" @feedback="onFeedback" />
-            <ToolPanel v-if="toolPanel" :active="toolPanel" />
-            <main class="main-content">
+              </div>
+              <div class="nav-user">
+                <n-dropdown
+                  v-if="userStore.isLoggedIn"
+                  :options="userMenuOptions"
+                  @select="onUserMenu"
+                >
+                  <n-button text class="nav-user-trigger">
+                    <span class="nav-user-name">{{ userStore.displayName }}</span>
+                  </n-button>
+                </n-dropdown>
+                <template v-else>
+                  <router-link to="/login" class="nav-login">登录</router-link>
+                  <router-link to="/register" class="nav-register">注册</router-link>
+                </template>
+              </div>
+              <!-- Agent 入口（仅二级界面）：首访自动弹 tooltip + bounce 提醒（永久一次），之后 hover 提示 -->
+              <n-tooltip placement="bottom-end" :show="attention">
+                <template #trigger>
+                  <n-button
+                    class="nav-agent"
+                    :class="{ 'agent-attention': attention }"
+                    secondary
+                    :aria-label="agentOpen ? '收起 AI 助手' : '打开 AI 助手'"
+                    @click="toggleAgent"
+                  >
+                    🤖 AI 助手
+                  </n-button>
+                </template>
+                和 AI 旅行伴侣聊聊，帮你查景点、规划行程
+              </n-tooltip>
+            </nav>
+            <div class="app-body">
+              <ToolRail v-model:active="toolPanel" @feedback="onFeedback" />
+              <ToolPanel v-if="toolPanel" :active="toolPanel" />
+              <main class="main-content">
+                <router-view v-slot="{ Component }">
+                  <keep-alive>
+                    <component :is="Component" />
+                  </keep-alive>
+                </router-view>
+              </main>
+            </div>
+            <AppFooter />
+            <AgentPanel v-model:show="agentOpen" />
+          </template>
+          <!-- 门户/认证/关于 极简布局：无导航/工具轨/Agent，但保留全局备案页脚 -->
+          <template v-else>
+            <main class="main-content portal-main">
               <router-view v-slot="{ Component }">
                 <keep-alive>
                   <component :is="Component" />
                 </keep-alive>
               </router-view>
             </main>
-          </div>
-          <footer class="footer">
-            <div class="footer-links">
-              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-                ICP备案/许可证号：桂ICP备2026015614号-1
-              </a>
-              <span class="footer-sep" aria-hidden="true">·</span>
-              <a
-                href="https://beian.mps.gov.cn/#/query/webSearch?code=44030002015955"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="footer-beian"
-              >
-                <svg class="beian-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z" fill="#2E6FE0" />
-                  <path
-                    d="M9 12l2 2 4-4"
-                    stroke="#fff"
-                    stroke-width="1.6"
-                    fill="none"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                粤公网安备 44030002015955号
-              </a>
-              <span class="footer-sep" aria-hidden="true">·</span>
-              <span class="footer-version">v0.1.0</span>
-            </div>
-          </footer>
-          <AgentPanel v-model:show="agentOpen" />
+            <AppFooter />
+          </template>
           <FeedbackModal v-model:show="feedbackOpen" />
         </div>
       </n-dialog-provider>
@@ -113,8 +98,8 @@
 
 <script setup lang="ts">
 /** 根组件：移动端降级提示 + 全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。 */
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
 import { usePlanStore } from '@/stores/plan'
@@ -122,11 +107,17 @@ import { useUserStore } from '@/stores/user'
 import ToolRail from '@/components/ToolRail.vue'
 import ToolPanel from '@/components/ToolPanel.vue'
 import AgentPanel from '@/components/AgentPanel.vue'
+import AppFooter from '@/components/AppFooter.vue'
 import FeedbackModal from '@/components/FeedbackModal.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = usePlanStore()
 const userStore = useUserStore()
+
+/** 是否工作区布局（二级界面）：完整导航 + 左侧工具轨 + Agent 助手。
+ * 由路由 meta.useWorkbench 标记决定；门户/认证/关于走极简布局（无这些）。 */
+const isWorkbench = computed(() => route.meta.useWorkbench === true)
 
 /** 移动端检测（CSS 媒体查询，含竖屏平板）；true 时整页渲染桌面端降级提示，隐藏主应用。 */
 const isMobile = ref(false)
@@ -156,11 +147,12 @@ function onFeedback() {
 }
 
 /**
- * 新建规划：清空全部规划状态并回首页（reset 补全清空待选栏/加载态/惩罚权重）。
+ * 新建规划：清空全部规划状态并回工作区首页（/home）。
+ * （门户挂根路由 /，重置后应回工作区而非门户）
  */
 function startNewPlan() {
   store.reset()
-  router.push('/')
+  router.push('/home')
 }
 
 /** 全局 Agent 面板显隐（导航栏按钮 / 遮罩点击 / Esc 三路控制）。 */
@@ -262,5 +254,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .nav-register {
   padding-left: 12px;
   border-left: 1px solid var(--tp-border-light);
+}
+/* 门户/认证/关于 极简布局主区：无左侧 padding（门户全宽自绘布局）；flex:1 撑满高度，底部 AppFooter 贴底部 */
+.portal-main {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>

@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AgentPanel: typeof import('./src/components/AgentPanel.vue')['default']
     AmapMap: typeof import('./src/components/AmapMap.vue')['default']
+    AppFooter: typeof import('./src/components/AppFooter.vue')['default']
     ChatMessage: typeof import('./src/components/ChatMessage.vue')['default']
     ChatStream: typeof import('./src/components/ChatStream.vue')['default']
     FeedbackModal: typeof import('./src/components/FeedbackModal.vue')['default']

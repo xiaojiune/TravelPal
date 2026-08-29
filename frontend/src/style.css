@@ -134,3 +134,17 @@ body {
   /* 对称内边距：页面容器（max-width + margin:0 auto）在剩余空间内水平居中 */
   padding: 24px;
 }
+/* 工具面板展开/收起：左侧滑入滑出动效（宽度 + 透明度，主内容随 flex 让宽） */
+.tool-slide-enter-active,
+.tool-slide-leave-active {
+  transition:
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+}
+.tool-slide-enter-from,
+.tool-slide-leave-to {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+}

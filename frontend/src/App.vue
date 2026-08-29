@@ -45,7 +45,10 @@
             </nav>
             <div class="app-body">
               <ToolRail v-model:active="toolPanel" />
-              <ToolPanel v-if="toolPanel" :active="toolPanel" />
+              <!-- 工具面板：展开/收起的左侧滑入滑出动效（与右侧 Agent 栏呼应） -->
+              <Transition name="tool-slide">
+                <ToolPanel v-if="toolPanel" :active="toolPanel" />
+              </Transition>
               <main class="main-content">
                 <!-- 内容滚动区：右上 AI 助手 + 页面出口 -->
                 <div class="content-scroll">

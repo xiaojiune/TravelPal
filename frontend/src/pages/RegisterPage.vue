@@ -71,7 +71,7 @@ async function onSubmit() {
   try {
     await userStore.register(email.value.trim(), password.value, nickname.value.trim() || undefined)
     message.success('注册成功，已自动登录')
-    router.push('/')
+    router.push('/home')
   } catch (e) {
     message.error(e instanceof Error ? e.message : '注册失败，请稍后重试')
   } finally {

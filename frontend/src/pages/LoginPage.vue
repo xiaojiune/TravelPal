@@ -63,11 +63,11 @@ async function onSubmit() {
   try {
     await userStore.login(email.value.trim(), password.value)
     message.success('登录成功')
-    // redirect 仅接受站内路径，防止开放重定向
+    // redirect 仅接受站内路径，防止开放重定向；无 redirect 时默认落工作区 /home
     const redirect =
       typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/')
         ? route.query.redirect
-        : '/'
+        : '/home'
     router.push(redirect)
   } catch (e) {
     message.error(e instanceof Error ? e.message : '登录失败，请稍后重试')

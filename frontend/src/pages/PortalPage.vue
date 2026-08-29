@@ -1,13 +1,10 @@
 <template>
   <div class="portal-page">
-    <!-- 顶部极简条：品牌 + 右上登录/注册（游客态）或用户昵称（登录态） -->
+    <!-- 顶部极简条：品牌 + 右上登录/注册（游客态；登录态隐藏，主入口在 hero） -->
     <header class="portal-header">
       <router-link to="/" class="portal-brand">TravelPal</router-link>
       <div class="portal-header-actions">
-        <template v-if="userStore.isLoggedIn">
-          <router-link to="/home" class="portal-link">进入工作区</router-link>
-        </template>
-        <template v-else>
+        <template v-if="!userStore.isLoggedIn">
           <router-link to="/login" class="portal-link">登录</router-link>
           <router-link to="/register" class="portal-link portal-link-primary">注册</router-link>
         </template>
@@ -18,15 +15,15 @@
     <section class="portal-hero">
       <h1 class="hero-title">把计算交给机器，把决策留给你</h1>
       <p class="hero-sub">
-        对话式共创 + CA/VNS 双引擎，从一句话到每一程。
+        基于约束求解和大模型的旅行Agent。
       </p>
       <div class="hero-actions">
-        <!-- 主入口：游客零门槛直达工作区（/home 工作区） -->
+        <!-- 主入口：游客零门槛直达工作区（/home）；居中做大 -->
         <n-button type="primary" size="large" round class="hero-main-btn" @click="goWorkbench">
           开始体验
         </n-button>
-        <n-button size="large" secondary round @click="goLogin">登录后继续</n-button>
       </div>
+      <p class="hero-hint">已有账号？点击右上角<router-link to="/login" class="hero-hint-link">登录</router-link> / <router-link to="/register" class="hero-hint-link">注册</router-link>继续</p>
     </section>
 
     <!-- 功能入口卡：分享站 / 关于项目（仅这些留在门户） -->
@@ -64,15 +61,6 @@ const userStore = useUserStore()
 /** 主入口：游客零门槛直达工作区（/home）；登录用户同样进入工作区。 */
 function goWorkbench() {
   router.push('/home')
-}
-
-/** 登录后继续：未登录跳登录页；已登录直接进工作区。 */
-function goLogin() {
-  if (userStore.isLoggedIn) {
-    router.push('/home')
-  } else {
-    router.push('/login')
-  }
 }
 </script>
 
@@ -152,8 +140,24 @@ function goLogin() {
   align-items: center;
 }
 .hero-main-btn {
-  min-width: 168px;
-  font-size: 16px;
+  min-width: 220px;
+  font-size: 18px;
+  padding: 10px 0;
+  font-weight: 600;
+}
+/* 主入口下方小字：指引右上角登录/注册 */
+.hero-hint {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--tp-text-3);
+}
+.hero-hint-link {
+  color: var(--tp-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.hero-hint-link:hover {
+  text-decoration: underline;
 }
 
 /* 功能入口卡 */

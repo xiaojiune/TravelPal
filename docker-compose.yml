@@ -43,8 +43,11 @@ services:
       LAVINMQ_AMQP_PORT: "5672"
       LAVINMQ_HTTP_PORT: "15672"
     ports:
-      - "15672:15672" # 管理台
-      - "5672:5672" # AMQP（Celery broker）
+      # AMQP(Celery broker)：容器间经服务名 lavinmq 内网通信，宿主机仅回环可连（本地 worker 用），
+      # 不暴露公网；生产公网访问不到。
+      - "127.0.0.1:5672:5672"
+      # 管理台：仅回环可连（SSH 进服务器才能访问），公网不暴露——guest/默认凭据防公网攻击
+      - "127.0.0.1:15672:15672"
     volumes:
       - lavinmq_data:/var/lib/lavinmq
 

@@ -12,7 +12,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.agent.chat.checkpointer import get_checkpointer
+from backend.data.checkpointer import get_checkpointer
 from backend.data.model.models import Conversation
 
 # 会话 TTL：登录用户 7 天，匿名访客 1 天

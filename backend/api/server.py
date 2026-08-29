@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from backend.agent.chat.checkpointer import checkpointer_context
+from backend.data.checkpointer import checkpointer_context
 from backend.api.admin import router as admin_router
 from backend.api.auth import router as auth_router
 from backend.api.routes import router

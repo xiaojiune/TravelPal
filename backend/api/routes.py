@@ -10,7 +10,6 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agent.chat import build_chat_messages, stream_orchestrator
-from backend.agent.chat.checkpointer import get_checkpointer
 from backend.agent.tools import parse_biz_hours
 from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
@@ -30,13 +29,14 @@ from backend.api.schemas import (
     TaskSubmitResponse,
 )
 from backend.data.amap_loader import get_poi_details
-from backend.data.model.database import get_session
-from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
-from backend.domain.conversations import (
+from backend.data.checkpointer import get_checkpointer
+from backend.data.conversations import (
     get_history_messages,
     get_or_create_conversation,
     get_recent_conversation,
 )
+from backend.data.model.database import get_session
+from backend.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
 from backend.tasks.submit import submit_task
 
 router = APIRouter()

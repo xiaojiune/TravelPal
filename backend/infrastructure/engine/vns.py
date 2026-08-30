@@ -6,7 +6,7 @@ from typing import Tuple
 
 import numpy as np
 
-from backend.domain.fitness import _cal_fitness_numba, analyze_solution
+from backend.domain.solver.fitness import _cal_fitness_numba, analyze_solution
 from backend.typedefs import SpotDict
 
 # ================== VNS 默认参数 ==================

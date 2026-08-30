@@ -13,8 +13,8 @@ add/remove 方案调整共享的核心抽象——把「增/删景点」统一�
 
 import numpy as np
 
-from backend.domain.fitness import analyze_solution
-from backend.domain.search import solve_groups
+from backend.domain.solver.fitness import analyze_solution
+from backend.domain.solver.search import solve_groups
 from backend.infrastructure.engine.solver import get_solver
 from backend.typedefs import SpotDict
 

@@ -56,7 +56,7 @@ def base_adjust_plan(n20_dataset) -> tuple[dict, np.ndarray, list]:
     dataset_loader 的 spots 缺 original_tw（真实 run_planning 会构建该字段），
     这里补齐以适配 _rebuild_schedule 的访问。
     """
-    from backend.domain.search import cluster_and_solve
+    from backend.domain.solver.search import cluster_and_solve
     from backend.infrastructure.engine.solver import get_solver
 
     spots, cost_mat, _ = n20_dataset

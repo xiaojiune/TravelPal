@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.domain.clustering import CLUSTER_METHODS, call_cluster
+from backend.domain.solver.clustering import CLUSTER_METHODS, call_cluster
 
 # ================== 聚类方法 ==================
 

@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.domain.ports import DrivingDataProvider  # noqa: E402
-from backend.domain.search import cluster_and_solve  # noqa: E402
+from backend.domain.solver.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
 
 # ================== 常量 ==================

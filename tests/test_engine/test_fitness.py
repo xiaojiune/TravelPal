@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.domain.fitness import analyze_solution
+from backend.domain.solver.fitness import analyze_solution
 
 # ================== 适应度函数 ==================
 

@@ -1,6 +1,6 @@
 import pytest
 
-from backend.domain.search import ca_suggest, cluster_and_solve
+from backend.domain.solver.search import ca_suggest, cluster_and_solve
 from backend.infrastructure.engine.solver import get_solver
 
 # 组合根：测试向求解编排注入代理工厂。

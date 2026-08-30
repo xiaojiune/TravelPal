@@ -5,8 +5,8 @@ from collections.abc import Callable
 
 import numpy as np
 
-from backend.domain.clustering import CLUSTER_METHODS, call_cluster
-from backend.domain.fitness import analyze_solution
+from backend.domain.solver.clustering import CLUSTER_METHODS, call_cluster
+from backend.domain.solver.fitness import analyze_solution
 from backend.typedefs import RouteResult, SpotDict
 
 # CA 建议搜索早退阈值（集中在域层，避免依赖具体求解器实现）

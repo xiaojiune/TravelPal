@@ -1,7 +1,4 @@
-"""密码哈希（bcrypt）。
-
-符合"自写优先 + 轻量"：直接用 bcrypt，不引密码学框架。
-"""
+"""认证领域逻辑：密码哈希（bcrypt）。属 domain 核心，纯逻辑、无外部 I/O。"""
 import bcrypt
 
 

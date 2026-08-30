@@ -6,20 +6,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.schemas import AuthLogin, AuthRegister, UserOut
-from backend.auth import (
-    create_session,
-    get_session,
-    hash_password,
-    revoke_session,
-    verify_password,
-)
 from backend.config import settings
 from backend.data.model.database import get_session as get_db_session
 from backend.data.model.models import User
+from backend.domain.security import hash_password, verify_password
+from backend.infrastructure.auth.session_store import RedisSessionStore
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 _SESSION_COOKIE = "session_id"
+
+# 会话存储（SessionStore 端口实现，Infrastructure 注入）。鉴权逻辑只依赖端口。
+_session_store = RedisSessionStore()
 
 
 def _to_user_out(user: User) -> UserOut:
@@ -68,7 +66,7 @@ async def _resolve_user_from_request(request: Request, session: AsyncSession) ->
         User | None: 当前登录用户；未登录、会话失效或用户已停用返回 None。
     """
     sid = request.cookies.get(_SESSION_COOKIE)
-    user_id = get_session(sid)  # Redis 会话（同步）
+    user_id = _session_store.get(sid)  # Redis 会话（同步）
     user = await _load_user(session, user_id)
     if user is None or not user.is_active:  # pyright: ignore[reportGeneralTypeIssues]
         return None
@@ -160,7 +158,7 @@ async def register(req: AuthRegister, response: Response, session: AsyncSession 
     session.add(user)
     await session.commit()
     await session.refresh(user)
-    sid = create_session(str(user.id))
+    sid = _session_store.create(str(user.id))
     if sid:
         _set_session_cookie(response, sid)
     return _to_user_out(user)
@@ -191,7 +189,7 @@ async def login(req: AuthLogin, response: Response, session: AsyncSession = Depe
         or not verify_password(req.password, user.password_hash)  # pyright: ignore[reportArgumentType]
     ):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="邮箱或密码错误")
-    sid = create_session(str(user.id))
+    sid = _session_store.create(str(user.id))
     if sid is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="会话创建失败")
     _set_session_cookie(response, sid)
@@ -211,7 +209,7 @@ async def logout(request: Request, response: Response):
     """
     sid = request.cookies.get(_SESSION_COOKIE)
     if sid:
-        revoke_session(sid)
+        _session_store.revoke(sid)
     response.delete_cookie(_SESSION_COOKIE, path="/")
     return {"ok": True}
 

@@ -4,12 +4,9 @@
 （pipeline）依赖，使其不再直接耦合 amap_loader / driving_cache 的实现细节。
 为未来可插拔数据提供者（多 travel_mode、多 API 键、ML 偏好上下文）预留边界。
 
-依赖方向：pipeline → driving_service（data 层）；本模块内部用 amap_loader + driving_cache。
-提供 DrivingDataProvider 端口 + AmapDrivingProvider 适配器：pipeline 依赖端口实例，
-未来可注入其它实现（travel_mode 多 API 键等）。
+依赖方向：pipeline → driving_service（data 层）；端口 DrivingDataProvider 定义在
+domain/ports.py，本模块提供 AmapDrivingProvider 适配器实现它。
 """
-
-from typing import Protocol, runtime_checkable
 
 from backend.data.amap_loader import _get_driving_data, build_real_data
 from backend.data.driving_cache import (
@@ -18,24 +15,10 @@ from backend.data.driving_cache import (
     set_driving_matrix,
     set_driving_pair,
 )
+from backend.domain.ports import DrivingDataProvider  # noqa: F401  # 端口在 domain/ports，本文件实现
 
 
-@runtime_checkable
-class DrivingDataProvider(Protocol):
-    """数据获取端口：驾车矩阵/点对/polyline。
-
-    OR 层（pipeline）只依赖本端口，不依赖具体实现；可注入不同数据源
-    （高德 / 多 travel_mode / 多 API 键 / 后续 ML 偏好上下文）。
-    """
-
-    def get_matrix(self, city: str, poi_names: list, coords: list, cancel_check=None) -> dict: ...
-
-    def get_pair(self, city: str, origin: dict, destination: dict) -> dict | None: ...
-
-    def get_polyline(self, origin: tuple[float, float], destination: tuple[float, float]) -> str | None: ...
-
-
-class AmapDrivingProvider:
+class AmapDrivingProvider:  # 实现 DrivingDataProvider 端口
     """高德驾车数据提供者：包装 driving_service 实现，作为 DrivingDataProvider 默认适配器。"""
 
     def get_matrix(self, city: str, poi_names: list, coords: list, cancel_check=None) -> dict:

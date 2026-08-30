@@ -115,8 +115,9 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import type { SuggestionItem } from '@/types'
+import type { SuggestionItem, SpotDictItem } from '@/types'
 import { cancelTask, getTask } from '@/services/api'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore, isPoiQuery } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
@@ -128,6 +129,7 @@ const props = defineProps<{ active: ToolPanelKind | null }>()
 const store = usePlanStore()
 const message = useMessage()
 const router = useRouter()
+const cache = useSuggestCache()
 
 /** 任务集合（生命周期在 store；后台轮询更新 status）。 */
 const { taskItems } = storeToRefs(store)
@@ -194,6 +196,15 @@ async function viewResult(taskId: string) {
       }
       if (typeof result.amap_api_key === 'string') store.amapApiKey = result.amap_api_key
       if (typeof result.amap_security_code === 'string') store.amapSecurityCode = result.amap_security_code
+      // 回填 suggest 缓存：/or 页点建议卡 buildPlanResultFromSuggestion 依赖 spots/polylines；
+      // 不补则 /show 地图无覆盖物、setFitView 失效而停留在默认中心(北京)，且无道路。
+      if (result.spots && typeof result.spots === 'object') {
+        cache.suggestSpots.value = result.spots as Record<string, SpotDictItem>
+      }
+      if (result.polylines && typeof result.polylines === 'object') {
+        cache.suggestPolylines.value = result.polylines as Record<string, string>
+      }
+      if (typeof result.algo_time === 'number') cache.suggestAlgoTime.value = result.algo_time
     }
     router.push('/or')
   } catch (e: unknown) {

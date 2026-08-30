@@ -57,9 +57,16 @@
         <span class="panel-title">📋 异步任务</span>
       </div>
       <div v-if="taskItems.length === 0" class="panel-empty">暂无任务（提交后在此查看进度）</div>
-      <div v-for="t in taskItems" :key="t.task_id" class="panel-card">
+      <div
+        v-for="(t, index) in taskItems"
+        :key="t.task_id"
+        class="panel-card"
+        :style="{ borderColor: statusColor(t.status) }"
+      >
         <div class="panel-card-head">
-          <span class="panel-card-tool">{{ taskTypeLabel(t.task_type) }}</span>
+          <span class="panel-task-name"
+            >任务{{ taskItems.length - index }}-{{ taskTypeLabel(t.task_type) }}</span
+          >
           <span class="panel-task-status" :style="{ color: statusColor(t.status) }">
             {{ statusLabel(t.status) }}
           </span>
@@ -149,8 +156,8 @@ const STATUS_META: Record<string, { label: string; color: string; cancellable: b
 }
 
 const TASK_TYPE_LABEL: Record<string, string> = {
-  'or-ca': 'CA 建议',
-  'or-vns': 'VNS 求解',
+  'or-ca': '求解',
+  'or-vns': '求解',
   adjust: '调整',
 }
 
@@ -283,6 +290,11 @@ async function viewResult(taskId: string) {
 .panel-card-tool {
   font-size: 11px;
   color: var(--tp-primary);
+  font-weight: 600;
+}
+.panel-task-name {
+  font-size: 11px;
+  color: var(--tp-text);
   font-weight: 600;
 }
 .panel-card-time {

@@ -107,17 +107,20 @@ async def _execute_task(task_id: str) -> None:
             task = await session.get(PlanTask, UUID(task_id))
             task.status = "done"  # type: ignore[assignment]
             task.result = result  # type: ignore[assignment]
+            await session.commit()  # 状态改写必须提交，否则 async_session 退出回滚
     except TaskCancelled:
         traceback.print_exc()
         async with async_session() as session:
             task = await session.get(PlanTask, UUID(task_id))
             task.status = "canceled"  # type: ignore[assignment]
+            await session.commit()
     except Exception as e:
         traceback.print_exc()
         async with async_session() as session:
             task = await session.get(PlanTask, UUID(task_id))
             task.status = "failed"  # type: ignore[assignment]
             task.error = str(e)  # type: ignore[assignment]
+            await session.commit()
     finally:
         watcher.cancel()
         # 等监护协程彻底退出，避免与随后 engine.dispose() 冲突

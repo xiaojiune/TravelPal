@@ -117,8 +117,8 @@ test-contract: ## 契约测试（tests/test_contract/，改动工具/编排/API 
 
 # ======== Docker ========
 
-dc-up: ## 启动基础设施（PostgreSQL + Redis，后台）
-	docker compose up -d postgres redis
+dc-up: ## 启动基础设施（PostgreSQL + Redis + LavinMQ，后台）
+	docker compose up -d postgres redis lavinmq
 
 dc-logs: ## 查看 Docker 日志
 	docker compose logs -f

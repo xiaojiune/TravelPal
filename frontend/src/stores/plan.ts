@@ -1,6 +1,7 @@
-/** 核心全局状态：管理输入参数、方案建议、规划结果、Agent 对话。Pinia setup 语法。 */
+/** 核心全局状态：管理输入参数、方案建议、规划结果、Agent 对话、异步任务集合。Pinia setup 语法。 */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { getTask } from '@/services/api'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import type {
   SpotFormItem,
@@ -18,6 +19,17 @@ export interface QueryResult {
   city?: string
   time?: string
 }
+
+/** 异步任务集合条目（工具栏面板展示 + 生命周期单点维护）。 */
+export interface TaskItem {
+  task_id: string
+  task_type: string
+  status: string
+  created_at: string
+}
+
+/** 登录用户任务集合的 localStorage 键（游客不持久化）。 */
+const TASKS_LOCAL_KEY = 'travelpal_task_items'
 
 /** 判定工具是否为 POI 查询（其结果数组可加入待选栏）。 */
 export function isPoiQuery(tool: string): boolean {
@@ -215,6 +227,100 @@ export const usePlanStore = defineStore('plan', () => {
     }
   }
 
+  // ====== 异步任务集合（生命周期单点：工具栏展示 + 后台轮询） ======
+  const taskItems = ref<TaskItem[]>([])
+  /** 是否将任务集合持久化到 localStorage；仅登录用户 true（游客只存内存，刷新即清）。 */
+  const persistTasks = ref(false)
+  let tasksTimer: number | null = null
+
+  function readLocalTasks(): TaskItem[] {
+    try {
+      return JSON.parse(localStorage.getItem(TASKS_LOCAL_KEY) ?? '[]') as TaskItem[]
+    } catch {
+      return []
+    }
+  }
+  function writeLocalTasks(items: TaskItem[]) {
+    localStorage.setItem(TASKS_LOCAL_KEY, JSON.stringify(items))
+  }
+  /** 是否为终态（不再轮询、不显示取消按钮）。 */
+  function isTaskTerminal(status: string): boolean {
+    return status === 'done' || status === 'failed' || status === 'canceled'
+  }
+
+  /** 登记一个已提交任务（提交页在 submitTask 成功后调用）。 */
+  function registerTask(task: { task_id: string; task_type: string }) {
+    if (taskItems.value.some((t) => t.task_id === task.task_id)) return
+    const item: TaskItem = {
+      task_id: task.task_id,
+      task_type: task.task_type,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    }
+    taskItems.value = [item, ...taskItems.value]
+    if (persistTasks.value) writeLocalTasks(taskItems.value)
+    ensurePolling()
+  }
+
+  /** 后台轮询一次：更新非终态任务状态，无活动任务即停。 */
+  async function pollOnce() {
+    const items = taskItems.value
+    if (items.length === 0) return
+    let hasActive = false
+    for (const t of items) {
+      if (isTaskTerminal(t.status)) continue
+      try {
+        const detail = await getTask(t.task_id)
+        const idx = taskItems.value.findIndex((x) => x.task_id === t.task_id)
+        if (idx >= 0) {
+          taskItems.value[idx] = { ...taskItems.value[idx], status: detail.status }
+        }
+        if (!isTaskTerminal(detail.status)) hasActive = true
+      } catch {
+        // 网络抖动：跳过本次，下轮再试（终态兜底由后端 status 决定）
+      }
+    }
+    if (persistTasks.value) writeLocalTasks(taskItems.value)
+    if (!hasActive) stopPolling()
+  }
+
+  function ensurePolling() {
+    if (tasksTimer !== null) return
+    tasksTimer = window.setInterval(() => void pollOnce(), 5000)
+  }
+  function stopPolling() {
+    if (tasksTimer !== null) {
+      clearInterval(tasksTimer)
+      tasksTimer = null
+    }
+  }
+
+  /** 外部（App.vue）设置是否持久化；置 false 时同步清空（切游客/登出）。 */
+  function setPersistTasks(persist: boolean) {
+    persistTasks.value = persist
+    if (!persist) clearTasks()
+  }
+
+  /** 刷新/登录后从 localStorage 唤回任务集合；有活动任务则启动后台轮询。 */
+  function hydrateTasks() {
+    taskItems.value = readLocalTasks()
+    ensurePolling()
+  }
+
+  /** 登出/切换账号：清空任务集合（内存 + localStorage）并停后台轮询。 */
+  function clearTasks() {
+    stopPolling()
+    taskItems.value = []
+    localStorage.removeItem(TASKS_LOCAL_KEY)
+  }
+
+  /** 更新单个任务状态（取消等即时反馈；pollOnce 也会轮询更新）。 */
+  function setTaskStatus(task_id: string, status: string) {
+    const idx = taskItems.value.findIndex((t) => t.task_id === task_id)
+    if (idx >= 0) taskItems.value[idx] = { ...taskItems.value[idx], status }
+    if (persistTasks.value) writeLocalTasks(taskItems.value)
+  }
+
   /** 重置全部状态至初始值。用于开始新规划或清空当前会话。 */
   function reset() {
     useSuggestCache().clear()
@@ -285,5 +391,11 @@ export const usePlanStore = defineStore('plan', () => {
     reset,
     addHotel,
     addSpot,
+    taskItems,
+    registerTask,
+    hydrateTasks,
+    clearTasks,
+    setPersistTasks,
+    setTaskStatus,
   }
 })

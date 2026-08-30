@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 /** 根组件：移动端降级提示 + 全局导航栏（含 Agent 入口按钮）+ 左侧工具栏/工具面板 + 页面出口 + Agent 下拉面板。 */
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { zhCN, dateZhCN } from 'naive-ui'
 import { themeOverrides } from '@/theme'
@@ -201,6 +201,20 @@ onMounted(() => {
     void userStore.fetchMe()
   }
 })
+
+// 异步任务集合生命周期：登录→持久化 + 从 localStorage 唤回；登出/切游客→清空。
+// 与"主动退出删除、关闭/强制刷新浏览器保留"一致（退出触发 isLoggedIn=false → 清空）。
+watch(
+  () => userStore.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      store.setPersistTasks(true)
+      store.hydrateTasks()
+    } else {
+      store.setPersistTasks(false) // 内部清空内存 + localStorage + 停轮询
+    }
+  },
+)
 
 /** Esc 收起 Agent 面板。 */
 function onKeydown(e: KeyboardEvent) {

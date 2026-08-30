@@ -270,18 +270,12 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
-import type { SuggestResult } from '@/types'
 import { usePoiSearch } from '@/composables/usePoiSearch'
 import { useEditTable } from '@/composables/useEditTable'
-import { useTaskPolling } from '@/composables/useTaskPolling'
-import { useSuggestCache } from '@/composables/useSuggestCache'
 
 const store = usePlanStore()
-const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
-
-const { startPolling } = useTaskPolling()
 
 const {
   spotText,
@@ -525,20 +519,11 @@ async function fetchSuggest() {
   store.loading = true
   try {
     const { task_id } = await submitTask('suggest', store.buildRequest(null))
-    const data = (await startPolling(task_id)) as unknown as SuggestResult
-    store.suggestions = data.suggestions || []
-    if (data.spots) cache.suggestSpots.value = data.spots
-    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time // 搜索总耗时
-    if (data.polylines) cache.suggestPolylines.value = data.polylines // 真实轨迹
-    if (data.amap_api_key) store.amapApiKey = data.amap_api_key
-    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
-    router.push('/suggest')
+    // 任务生命周期统一由工具栏维护：登记进任务集合，不阻塞页面等结果
+    store.registerTask({ task_id, task_type: 'suggest' })
+    message.success('任务已提交，可到 📋 任务面板查看进度')
   } catch (e: unknown) {
-    if (e instanceof Error && e.message === '任务已取消') {
-      message.warning('任务已取消')
-    } else {
-      message.error('获取建议失败: ' + (e instanceof Error ? e.message : '未知错误'))
-    }
+    message.error('提交失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }

@@ -90,7 +90,6 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
-import { useTaskPolling } from '@/composables/useTaskPolling'
 import { useSuggestCache } from '@/composables/useSuggestCache'
 import type { SuggestionItem, PlanResult } from '@/types'
 
@@ -98,8 +97,6 @@ const store = usePlanStore()
 const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
-
-const { startPolling } = useTaskPolling()
 
 const mode = ref<'fast' | 'deep'>('fast')
 const deepNDays = ref<number | null>(null)
@@ -181,18 +178,12 @@ async function runDeep() {
     const req = store.buildRequest(deepNDays.value)
     req.mode = 'deep'
     const { task_id } = await submitTask('plan', req)
-    const data = (await startPolling(task_id)) as unknown as PlanResult
-    // 深度模式复用 suggest 阶段缓存的真实路径坐标（后端因跳过驾车 API 返回空 polylines）
-    if (Object.keys(cache.suggestPolylines.value).length) data.polylines = cache.suggestPolylines.value
-    store.deepResults.push(data)
-    deepAlgoTime.value = data.algo_time || 0
+    // 任务生命周期统一由工具栏维护：登记进任务集合，不阻塞页面等结果
+    store.registerTask({ task_id, task_type: 'plan' })
+    message.success('任务已提交，可到 📋 任务面板查看进度')
     deepNDays.value = null
   } catch (e: unknown) {
-    if (e instanceof Error && e.message === '任务已取消') {
-      message.warning('任务已取消')
-    } else {
-      message.error('深度规划失败: ' + (e instanceof Error ? e.message : '未知错误'))
-    }
+    message.error('提交失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }

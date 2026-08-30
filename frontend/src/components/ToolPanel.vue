@@ -51,25 +51,32 @@
       </template>
     </template>
 
-    <!-- 异步任务面板：当前用户任务列表 + 取消入口 -->
+    <!-- 异步任务面板：任务集合（生命周期在 store，后台轮询更新状态） -->
     <template v-else-if="active === 'tasks'">
       <div class="panel-head">
         <span class="panel-title">📋 异步任务</span>
-        <n-button size="tiny" quaternary class="panel-refresh" @click="loadTasks">↻ 刷新</n-button>
       </div>
-      <div v-if="tasksLoading" class="panel-empty">加载中…</div>
-      <div v-else-if="tasks.length === 0" class="panel-empty">暂无任务</div>
-      <div v-for="t in tasks" :key="t.task_id" class="panel-card">
+      <div v-if="taskItems.length === 0" class="panel-empty">暂无任务（提交后在此查看进度）</div>
+      <div v-for="t in taskItems" :key="t.task_id" class="panel-card">
         <div class="panel-card-head">
           <span class="panel-card-tool">{{ taskTypeLabel(t.task_type) }}</span>
           <span class="panel-task-status" :style="{ color: statusColor(t.status) }">
             {{ statusLabel(t.status) }}
           </span>
         </div>
-        <div class="panel-task-meta">创建于 {{ t.created_at ? formatTime(t.created_at) : '—' }}</div>
-        <div v-if="canCancel(t.status)" class="panel-actions">
-          <n-button size="tiny" tertiary type="error" @click="doCancel(t.task_id)">
+        <div class="panel-task-meta">提交于 {{ t.created_at ? formatTime(t.created_at) : '—' }}</div>
+        <div v-if="canCancel(t.status) || t.status === 'done'" class="panel-actions">
+          <n-button
+            v-if="canCancel(t.status)"
+            size="tiny"
+            tertiary
+            type="error"
+            @click="doCancel(t.task_id)"
+          >
             ✕ 取消
+          </n-button>
+          <n-button v-if="t.status === 'done'" size="tiny" type="primary" @click="viewResult(t.task_id)">
+            查看结果
           </n-button>
         </div>
       </div>
@@ -100,15 +107,16 @@
  *
  * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
  *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
- * - 异步任务面板：列出当前登录用户任务（GET /api/tasks），非终态（pending/running）
- *   可取消；仅当存在活动任务时才 5s 周期刷新（无活动任务即停表，避免空轮询），
- *   离开面板清理定时器。
+ * - 异步任务面板：渲染 store.taskItems（任务生命周期单点在 store，后台轮询更新状态）；
+ *   非终态可取消，已完成可查看结果（暂跳 /suggest，端点问题后续修）。
  * - 操作面板：v1.1 占位，点击显示「未实现，v1.1 接入」。
  */
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import type { TaskListItem } from '@/types'
-import { cancelTask, listTasks } from '@/services/api'
+import type { SuggestionItem } from '@/types'
+import { cancelTask, getTask } from '@/services/api'
 import { usePlanStore, isPoiQuery } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
@@ -119,15 +127,15 @@ const props = defineProps<{ active: ToolPanelKind | null }>()
 
 const store = usePlanStore()
 const message = useMessage()
+const router = useRouter()
+
+/** 任务集合（生命周期在 store；后台轮询更新 status）。 */
+const { taskItems } = storeToRefs(store)
 
 /** 非 POI 型查询结果（仅展示，不可添加行程）。 */
 const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery(q.tool)))
 
 // ================== 异步任务面板 ==================
-
-const tasks = ref<TaskListItem[]>([])
-const tasksLoading = ref(false)
-let tasksTimer: number | null = null
 
 /** 状态展示元数据。 */
 const STATUS_META: Record<string, { label: string; color: string; cancellable: boolean }> = {
@@ -163,62 +171,35 @@ function formatTime(iso: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-async function loadTasks() {
-  tasksLoading.value = true
-  try {
-    const res = await listTasks(20)
-    tasks.value = res.tasks
-    // 仅当存在活动任务（pending/running）才保持轮询；无事可做即停表，避免空轮询
-    if (tasks.value.some((t) => canCancel(t.status))) {
-      ensureTasksTimer()
-    } else {
-      stopTasksTimer()
-    }
-  } catch {
-    // 网络/权限异常：保留现有列表，不打断面板
-  } finally {
-    tasksLoading.value = false
-  }
-}
-
 async function doCancel(taskId: string) {
   try {
-    const res = await cancelTask(taskId)
-    message.success(res.status === 'canceled' ? '任务已取消' : '操作完成')
-    void loadTasks()
+    await cancelTask(taskId)
+    store.setTaskStatus(taskId, 'canceled')
+    message.success('任务已取消')
   } catch (e: unknown) {
     message.error('取消失败: ' + (e instanceof Error ? e.message : '未知错误'))
   }
 }
 
-function ensureTasksTimer() {
-  if (tasksTimer === null) {
-    tasksTimer = window.setInterval(() => void loadTasks(), 5000)
-  }
-}
-function stopTasksTimer() {
-  if (tasksTimer !== null) {
-    clearInterval(tasksTimer)
-    tasksTimer = null
-  }
-}
-
-// 切换到任务面板时拉取一次，无活动任务则不启动轮询；离开清理
-watch(
-  () => props.active,
-  (a) => {
-    if (a === 'tasks') {
-      void loadTasks()
-    } else {
-      stopTasksTimer()
+/** 查看已完成任务结果：拉取 result → 写入 store 建议区 → 跳 /suggest（后续端点修好再细化）。 */
+async function viewResult(taskId: string) {
+  try {
+    const detail = await getTask(taskId)
+    const result = detail.result as
+      | (Record<string, unknown> & { suggestions?: unknown[]; amap_api_key?: unknown; amap_security_code?: unknown })
+      | undefined
+    if (result) {
+      if (Array.isArray(result.suggestions)) {
+        store.suggestions = result.suggestions as SuggestionItem[]
+      }
+      if (typeof result.amap_api_key === 'string') store.amapApiKey = result.amap_api_key
+      if (typeof result.amap_security_code === 'string') store.amapSecurityCode = result.amap_security_code
     }
-  },
-)
-
-onMounted(() => {
-  if (props.active === 'tasks') void loadTasks()
-})
-onUnmounted(() => stopTasksTimer())
+    router.push('/suggest')
+  } catch (e: unknown) {
+    message.error('获取结果失败: ' + (e instanceof Error ? e.message : '未知错误'))
+  }
+}
 </script>
 
 <style scoped>
@@ -244,9 +225,6 @@ onUnmounted(() => stopTasksTimer())
   font-weight: 600;
   font-size: 14px;
   user-select: none;
-}
-.panel-refresh {
-  margin-left: auto;
 }
 .panel-count {
   background: var(--tp-primary);

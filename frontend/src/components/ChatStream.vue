@@ -43,14 +43,11 @@
  */
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
-import { useTaskPolling } from '@/composables/useTaskPolling'
-import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
 import { useUserStore } from '@/stores/user'
-import type { ChatMessage as ChatMessageType, HistoryMessage, SuggestResult } from '@/types'
+import type { ChatMessage as ChatMessageType, HistoryMessage } from '@/types'
 import { fetchChatHistory, streamChat } from '@/services/agent'
 
 interface Props {
@@ -69,9 +66,6 @@ const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
 const emit = defineEmits<{ (e: 'tool-result', payload: ToolResultPayload): void }>()
 const store = usePlanStore()
 const userStore = useUserStore()
-const cache = useSuggestCache()
-const router = useRouter()
-const { startPolling } = useTaskPolling()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
@@ -270,28 +264,12 @@ async function send() {
 }
 
 /**
- * 处理规划任务工具（submit_plan_form）的异步轮询：
- * 轮询任务到 done → 把 SuggestResult 写入 store.suggestions + 缓存 → 跳转 /suggest。
- * 与 HomePage.fetchSuggest 的写入/跳转行为保持一致（done 即跳转）。
+ * 处理规划任务工具（submit_plan_form）：提交后登记进任务集合，生命周期交工具栏。
+ * 不再阻塞等待/自动跳转（任务状态与结果在 📋 任务面板查看）。
  */
 async function handlePlanTask(taskId: string) {
-  try {
-    const data = (await startPolling(taskId)) as unknown as SuggestResult
-    store.suggestions = data.suggestions || []
-    if (data.spots) cache.suggestSpots.value = data.spots
-    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time
-    if (data.polylines) cache.suggestPolylines.value = data.polylines
-    if (data.amap_api_key) store.amapApiKey = data.amap_api_key
-    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
-    router.push('/suggest')
-  } catch (e: unknown) {
-    // 任务失败/取消：通过打字机追加一条提示（不打断当前对话流）
-    append(
-      e instanceof Error && e.message === '任务已取消'
-        ? '（任务已取消）'
-        : '（规划失败，请检查首页表单内容后重试）',
-    )
-  }
+  store.registerTask({ task_id: taskId, task_type: 'plan' })
+  append('（任务已提交，可在 📋 任务面板查看进度）')
 }
 
 /**

@@ -4,9 +4,9 @@
 """
 from uuid import uuid4
 
-from backend.data.checkpointer import psycopg_url
+from backend.infrastructure.data.checkpointer import psycopg_url
 from backend.api.schemas import ChatRequest
-from backend.data.conversations import TTL_ANONYMOUS, TTL_LOGGED_IN, _belongs, _expires_for
+from backend.infrastructure.data.conversations import TTL_ANONYMOUS, TTL_LOGGED_IN, _belongs, _expires_for
 
 
 class TestChatRequestConversationId:

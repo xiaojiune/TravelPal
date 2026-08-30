@@ -8,14 +8,14 @@
 domain/ports.py，本模块提供 AmapDrivingProvider 适配器实现它。
 """
 
-from backend.data.amap_loader import _get_driving_data, build_real_data
-from backend.data.driving_cache import (
+from backend.domain.ports import DrivingDataProvider  # noqa: F401  # 端口在 domain/ports，本文件实现
+from backend.infrastructure.data.amap_loader import _get_driving_data, build_real_data
+from backend.infrastructure.data.driving_cache import (
     get_driving_matrix,
     get_driving_pair,
     set_driving_matrix,
     set_driving_pair,
 )
-from backend.domain.ports import DrivingDataProvider  # noqa: F401  # 端口在 domain/ports，本文件实现
 
 
 class AmapDrivingProvider:  # 实现 DrivingDataProvider 端口

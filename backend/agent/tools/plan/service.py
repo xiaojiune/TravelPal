@@ -11,8 +11,8 @@
 
 from uuid import UUID
 
-from backend.data.model.database import async_session
-from backend.data.model.models import PlanTask
+from backend.infrastructure.data.model.database import async_session
+from backend.infrastructure.data.model.models import PlanTask
 from backend.tasks.submit import submit_task
 
 

@@ -21,8 +21,8 @@ from uuid import UUID
 from sqlalchemy import select
 
 from backend.config import settings
-from backend.data.model.database import async_session, engine
-from backend.data.model.models import PlanTask
+from backend.infrastructure.data.model.database import async_session, engine
+from backend.infrastructure.data.model.models import PlanTask
 from backend.observability import task_duration, task_total
 from backend.tasks.app import celery_app
 from backend.tasks.executors import TASK_EXECUTORS

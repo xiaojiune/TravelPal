@@ -9,7 +9,11 @@ run_planning 保持函数内延迟 import：worker 启动时不加载引擎，
 
 from typing import Callable, cast
 
+from backend.data.driving_service import AmapDrivingProvider
 from backend.typedefs import AdjustParams, PlanResult, PoiCache, PoiCacheItem, TaskParams
+
+# 驾车数据提供者（组合根装配）：executor 是应用层，向 domain pipeline 注入实现。
+_driving = AmapDrivingProvider()
 
 __all__ = ["TASK_EXECUTORS", "_build_poi_cache"]
 
@@ -84,6 +88,7 @@ def _run_or_ca(params: TaskParams, cancel_check: Callable[[], bool] | None = Non
         cost_matrix_override=params.get("cost_matrix"),
         dist_matrix_override=params.get("dist_matrix"),
         cancel_check=cancel_check,
+        driving=_driving,
     )
 
 
@@ -118,6 +123,7 @@ def _run_or_vns(params: TaskParams, cancel_check: Callable[[], bool] | None = No
             cost_matrix_override=params.get("cost_matrix"),
             dist_matrix_override=params.get("dist_matrix"),
             cancel_check=cancel_check,
+            driving=_driving,
         ),
     )
 
@@ -149,6 +155,7 @@ def _run_adjust(params: AdjustParams, cancel_check: Callable[[], bool] | None = 
             params["adjustments"],
             city=params["city"],
             cancel_check=cancel_check,
+            driving=_driving,
         ),
     )
 

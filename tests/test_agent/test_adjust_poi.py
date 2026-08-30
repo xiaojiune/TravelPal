@@ -63,7 +63,7 @@ def test_missing_matrix_snapshot_hit_backfills(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None):
         captured["cost"] = cost
         captured["dist"] = dist
         return {"solution": {"routes": [[0, 1, 3, 0], [0, 2, 0]]}}
@@ -124,7 +124,7 @@ def test_add_poi_missing_day_global_path(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None):
         captured["adjustments"] = adjustments
         return fake_result
 
@@ -158,7 +158,7 @@ def test_add_poi_sync_fast_path(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None):
         captured["adjustments"] = adjustments
         return fake_result
 

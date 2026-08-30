@@ -11,12 +11,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.data.driving_service import AmapDrivingProvider, DrivingDataProvider  # noqa: E402
+from backend.domain.ports import DrivingDataProvider  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
-
-# 驾车数据提供者（端口-适配器）：OR 层只依赖 DrivingDataProvider，未来换数据源即换实例
-_driving: DrivingDataProvider = AmapDrivingProvider()
 
 # ================== 常量 ==================
 
@@ -26,6 +23,7 @@ def _supplement_polylines(
     coords: list[tuple[float, float]],
     polylines: dict[tuple[int, int], str],
     cancel_check: Callable[[], bool] | None = None,
+    driving: DrivingDataProvider | None = None,
 ) -> None:
     """扫描 routes 涉及的缺失 polyline 段，逐段补调驾车 API。
 
@@ -57,7 +55,8 @@ def _supplement_polylines(
     for f, t in sorted(needed):
         if cancel_check is not None and cancel_check():
             raise TaskCancelled("用户已取消任务")
-        poly = _driving.get_polyline(coords[f], coords[t])
+        assert driving is not None  # 组合根注入：触驾车必传 provider
+        poly = driving.get_polyline(coords[f], coords[t])
         if poly:
             polylines[(f, t)] = poly
         time.sleep(0.4)
@@ -82,6 +81,7 @@ def run_planning(
     dist_matrix_override: list[list[float]] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     preference: dict | None = None,  # TODO：上层(ML)注入的软约束参数，当前不启用
+    driving: DrivingDataProvider | None = None,  # 组合根注入的数据提供者（域不 import 实现）
 ) -> PlanResult | dict:
     """
     双阶段流程编排入口。
@@ -127,7 +127,8 @@ def run_planning(
         print("已复用 suggest 阶段成本矩阵，跳过驾车API调用。\n")
     else:
         # 驾车数据服务：缓存命中复用整矩阵，未命中拉 API 并写缓存（数据获取与算法解耦）
-        matrix = _driving.get_matrix(city, poi_names, coords, cancel_check)
+        assert driving is not None  # 组合根注入：触驾车必传 provider
+        matrix = driving.get_matrix(city, poi_names, coords, cancel_check)
         cost_matrix = np.array(matrix["cost"], dtype=np.float64)
         dist_matrix = np.array(matrix["dist"], dtype=np.float64)
         polylines = matrix["polylines"]
@@ -187,6 +188,7 @@ def run_planning(
             coords,
             polylines,
             cancel_check,
+            driving,
         )
         polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
         result["algo_time"] = round(time.time() - total_start, 2)
@@ -199,7 +201,7 @@ def run_planning(
         result["polylines"] = polylines_serial
         return result
 
-    _supplement_polylines([result["solution"]["routes"]], coords, polylines, cancel_check)
+    _supplement_polylines([result["solution"]["routes"]], coords, polylines, cancel_check, driving)
     polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
 
     solution = result["solution"]
@@ -336,6 +338,7 @@ def adjust_plan(
     adjustments: dict,
     city: str = "",
     cancel_check: Callable[[], bool] | None = None,
+    driving: DrivingDataProvider | None = None,
 ) -> PlanResult:
     """
     对已有方案执行调整（移除景点、添加景点）。
@@ -432,7 +435,8 @@ def adjust_plan(
                 new_dist[i][i] = 0
                 continue
             target_point = {"name": spot["name"], "lon": spot["x"], "lat": spot["y"]}
-            pair = _driving.get_pair(city, poi_point, target_point)
+            assert driving is not None  # 组合根注入：触驾车必传 provider
+            pair = driving.get_pair(city, poi_point, target_point)
             if pair is not None:
                 # 数据服务：点对缓存命中或成功拉取（含写缓存），直接复用
                 new_cost[new_idx][i] = new_cost[i][new_idx] = pair["duration_min"]

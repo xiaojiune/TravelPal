@@ -101,7 +101,8 @@
  * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
  *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
  * - 异步任务面板：列出当前登录用户任务（GET /api/tasks），非终态（pending/running）
- *   可取消，激活时拉取 + 5s 周期刷新，离开清理定时器。
+ *   可取消；仅当存在活动任务时才 5s 周期刷新（无活动任务即停表，避免空轮询），
+ *   离开面板清理定时器。
  * - 操作面板：v1.1 占位，点击显示「未实现，v1.1 接入」。
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -167,6 +168,12 @@ async function loadTasks() {
   try {
     const res = await listTasks(20)
     tasks.value = res.tasks
+    // 仅当存在活动任务（pending/running）才保持轮询；无事可做即停表，避免空轮询
+    if (tasks.value.some((t) => canCancel(t.status))) {
+      ensureTasksTimer()
+    } else {
+      stopTasksTimer()
+    }
   } catch {
     // 网络/权限异常：保留现有列表，不打断面板
   } finally {
@@ -184,9 +191,10 @@ async function doCancel(taskId: string) {
   }
 }
 
-function startTasksTimer() {
-  stopTasksTimer()
-  tasksTimer = window.setInterval(() => void loadTasks(), 5000)
+function ensureTasksTimer() {
+  if (tasksTimer === null) {
+    tasksTimer = window.setInterval(() => void loadTasks(), 5000)
+  }
 }
 function stopTasksTimer() {
   if (tasksTimer !== null) {
@@ -195,13 +203,12 @@ function stopTasksTimer() {
   }
 }
 
-// 切换到任务面板时拉取一次并启动周期刷新；离开清理
+// 切换到任务面板时拉取一次，无活动任务则不启动轮询；离开清理
 watch(
   () => props.active,
   (a) => {
     if (a === 'tasks') {
       void loadTasks()
-      startTasksTimer()
     } else {
       stopTasksTimer()
     }
@@ -209,7 +216,7 @@ watch(
 )
 
 onMounted(() => {
-  if (props.active === 'tasks') startTasksTimer()
+  if (props.active === 'tasks') void loadTasks()
 })
 onUnmounted(() => stopTasksTimer())
 </script>

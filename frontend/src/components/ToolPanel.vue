@@ -57,12 +57,9 @@
         <span class="panel-title">📋 异步任务</span>
       </div>
       <div v-if="taskItems.length === 0" class="panel-empty">暂无任务（提交后在此查看进度）</div>
-      <div
-        v-for="(t, index) in taskItems"
-        :key="t.task_id"
-        class="panel-card"
-        :style="{ borderColor: statusColor(t.status) }"
-      >
+      <template v-for="(t, index) in taskItems" :key="t.task_id">
+        <div v-if="index === 1" class="panel-section-title">历史</div>
+        <div class="panel-card" :style="{ borderColor: statusColor(t.status) }">
         <div class="panel-card-head">
           <span class="panel-task-name"
             >任务{{ taskItems.length - index }}-{{ taskTypeLabel(t.task_type) }}</span
@@ -86,7 +83,8 @@
             查看结果
           </n-button>
         </div>
-      </div>
+        </div>
+      </template>
     </template>
 
     <!-- 操作面板：v1.1 占位 -->

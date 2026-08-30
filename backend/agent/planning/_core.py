@@ -13,9 +13,13 @@ add/remove 方案调整共享的核心抽象——把「增/删景点」统一�
 
 import numpy as np
 
-from backend.engine.fitness import analyze_solution
-from backend.engine.search import solve_groups
+from backend.domain.fitness import analyze_solution
+from backend.domain.search import solve_groups
+from backend.infrastructure.engine.solver import get_solver
 from backend.typedefs import SpotDict
+
+# 组合根装配：Agent 应用层向 domain solver_factory 注入。
+_solver_factory = get_solver
 
 __all__ = ["extract_cores", "reorder_from_cores"]
 
@@ -81,7 +85,7 @@ def reorder_from_cores(
         target_cores = [cores[only_day]]
 
     # 只解目标天（CA），其余天路线保留
-    day_result = solve_groups(target_cores, spots_dict, cost_matrix, solver_type="CA")
+    day_result = solve_groups(target_cores, spots_dict, cost_matrix, solver_type="CA", solver_factory=_solver_factory)
 
     if only_day is None:
         new_routes = day_result["routes"]

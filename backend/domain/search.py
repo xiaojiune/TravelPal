@@ -5,11 +5,13 @@ from collections.abc import Callable
 
 import numpy as np
 
-from backend.engine.ca import CA_DEFAULT_PARAMS
-from backend.engine.clustering import CLUSTER_METHODS, call_cluster
-from backend.engine.fitness import analyze_solution
-from backend.engine.solver import get_solver
+from backend.domain.clustering import CLUSTER_METHODS, call_cluster
+from backend.domain.fitness import analyze_solution
 from backend.typedefs import RouteResult, SpotDict
+
+# CA 建议搜索早退阈值（集中在域层，避免依赖具体求解器实现）
+_EARLY_STOP_GAIN_THRESHOLD = 1.0
+_STOP_CONSECUTIVE_WORSE = 3
 
 # ================== 分组求解 ==================
 
@@ -48,7 +50,9 @@ def solve_groups(
     for g in groups:
         if not g:
             continue
-        solver_cls = (solver_factory or get_solver)(solver_type)
+        if solver_factory is None:
+            raise ValueError("solver_factory 必填（组合根注入求解器工厂）")
+        solver_cls = solver_factory(solver_type)
         solver = solver_cls(
             g,
             spots,
@@ -151,9 +155,9 @@ def ca_suggest(
     if min_days is None:
         min_days = max(1, n_spots // 8 + 1)
     if early_stop_gain_threshold is None:
-        early_stop_gain_threshold = CA_DEFAULT_PARAMS["early_stop_gain_threshold"]
+        early_stop_gain_threshold = _EARLY_STOP_GAIN_THRESHOLD
     if stop_consecutive_worse is None:
-        stop_consecutive_worse = CA_DEFAULT_PARAMS["stop_consecutive_worse"]
+        stop_consecutive_worse = _STOP_CONSECUTIVE_WORSE
 
     raw_results = []
     algo_start = time.time()  # 计时仅覆盖引擎求解阶段（不含 API 拉取）

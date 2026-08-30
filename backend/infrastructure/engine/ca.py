@@ -5,7 +5,7 @@ import random
 
 import numpy as np
 
-from backend.engine.fitness import _cal_fitness_numba
+from backend.domain.fitness import _cal_fitness_numba
 
 # ================== CA 默认参数 ==================
 # ***** 压缩退火参数（正确版本）*****

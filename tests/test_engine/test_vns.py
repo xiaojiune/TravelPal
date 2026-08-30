@@ -1,5 +1,5 @@
-from backend.engine.ca import CASolver
-from backend.engine.vns import VNSSolver
+from backend.infrastructure.engine.ca import CASolver
+from backend.infrastructure.engine.vns import VNSSolver
 
 # ================== VNS 求解器 ==================
 

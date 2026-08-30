@@ -1,6 +1,10 @@
 import pytest
 
-from backend.engine.search import ca_suggest, cluster_and_solve
+from backend.domain.search import ca_suggest, cluster_and_solve
+from backend.infrastructure.engine.solver import get_solver
+
+# 组合根：测试向求解编排注入代理工厂。
+_solver_factory = get_solver
 
 # ================== CA 全参数搜索 ==================
 
@@ -20,6 +24,7 @@ class TestCASuggest:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         assert result["type"] == "suggestion"
@@ -44,6 +49,7 @@ class TestCASuggest:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         costs = [s["cost"] for s in result["suggestions"]]
@@ -61,6 +67,7 @@ class TestCASuggest:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         unique_methods = set(s["method"] for s in result["suggestions"])
@@ -82,6 +89,7 @@ class TestCASuggest:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         assert result["type"] == "suggestion"
@@ -111,6 +119,7 @@ class TestClusterAndSolve:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         assert result["type"] == "solution"
@@ -132,6 +141,7 @@ class TestClusterAndSolve:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         assert result["type"] == "solution"
@@ -151,6 +161,7 @@ class TestClusterAndSolve:
                 penalty_weight=100.0,
                 early_wait_weight=0.1,
                 late_return_weight=50.0,
+            solver_factory=_solver_factory,
             )
 
     # ---------- fast 无天数 ----------
@@ -166,6 +177,7 @@ class TestClusterAndSolve:
             penalty_weight=100.0,
             early_wait_weight=0.1,
             late_return_weight=50.0,
+            solver_factory=_solver_factory,
         )
 
         assert result["type"] == "suggestion"
@@ -189,6 +201,7 @@ class TestClusterAndSolve:
                 penalty_weight=100.0,
                 early_wait_weight=0.1,
                 late_return_weight=50.0,
+            solver_factory=_solver_factory,
             )
 
             visited = set()
@@ -212,6 +225,7 @@ class TestClusterAndSolve:
                 penalty_weight=100.0,
                 early_wait_weight=0.1,
                 late_return_weight=50.0,
+            solver_factory=_solver_factory,
             )
 
             for route in result["solution"]["routes"]:
@@ -236,6 +250,7 @@ class TestClusterAndSolve:
                 penalty_weight=100.0,
                 early_wait_weight=0.1,
                 late_return_weight=50.0,
+            solver_factory=_solver_factory,
             )
             assert result["solution"]["total_cost"] > 0
             assert result["solution"]["valid"]

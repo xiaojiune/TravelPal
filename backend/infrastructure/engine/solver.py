@@ -4,8 +4,8 @@ Solver 端口（接口）定义在 domain/ports.py；本模块只保留"名称 �
 编排层经 get_solver(name) 取实现。未来统一 OR 引擎在此注册即可，编排/调度零改动。
 """
 
-from backend.engine.ca import CASolver
-from backend.engine.vns import VNSSolver
+from backend.infrastructure.engine.ca import CASolver
+from backend.infrastructure.engine.vns import VNSSolver
 
 # 求解器注册表：名称 → 求解器类。CA/VNS 已注册，未来统一 OR 引擎在此新增。
 SOLVER_REGISTRY: dict[str, type] = {

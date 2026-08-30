@@ -75,10 +75,11 @@ def add_poi_to_plan(
         dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
     """
     from backend.domain.pipeline import _rebuild_schedule
-    from backend.engine.search import cluster_and_solve
+    from backend.domain.search import cluster_and_solve
+    from backend.infrastructure.engine.solver import get_solver
 
     n_days = len(routes)
-    result = cluster_and_solve(spots_dict, 0, cost_matrix, mode="fast", n_days=n_days)
+    result = cluster_and_solve(spots_dict, 0, cost_matrix, mode="fast", n_days=n_days, solver_factory=get_solver)
     if result["type"] != "solution":
         return result
     solution = result["solution"]

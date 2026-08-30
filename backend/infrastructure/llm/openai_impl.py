@@ -7,9 +7,8 @@
 import json
 from collections.abc import AsyncIterator
 
-from openai import OpenAI
-from openai import APIConnectionError, APITimeoutError, APIStatusError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from openai import APIConnectionError, APITimeoutError, OpenAI
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.config import settings
 from backend.domain.llm_service import LLMResult, LLMService, ToolCallResult

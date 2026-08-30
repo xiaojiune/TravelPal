@@ -7,11 +7,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import Response
 
-from backend.data.checkpointer import checkpointer_context
 from backend.api.admin import router as admin_router
 from backend.api.auth import router as auth_router
 from backend.api.routes import router
 from backend.config import settings
+from backend.data.checkpointer import checkpointer_context
 from backend.data.model.database import close_db
 from backend.observability import http_duration, http_requests, metrics_response
 

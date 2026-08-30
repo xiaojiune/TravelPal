@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from backend.agent.planning import remove_poi_from_day
-from backend.engine.pipeline import adjust_plan
+from backend.domain.pipeline import adjust_plan
 
 
 def _single_spot_plan():

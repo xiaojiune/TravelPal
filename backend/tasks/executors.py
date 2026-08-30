@@ -55,8 +55,8 @@ def _build_poi_cache(params: TaskParams) -> PoiCache:
     return PoiCache(hotel=hotel, spots=spots)
 
 
-def _run_suggest(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> dict:
-    """suggest 任务执行体：CA 建议模式（n_days=None，自动搜索天数）。
+def _run_or_ca(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> dict:
+    """or-ca 任务执行体：CA 建议模式（n_days=None，自动搜索天数）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/penalty/day_start/min_days/cost_matrix 等）。
@@ -87,8 +87,8 @@ def _run_suggest(params: TaskParams, cancel_check: Callable[[], bool] | None = N
     )
 
 
-def _run_plan(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
-    """plan 任务执行体：指定天数求解（mode=fast 用 CA / deep 用 VNS）。
+def _run_or_vns(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
+    """or-vns 任务执行体：指定天数求解（mode=fast 用 CA / deep 用 VNS）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/mode/n_days/day_start 等）。
@@ -154,9 +154,9 @@ def _run_adjust(params: AdjustParams, cancel_check: Callable[[], bool] | None = 
 
 
 # 任务类型 → 执行函数注册表（worker._execute_task 按 task_type 分发）。
-# suggest 返回 dict（结构对应 schemas.SuggestResult），plan/adjust 返回 PlanResult。
+# or-ca 返回 dict（结构对应 schemas.SuggestResult），or-vns/adjust 返回 PlanResult。
 TASK_EXECUTORS: dict[str, Callable[..., PlanResult | dict]] = {
-    "suggest": _run_suggest,
-    "plan": _run_plan,
+    "or-ca": _run_or_ca,
+    "or-vns": _run_or_vns,
     "adjust": _run_adjust,
 }

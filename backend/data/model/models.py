@@ -66,7 +66,7 @@ class SharedPlan(Base):
 
 
 class PlanTask(Base):
-    """异步规划任务 ORM 模型，存储 suggest/plan 任务的执行状态与结果。
+    """异步规划任务 ORM 模型，存储 or-ca/or-vns 任务的执行状态与结果。
 
     设计说明：
     - 前端不再同步等待长耗时规划（suggest 拉取驾车 API 成本矩阵可达 40s），
@@ -75,7 +75,7 @@ class PlanTask(Base):
       （方案 A：不依赖 Celery result backend，复用现有 async SQLAlchemy）。
     - result 存完整结果 JSONB（suggest 响应或完整 PlanResult），与 SharedPlan
       的 plan_result 同构；删除由用户主动发起，暂不做软删除/归档。
-    - task_type 区分 "suggest"（CA 建议）与 "plan"（指定天数求解），
+    - task_type 区分 "or-ca"（CA 建议）与 "or-vns"（指定天数求解），
       未来 OR+AI/ML 架构演进时可为不同类型任务配置不同队列/worker。
     """
 
@@ -83,7 +83,7 @@ class PlanTask(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空）")
-    task_type = Column(String(16), nullable=False, comment="任务类型：suggest 或 plan")
+    task_type = Column(String(16), nullable=False, comment="任务类型：or-ca 或 or-vns")
     status = Column(String(16), nullable=False, default="pending", comment="pending/running/done/failed/canceled")
     request_params = Column(JSONB, nullable=False, comment="提交的完整请求参数（PlanRequest 结构）")
     result = Column(JSONB, nullable=True, comment="成功结果（suggest 完整响应或完整 PlanResult）")

@@ -163,11 +163,11 @@ function onCardClick(s: SuggestionItem) {
   store.planResult = buildPlanResultFromSuggestion(s)
   store.historyRecordId = null
   store.historyRequestParams = null
-  router.push('/plan')
+  router.push('/show')
 }
 
 /**
- * 深度规划：提交异步 plan 任务后轮询，完成后追加到深度结果卡片。
+ * 深度规划：提交异步 or-vns 任务后轮询，完成后追加到深度结果卡片。
  * 成本矩阵由后端驾车快照缓存托管（同一城市同一批点自动命中，跳过驾车 API）。
  */
 async function runDeep() {
@@ -177,9 +177,9 @@ async function runDeep() {
   try {
     const req = store.buildRequest(deepNDays.value)
     req.mode = 'deep'
-    const { task_id } = await submitTask('plan', req)
+    const { task_id } = await submitTask('or-vns', req)
     // 任务生命周期统一由工具栏维护：登记进任务集合，不阻塞页面等结果
-    store.registerTask({ task_id, task_type: 'plan' })
+    store.registerTask({ task_id, task_type: 'or-vns' })
     message.success('任务已提交，可到 📋 任务面板查看进度')
     deepNDays.value = null
   } catch (e: unknown) {
@@ -193,7 +193,7 @@ function viewDeepResult(r: PlanResult) {
   store.planResult = r
   store.historyRecordId = null
   store.historyRequestParams = null
-  router.push('/plan')
+  router.push('/show')
 }
 </script>
 

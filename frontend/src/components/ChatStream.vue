@@ -268,7 +268,7 @@ async function send() {
  * 不再阻塞等待/自动跳转（任务状态与结果在 📋 任务面板查看）。
  */
 async function handlePlanTask(taskId: string) {
-  store.registerTask({ task_id: taskId, task_type: 'plan' })
+  store.registerTask({ task_id: taskId, task_type: 'or-vns' })
   append('（任务已提交，可在 📋 任务面板查看进度）')
 }
 

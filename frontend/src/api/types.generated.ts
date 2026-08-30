@@ -57,7 +57,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/suggest": {
+    "/api/or-ca": {
         parameters: {
             query?: never;
             header?: never;
@@ -67,8 +67,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Suggest
-         * @description 提交方案建议任务（异步执行）。
+         * Or Ca
+         * @description 提交 OR-CA 方案建议任务（异步执行）。
          *
          *     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
          *     改为提交异步任务，立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。
@@ -84,14 +84,14 @@ export interface paths {
          *     Raises:
          *         HTTPException 500: 任务创建失败。
          */
-        post: operations["suggest_api_suggest_post"];
+        post: operations["or_ca_api_or_ca_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/plan": {
+    "/api/or-vns": {
         parameters: {
             query?: never;
             header?: never;
@@ -101,8 +101,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Plan
-         * @description 提交完整规划任务（异步执行）。
+         * Or Vns
+         * @description 提交 OR-VNS 完整规划任务（异步执行）。
          *
          *     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
          *     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
@@ -120,7 +120,7 @@ export interface paths {
          *         HTTPException 400: n_days 未指定时。
          *         HTTPException 500: 任务创建失败。
          */
-        post: operations["plan_api_plan_post"];
+        post: operations["or_vns_api_or_vns_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -593,7 +593,7 @@ export interface paths {
         };
         /**
          * List Tasks
-         * @description 分页列出全部异步规划任务（suggest/plan）。
+         * @description 分页列出全部异步规划任务（or-ca/or-vns）。
          *
          *     Args:
          *         page: 页码。
@@ -704,7 +704,7 @@ export interface components {
          *
          *     Attributes:
          *         id: 任务 UUID。
-         *         task_type: 任务类型（suggest/plan）。
+         *         task_type: 任务类型（or-ca/or-vns）。
          *         status: 状态（pending/running/done/failed）。
          *         created_at: 创建时间（ISO 字符串）。
          *         finished_at: 结束时间（ISO 字符串；未结束为空）。
@@ -1569,7 +1569,7 @@ export interface operations {
             };
         };
     };
-    suggest_api_suggest_post: {
+    or_ca_api_or_ca_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1602,7 +1602,7 @@ export interface operations {
             };
         };
     };
-    plan_api_plan_post: {
+    or_vns_api_or_vns_post: {
         parameters: {
             query?: never;
             header?: never;

@@ -21,8 +21,8 @@
               </div>
               <div class="nav-links">
                 <router-link to="/home">首页</router-link>
-                <router-link to="/suggest">方案建议</router-link>
-                <router-link to="/plan">规划结果</router-link>
+                <router-link to="/or">方案建议</router-link>
+                <router-link to="/show">规划结果</router-link>
                 <router-link to="/shares">分享站</router-link>
               </div>
               <div class="nav-user">

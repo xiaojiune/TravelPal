@@ -10,9 +10,9 @@ export function postPoiLookup(city: string, names: string[]): Promise<POILookupR
 
 // ================== 异步规划任务 ==================
 
-/** 提交异步规划任务。suggest/plan 立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。 */
+/** 提交异步规划任务。or-ca/or-vns 立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。 */
 export function submitTask(
-  type: 'suggest' | 'plan',
+  type: 'or-ca' | 'or-vns',
   data: PlanRequestPayload,
 ): Promise<components['schemas']['TaskSubmitResponse']> {
   return http.post(`/${type}`, data)

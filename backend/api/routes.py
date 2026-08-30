@@ -99,12 +99,12 @@ async def poi_lookup(req: POILookupRequest):
 # ---------- 规划相关 ----------
 
 
-@router.post("/api/suggest", response_model=TaskSubmitResponse)
-async def suggest(
+@router.post("/api/or-ca", response_model=TaskSubmitResponse)
+async def or_ca(
     req: PlanRequest,
     current: User | None = Depends(get_current_user_optional),
 ):
-    """提交方案建议任务（异步执行）。
+    """提交 OR-CA 方案建议任务（异步执行）。
 
     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
     改为提交异步任务，立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。
@@ -121,19 +121,19 @@ async def suggest(
         HTTPException 500: 任务创建失败。
     """
     try:
-        task_id = await submit_task("suggest", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
+        task_id = await submit_task("or-ca", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/plan", response_model=TaskSubmitResponse)
-async def plan(
+@router.post("/api/or-vns", response_model=TaskSubmitResponse)
+async def or_vns(
     req: PlanRequest,
     current: User | None = Depends(get_current_user_optional),
 ):
-    """提交完整规划任务（异步执行）。
+    """提交 OR-VNS 完整规划任务（异步执行）。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
@@ -154,7 +154,7 @@ async def plan(
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
     try:
-        task_id = await submit_task("plan", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
+        task_id = await submit_task("or-vns", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()

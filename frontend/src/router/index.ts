@@ -1,5 +1,5 @@
 /** 路由表：页面组件懒加载 + 认证/管理守卫。
- * 一级=门户（/）、二级=工作区（/home /suggest /plan /shares）、
+ * 一级=门户（/）、二级=工作区（/home /or /show /shares）、
  * 三级=个人中心（/profile，点头像进入）/ 管理台（/admin）。Agent 已全局化（App.vue 浮动抽屉，仅二级显示），无独立路由。 */
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
@@ -19,8 +19,8 @@ declare module 'vue-router' {
 const routes: RouteRecordRaw[] = [
   { path: '/', name: 'Portal', component: () => import('@/pages/PortalPage.vue') },
   { path: '/home', name: 'Home', component: () => import('@/pages/HomePage.vue'), meta: { useWorkbench: true } },
-  { path: '/suggest', name: 'Suggest', component: () => import('@/pages/SuggestPage.vue'), meta: { useWorkbench: true } },
-  { path: '/plan', name: 'Plan', component: () => import('@/pages/PlanPage.vue'), meta: { useWorkbench: true } },
+  { path: '/or', name: 'Or', component: () => import('@/pages/OrPage.vue'), meta: { useWorkbench: true } },
+  { path: '/show', name: 'Show', component: () => import('@/pages/ShowPage.vue'), meta: { useWorkbench: true } },
   { path: '/shares', name: 'Shares', component: () => import('@/pages/SharePage.vue'), meta: { useWorkbench: true } },
   { path: '/about', name: 'About', component: () => import('@/pages/AboutPage.vue') },
   { path: '/login', name: 'Login', component: () => import('@/pages/LoginPage.vue') },

@@ -476,7 +476,7 @@ class AdminTask(BaseModel):
 
     Attributes:
         id: 任务 UUID。
-        task_type: 任务类型（suggest/plan）。
+        task_type: 任务类型（or-ca/or-vns）。
         status: 状态（pending/running/done/failed）。
         created_at: 创建时间（ISO 字符串）。
         finished_at: 结束时间（ISO 字符串；未结束为空）。

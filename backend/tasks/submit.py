@@ -15,7 +15,7 @@ async def submit_task(task_type: str, params: dict, user_id: uuid.UUID | None = 
     """创建异步任务记录并投递到 Celery 队列。
 
     Args:
-        task_type: 任务类型，固定 "suggest" 或 "plan"。
+        task_type: 任务类型，固定 "or-ca" 或 "or-vns"。
         params: 完整请求参数字典（PlanRequest 结构，含 hotel_*/spots/penalty 等）。
         user_id: 归属用户 UUID 字符串（可空）；HTTP 端点登录时传入，
             MCP/Agent 工具路径无登录上下文则省略（默认 None，走匿名）。

@@ -518,9 +518,9 @@ async function fetchSuggest() {
   store.planResult = null
   store.loading = true
   try {
-    const { task_id } = await submitTask('suggest', store.buildRequest(null))
+    const { task_id } = await submitTask('or-ca', store.buildRequest(null))
     // 任务生命周期统一由工具栏维护：登记进任务集合，不阻塞页面等结果
-    store.registerTask({ task_id, task_type: 'suggest' })
+    store.registerTask({ task_id, task_type: 'or-ca' })
     message.success('任务已提交，可到 📋 任务面板查看进度')
   } catch (e: unknown) {
     message.error('提交失败: ' + (e instanceof Error ? e.message : '未知错误'))

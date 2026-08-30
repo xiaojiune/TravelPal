@@ -70,7 +70,7 @@ async def list_tasks(
     session: AsyncSession = Depends(get_session),
     current: User = Depends(require_admin),
 ):
-    """分页列出全部异步规划任务（suggest/plan）。
+    """分页列出全部异步规划任务（or-ca/or-vns）。
 
     Args:
         page: 页码。

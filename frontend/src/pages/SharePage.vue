@@ -97,7 +97,7 @@ async function viewRecord(r: ShareSummary) {
     store.planResult = detail.plan_result as PlanResult
     store.historyRecordId = r.id
     store.historyRequestParams = detail.request_params as Record<string, unknown> | null
-    router.push('/plan')
+    router.push('/show')
   } catch {
     message.error('加载方案详情失败，请稍后重试。')
   }

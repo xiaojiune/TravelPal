@@ -193,7 +193,7 @@ export const usePlanStore = defineStore('plan', () => {
 
   // ====== 方法 ======
 
-  /** 构建 POST /api/plan 或 /api/suggest 请求体。nDays=null 时引擎端自动推断。 */
+  /** 构建 POST /api/or-vns 或 /api/or-ca 请求体。nDays=null 时引擎端自动推断。 */
   function buildRequest(
     nDays: number | null,
     extra?: { cost_matrix?: number[][]; dist_matrix?: number[][] },

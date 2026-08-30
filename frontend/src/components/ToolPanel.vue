@@ -108,7 +108,7 @@
  * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
  *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
  * - 异步任务面板：渲染 store.taskItems（任务生命周期单点在 store，后台轮询更新状态）；
- *   非终态可取消，已完成可查看结果（暂跳 /suggest，端点问题后续修）。
+ *   非终态可取消，已完成可查看结果（暂跳 /or，端点问题后续修）。
  * - 操作面板：v1.1 占位，点击显示「未实现，v1.1 接入」。
  */
 import { computed } from 'vue'
@@ -147,8 +147,8 @@ const STATUS_META: Record<string, { label: string; color: string; cancellable: b
 }
 
 const TASK_TYPE_LABEL: Record<string, string> = {
-  suggest: '建议',
-  plan: '规划',
+  'or-ca': 'CA 建议',
+  'or-vns': 'VNS 求解',
   adjust: '调整',
 }
 
@@ -181,7 +181,7 @@ async function doCancel(taskId: string) {
   }
 }
 
-/** 查看已完成任务结果：拉取 result → 写入 store 建议区 → 跳 /suggest（后续端点修好再细化）。 */
+/** 查看已完成任务结果：拉取 result → 写入 store 建议区 → 跳 /or（后续端点修好再细化）。 */
 async function viewResult(taskId: string) {
   try {
     const detail = await getTask(taskId)
@@ -195,7 +195,7 @@ async function viewResult(taskId: string) {
       if (typeof result.amap_api_key === 'string') store.amapApiKey = result.amap_api_key
       if (typeof result.amap_security_code === 'string') store.amapSecurityCode = result.amap_security_code
     }
-    router.push('/suggest')
+    router.push('/or')
   } catch (e: unknown) {
     message.error('获取结果失败: ' + (e instanceof Error ? e.message : '未知错误'))
   }

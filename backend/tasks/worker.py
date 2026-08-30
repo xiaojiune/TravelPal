@@ -31,7 +31,7 @@ from backend.typedefs import TaskCancelled, TaskParams
 
 @celery_app.task(name="travelpal.run_plan_task")
 def run_plan_task(task_id: str) -> str:
-    """异步规划任务入口：执行 suggest 或 plan 求解，更新 plan_tasks 状态。
+    """异步规划任务入口：执行 or-ca 或 or-vns 求解，更新 plan_tasks 状态。
 
     Args:
         task_id: plan_tasks 表主键（UUID 字符串）。

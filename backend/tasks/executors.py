@@ -9,6 +9,7 @@ run_planning 保持函数内延迟 import：worker 启动时不加载引擎，
 
 from typing import Callable, cast
 
+from backend.engine.solver import get_solver
 from backend.infrastructure.data.driving_service import AmapDrivingProvider
 from backend.typedefs import AdjustParams, PlanResult, PoiCache, PoiCacheItem, TaskParams
 
@@ -89,6 +90,7 @@ def _run_or_ca(params: TaskParams, cancel_check: Callable[[], bool] | None = Non
         dist_matrix_override=params.get("dist_matrix"),
         cancel_check=cancel_check,
         driving=_driving,
+        solver_factory=get_solver,
     )
 
 
@@ -124,6 +126,7 @@ def _run_or_vns(params: TaskParams, cancel_check: Callable[[], bool] | None = No
             dist_matrix_override=params.get("dist_matrix"),
             cancel_check=cancel_check,
             driving=_driving,
+            solver_factory=get_solver,
         ),
     )
 

@@ -1,6 +1,7 @@
 """双模式分发：CA 全参数搜索建议 + 指定天数求解。"""
 
 import time
+from collections.abc import Callable
 
 import numpy as np
 
@@ -21,6 +22,7 @@ def solve_groups(
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> RouteResult:
     """
     对已分组的路径逐一求解。
@@ -46,7 +48,7 @@ def solve_groups(
     for g in groups:
         if not g:
             continue
-        solver_cls = get_solver(solver_type)
+        solver_cls = (solver_factory or get_solver)(solver_type)
         solver = solver_cls(
             g,
             spots,
@@ -122,6 +124,7 @@ def ca_suggest(
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """
     全参数搜索，输出全部可行方案建议（去重后）。
@@ -170,6 +173,7 @@ def ca_suggest(
                 penalty_weight,
                 early_wait_weight,
                 late_return_weight,
+                solver_factory,
             )
             if len(res["routes"]) != n_days:  # 聚类可能产生空天（组数与 n_days 不匹配），跳过该方案
                 continue
@@ -237,6 +241,7 @@ def _solve_best(
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """遍历 6 种聚类方法，选成本最低的方案。
 
@@ -267,6 +272,7 @@ def _solve_best(
             penalty_weight,
             early_wait_weight,
             late_return_weight,
+            solver_factory,
         )
         if len(res["routes"]) != n_days:
             continue
@@ -294,6 +300,7 @@ def cluster_and_solve(
     penalty_weight: float = 100.0,
     early_wait_weight: float = 0.1,
     late_return_weight: float = 50.0,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """
     双模式路由分发入口。
@@ -322,7 +329,15 @@ def cluster_and_solve(
     if n_days is not None:
         solver_type = "VNS" if mode == "deep" else "CA"
         return _solve_best(
-            spots, depot, cost_mat, solver_type, n_days, penalty_weight, early_wait_weight, late_return_weight
+            spots,
+            depot,
+            cost_mat,
+            solver_type,
+            n_days,
+            penalty_weight,
+            early_wait_weight,
+            late_return_weight,
+            solver_factory,
         )
 
     if mode == "deep":
@@ -336,4 +351,5 @@ def cluster_and_solve(
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
+        solver_factory=solver_factory,
     )

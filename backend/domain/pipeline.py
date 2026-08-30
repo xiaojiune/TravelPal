@@ -82,6 +82,7 @@ def run_planning(
     cancel_check: Callable[[], bool] | None = None,
     preference: dict | None = None,  # TODO：上层(ML)注入的软约束参数，当前不启用
     driving: DrivingDataProvider | None = None,  # 组合根注入的数据提供者（域不 import 实现）
+    solver_factory: Callable[[str], type] | None = None,  # 组合根注入的求解器工厂（域不 import 算法实现）
 ) -> PlanResult | dict:
     """
     双阶段流程编排入口。
@@ -176,6 +177,7 @@ def run_planning(
         penalty_weight=penalty_weight,
         early_wait_weight=early_wait_weight,
         late_return_weight=late_return_weight,
+        solver_factory=solver_factory,
     )
     if result["type"] != "suggestion":
         algo_name = "VNS" if mode == "deep" else "CA"

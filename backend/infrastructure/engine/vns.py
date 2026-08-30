@@ -7,7 +7,7 @@ from typing import Tuple
 import numpy as np
 
 from backend.domain.solver.fitness import _cal_fitness_numba, analyze_solution
-from backend.typedefs import SpotDict
+from backend.domain.types import SpotDict
 
 # ================== VNS 默认参数 ==================
 # VNS_DEFAULT_PARAMS 设计说明：

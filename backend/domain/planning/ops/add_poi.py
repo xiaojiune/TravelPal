@@ -15,7 +15,7 @@ from collections.abc import Callable
 import numpy as np
 
 from backend.domain.planning._core import extract_cores, reorder_from_cores
-from backend.typedefs import SpotDict
+from backend.domain.types import SpotDict
 
 
 def add_poi_to_day(

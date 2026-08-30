@@ -26,7 +26,8 @@ from backend.infrastructure.data.model.models import PlanTask
 from backend.observability import task_duration, task_total
 from backend.tasks.app import celery_app
 from backend.tasks.executors import TASK_EXECUTORS
-from backend.typedefs import TaskCancelled, TaskParams
+from backend.tasks.types import TaskParams
+from backend.utils.exceptions import TaskCancelled
 
 
 @celery_app.task(name="travelpal.run_plan_task")

@@ -20,7 +20,7 @@ import numpy as np
 
 from backend.domain.solver.fitness import analyze_solution
 from backend.domain.solver.search import solve_groups
-from backend.typedefs import SpotDict
+from backend.domain.types import SpotDict
 
 __all__ = ["extract_cores", "reorder_from_cores"]
 

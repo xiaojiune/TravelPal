@@ -13,7 +13,8 @@ os.environ["OMP_NUM_THREADS"] = "1"
 
 from backend.domain.ports import DrivingDataProvider  # noqa: E402
 from backend.domain.solver.search import cluster_and_solve  # noqa: E402
-from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
+from backend.domain.types import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
+from backend.utils.exceptions import TaskCancelled  # noqa: E402
 
 # ================== 常量 ==================
 

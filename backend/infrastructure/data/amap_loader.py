@@ -11,7 +11,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from backend.config import settings
 from backend.observability import driving_calls, driving_duration, matrix_build_duration
-from backend.typedefs import TaskCancelled
+from backend.utils.exceptions import TaskCancelled
 from backend.utils.breaker import CircuitBreaker
 from backend.utils.decorators import legacy_only
 

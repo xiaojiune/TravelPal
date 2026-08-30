@@ -17,7 +17,7 @@ from typing import Callable
 
 import numpy as np
 
-from backend.typedefs import SpotDict
+from backend.domain.types import SpotDict
 from backend.utils.decorators import placeholder
 
 # 单点负载函数注册表：metric -> (spots, node) -> float

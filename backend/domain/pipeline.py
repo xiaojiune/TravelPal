@@ -11,8 +11,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
-from backend.data.driving_cache import get_driving_matrix, set_driving_matrix  # noqa: E402
+from backend.data.driving_service import get_matrix, get_pair, get_polyline  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
 
@@ -55,7 +54,7 @@ def _supplement_polylines(
     for f, t in sorted(needed):
         if cancel_check is not None and cancel_check():
             raise TaskCancelled("用户已取消任务")
-        _, _, poly = _get_driving_data(coords[f], coords[t])  # pyright: ignore[reportGeneralTypeIssues]
+        poly = get_polyline(coords[f], coords[t])
         if poly:
             polylines[(f, t)] = poly
         time.sleep(0.4)
@@ -79,6 +78,7 @@ def run_planning(
     cost_matrix_override: list[list[float]] | None = None,
     dist_matrix_override: list[list[float]] | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    preference: dict | None = None,  # TODO：上层(ML)注入的软约束参数，当前不启用
 ) -> PlanResult | dict:
     """
     双阶段流程编排入口。
@@ -100,6 +100,8 @@ def run_planning(
         dist_matrix_override: 与 cost_matrix_override 一同传入的距离矩阵。
         cancel_check: 取消检查回调（驾车 API 逐段调用后探测）；返回 True 时抛出
             TaskCancelled，实现协作式取消（任务被取消时快速中断长耗时拉取）。
+        preference: 预留接口——上层（如 ML 用户习惯/记忆）注入的可量化软约束参数
+            （如偏好权重）；当前为 None 不启用，保持 OR 纯净、可插拔不耦合上层。
 
     Returns:
         dict: type="suggestion"（未指定天数）时含 suggestions、algo_time、cost_matrix、dist_matrix、polylines；
@@ -121,27 +123,11 @@ def run_planning(
         polylines = {}
         print("已复用 suggest 阶段成本矩阵，跳过驾车API调用。\n")
     else:
-        # 矩阵快照优先：整矩阵 + polylines 同批绑定缓存，命中直接复用（读加速）
-        snapshot = get_driving_matrix(city, poi_names, coords)
-        if snapshot is not None:
-            cost_matrix = np.array(snapshot["cost"], dtype=np.float64)
-            dist_matrix = np.array(snapshot["dist"], dtype=np.float64)
-            polylines = {(int(k.split("_")[0]), int(k.split("_")[1])): v for k, v in snapshot["polylines"].items()}
-            print("已命中驾车矩阵快照缓存，跳过驾车API调用。\n")
-        else:
-            print("正在调用驾车API计算成本矩阵...")
-            cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords, cancel_check=cancel_check)
-            set_driving_matrix(
-                city,
-                poi_names,
-                coords,
-                {
-                    "cost": cost_matrix.tolist(),
-                    "dist": dist_matrix.tolist(),
-                    "polylines": {f"{k[0]}_{k[1]}": v for k, v in polylines.items()},
-                },
-            )
-            print("成本矩阵构建完成，已写入快照缓存。\n")
+        # 驾车数据服务：缓存命中复用整矩阵，未命中拉 API 并写缓存（数据获取与算法解耦）
+        matrix = get_matrix(city, poi_names, coords, cancel_check)
+        cost_matrix = np.array(matrix["cost"], dtype=np.float64)
+        dist_matrix = np.array(matrix["dist"], dtype=np.float64)
+        polylines = matrix["polylines"]
 
     hotel_tw = poi_cache["hotel"]["tw"]
     effective_hotel_start = max(hotel_tw[0], day_start)
@@ -414,9 +400,6 @@ def adjust_plan(
             )
     elif "add_poi" in adjustments:
         from backend.agent.planning import add_poi_to_day
-        from backend.data.amap_loader import _get_driving_data
-        from backend.data.driving_cache import get_driving_pair, set_driving_pair
-
         poi = adjustments["add_poi"]
         day = adjustments.get("day")
         poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
@@ -446,21 +429,11 @@ def adjust_plan(
                 new_dist[i][i] = 0
                 continue
             target_point = {"name": spot["name"], "lon": spot["x"], "lat": spot["y"]}
-            cached = get_driving_pair(city, poi_point, target_point)
-            if cached is not None:
-                # 点对缓存命中：复用上次拉取的驾车数据，跳过 API 调用
-                new_cost[new_idx][i] = new_cost[i][new_idx] = cached["duration_min"]
-                new_dist[new_idx][i] = new_dist[i][new_idx] = cached["distance_km"]
-                continue
-            d_km, dur, _ = _get_driving_data((poi["lon"], poi["lat"]), (spot["x"], spot["y"]))  # pyright: ignore[reportGeneralTypeIssues]
-            if dur is not None:
-                data = {
-                    "duration_min": round(dur / 60.0, 2),
-                    "distance_km": round(d_km, 2),  # pyright: ignore[reportCallIssue, reportArgumentType]
-                }
-                new_cost[new_idx][i] = new_cost[i][new_idx] = data["duration_min"]
-                new_dist[new_idx][i] = new_dist[i][new_idx] = data["distance_km"]
-                set_driving_pair(city, poi_point, target_point, data)
+            pair = get_pair(city, poi_point, target_point)
+            if pair is not None:
+                # 数据服务：点对缓存命中或成功拉取（含写缓存），直接复用
+                new_cost[new_idx][i] = new_cost[i][new_idx] = pair["duration_min"]
+                new_dist[new_idx][i] = new_dist[i][new_idx] = pair["distance_km"]
             else:
                 new_cost[new_idx][i] = new_cost[i][new_idx] = -1
                 new_dist[new_idx][i] = new_dist[i][new_idx] = -1

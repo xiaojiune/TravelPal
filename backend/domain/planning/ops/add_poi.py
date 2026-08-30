@@ -6,11 +6,15 @@
   day 由编排层从对话明确提取。
 - add_poi_to_plan：全局重排——遍历 6 种聚类全量重分组。
   day 缺失（用户意图未定）时由 pipeline 兜底调用（与 remove_poi_from_plan 对称）。
+
+约束：domain 纯编排，不 import 任何实现——solver_factory 由组合根注入。
 """
+
+from collections.abc import Callable
 
 import numpy as np
 
-from backend.agent.planning._core import extract_cores, reorder_from_cores
+from backend.domain.planning._core import extract_cores, reorder_from_cores
 from backend.typedefs import SpotDict
 
 
@@ -21,6 +25,7 @@ def add_poi_to_day(
     routes: list,
     new_idx: int,
     day: int,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """向方案添加新景点并只对目标天重新求解（单日重排）。
 
@@ -35,6 +40,7 @@ def add_poi_to_day(
         routes: 当前方案的路径列表（每组含首尾 depot）。
         new_idx: 新点在 spots_dict 中的索引。
         day: 目标天索引（0-indexed，第 1 天 = 0）。
+        solver_factory: 组合根注入的求解器工厂（需非 None）。
 
     Returns:
         dict: { solution, best_days, best_m, daily_schedules }，
@@ -48,7 +54,7 @@ def add_poi_to_day(
     if not 0 <= day < n_days:
         raise ValueError(f"目标天 day={day} 超出范围，方案共 {n_days} 天（第 1 天=0）")
     cores[day] = list(cores[day]) + [new_idx]
-    plan = reorder_from_cores(spots_dict, cost_matrix, routes, cores, only_day=day)
+    plan = reorder_from_cores(spots_dict, cost_matrix, routes, cores, only_day=day, solver_factory=solver_factory)
     plan["best_m"] = "add_poi"
     return plan
 
@@ -58,6 +64,7 @@ def add_poi_to_plan(
     cost_matrix: np.ndarray,
     dist_matrix: np.ndarray,
     routes: list,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """向方案添加新景点并全局重新求解。
 
@@ -70,16 +77,16 @@ def add_poi_to_plan(
         cost_matrix: 展开后的成本矩阵（ndarray）。
         dist_matrix: 展开后的距离矩阵（ndarray，仅接收，不参与求解）。
         routes: 当前方案的路径列表（仅用于获取天数）。
+        solver_factory: 组合根注入的求解器工厂（需非 None）。
 
     Returns:
         dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
     """
     from backend.domain.pipeline import _rebuild_schedule
     from backend.domain.solver.search import cluster_and_solve
-    from backend.infrastructure.engine.solver import get_solver
 
     n_days = len(routes)
-    result = cluster_and_solve(spots_dict, 0, cost_matrix, mode="fast", n_days=n_days, solver_factory=get_solver)
+    result = cluster_and_solve(spots_dict, 0, cost_matrix, mode="fast", n_days=n_days, solver_factory=solver_factory)
     if result["type"] != "solution":
         return result
     solution = result["solution"]

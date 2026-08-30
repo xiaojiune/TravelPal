@@ -6,13 +6,16 @@
   保留。删除导致目标天空时废弃该天（best_days 减 1）并发出警告。
 - remove_poi_from_plan：全局重排——保持分组结构对全部天做组内重排。
   day 缺失（用户意图未定）时由 pipeline 兜底调用（与 add_poi_to_plan 对称）。
+
+约束：domain 纯编排，不 import 任何实现——solver_factory 由组合根注入。
 """
 
 import warnings
+from collections.abc import Callable
 
 import numpy as np
 
-from backend.agent.planning._core import extract_cores, reorder_from_cores
+from backend.domain.planning._core import extract_cores, reorder_from_cores
 from backend.typedefs import SpotDict
 
 __all__ = ["remove_poi_from_day", "remove_poi_from_plan"]
@@ -84,6 +87,7 @@ def remove_poi_from_day(
     routes: list,
     poi_name: str,
     day: int,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """从指定天移除景点并只对该天重新求解（单日重排）。
 
@@ -97,6 +101,7 @@ def remove_poi_from_day(
         routes: 当前方案的路径列表。
         poi_name: 要移除的景点名称。
         day: 目标天索引（0-indexed，第 1 天 = 0）。
+        solver_factory: 组合根注入的求解器工厂（需非 None）。
 
     Returns:
         dict: { solution, best_days, best_m, daily_schedules }。
@@ -121,12 +126,14 @@ def remove_poi_from_day(
             stacklevel=2,
         )
         remaining = [c for i, c in enumerate(cores) if i != day]
-        plan = reorder_from_cores(spots, cost, new_routes[:day] + new_routes[day + 1 :], remaining, only_day=None)
+        plan = reorder_from_cores(
+            spots, cost, new_routes[:day] + new_routes[day + 1 :], remaining, only_day=None, solver_factory=solver_factory
+        )
         plan["best_m"] = "remove_poi"
         return plan
 
     cores[day] = core
-    plan = reorder_from_cores(spots, cost, new_routes, cores, only_day=day)
+    plan = reorder_from_cores(spots, cost, new_routes, cores, only_day=day, solver_factory=solver_factory)
     plan["best_m"] = "remove_poi"
     return plan
 
@@ -137,6 +144,7 @@ def remove_poi_from_plan(
     dist_matrix: np.ndarray,
     routes: list,
     poi_name: str,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """从方案移除景点并保持分组全方案重排。
 
@@ -149,6 +157,7 @@ def remove_poi_from_plan(
         dist_matrix: np.ndarray 距离矩阵（仅接收，用于矩阵一致性维护）。
         routes: 当前方案的路径列表。
         poi_name: 要移除的景点名称。
+        solver_factory: 组合根注入的求解器工厂（需非 None）。
 
     Returns:
         dict: 重排后的完整方案（solution/best_days/best_m/daily_schedules）。
@@ -158,6 +167,6 @@ def remove_poi_from_plan(
     """
     spots, cost, dist, new_routes, _, _ = _locate_and_remove(spots_dict, cost_matrix, dist_matrix, routes, poi_name)
     cores = extract_cores(new_routes)
-    plan = reorder_from_cores(spots, cost, new_routes, cores, only_day=None)
+    plan = reorder_from_cores(spots, cost, new_routes, cores, only_day=None, solver_factory=solver_factory)
     plan["best_m"] = "remove_poi"
     return plan

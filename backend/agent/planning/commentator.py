@@ -132,8 +132,8 @@ def generate_commentary(solution: dict, spots: dict, cost_mat: np.ndarray) -> st
     """遍历规则注册表生成评语，取前两条非空结果拼接。
 
     TODO(重构方向)：评语已从 run_planning / adjust_plan 流程剥离（返回
-    commentary=None），本函数转为 Agent 工具形态——后期经 orchestrator 注册
-    为工具（TOOL_REGISTRY），由 Agent 决定是否生成评语，并接入 LLM 润色。
+        commentary=None），本函数转为 Agent 工具形态——后期经 orchestrator 注册
+        为工具（TOOL_REGISTRY），由 Agent 决定是否生成评语，并接入 LLM 润色。
 
     Args:
         solution: solve_groups 返回的结果，含 routes/total_cost/wait/late 等。

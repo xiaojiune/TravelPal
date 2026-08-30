@@ -43,7 +43,7 @@ def test_remove_poi_day_specified_passes_day(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 
@@ -66,7 +66,7 @@ def test_remove_poi_missing_day_global(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 

@@ -23,6 +23,7 @@ from typing import cast
 
 from backend.agent.tools.plan._common import ensure_matrix
 from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.submit import submit_task
 
 # 组合根装配：应用层向 domain adjust_plan 注入驾车数据提供者。
@@ -77,6 +78,7 @@ async def remove_poi(
                 adjustments,
                 city=city,
                 driving=_driving,
+                solver_factory=get_solver,
             ),
         )
     except Exception:

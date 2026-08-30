@@ -21,6 +21,7 @@ from typing import cast
 from backend.agent.tools.plan._common import ensure_matrix
 from backend.infrastructure.data.driving_cache import get_driving_pair
 from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.submit import submit_task
 
 # 组合根装配：应用层向 domain adjust_plan 注入驾车数据提供者。
@@ -128,6 +129,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
                     {"add_poi": poi},
                     city=city,
                     driving=_driving,
+                    solver_factory=get_solver,
                 ),
             )
         except Exception as e:
@@ -161,6 +163,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
                     {"add_poi": poi, "day": day},
                     city=city,
                     driving=_driving,
+                    solver_factory=get_solver,
                 ),
             )
         except Exception as e:

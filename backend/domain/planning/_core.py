@@ -9,17 +9,18 @@ add/remove 方案调整共享的核心抽象——把「增/删景点」统一�
 
 注意：本模块不做「重新聚类分组」（那是 add_poi_to_plan 用 cluster_and_solve
 的语义），只做组内重排。重新分组语义不在此抽象内。
+
+约束：domain 纯编排，不 import 任何实现——solver_factory 由组合根注入
+（domain → infra 方向上禁止出现 `from backend.infrastructure...`）。
 """
+
+from collections.abc import Callable
 
 import numpy as np
 
 from backend.domain.solver.fitness import analyze_solution
 from backend.domain.solver.search import solve_groups
-from backend.infrastructure.engine.solver import get_solver
 from backend.typedefs import SpotDict
-
-# 组合根装配：Agent 应用层向 domain solver_factory 注入。
-_solver_factory = get_solver
 
 __all__ = ["extract_cores", "reorder_from_cores"]
 
@@ -52,6 +53,7 @@ def reorder_from_cores(
     routes: list,
     cores: list[list[int]],
     only_day: int | None = None,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> dict:
     """给定每日核心节点集合，重排并生成新方案。
 
@@ -62,6 +64,7 @@ def reorder_from_cores(
         cores: 修改后的每日核心节点集合（长度必须等于 routes 的天数）。
         only_day: 目标天索引（0-indexed）。为 None 时对全部天做组内重排；
             有值时只解该天，其余天路线原样保留。
+        solver_factory: 组合根注入的求解器工厂（需非 None，否则 solve_groups 抛错）。
 
     Returns:
         dict: { solution, best_days, best_m, daily_schedules }，
@@ -85,7 +88,7 @@ def reorder_from_cores(
         target_cores = [cores[only_day]]
 
     # 只解目标天（CA），其余天路线保留
-    day_result = solve_groups(target_cores, spots_dict, cost_matrix, solver_type="CA", solver_factory=_solver_factory)
+    day_result = solve_groups(target_cores, spots_dict, cost_matrix, solver_type="CA", solver_factory=solver_factory)
 
     if only_day is None:
         new_routes = day_result["routes"]

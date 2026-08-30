@@ -341,6 +341,7 @@ def adjust_plan(
     city: str = "",
     cancel_check: Callable[[], bool] | None = None,
     driving: DrivingDataProvider | None = None,
+    solver_factory: Callable[[str], type] | None = None,
 ) -> PlanResult:
     """
     对已有方案执行调整（移除景点、添加景点）。
@@ -360,6 +361,7 @@ def adjust_plan(
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
         cancel_check: 取消检查回调（add_poi 分支逐点拉驾车数据时探测）；返回 True 时
             抛出 TaskCancelled，实现协作式取消。
+        solver_factory: 组合根注入的求解器工厂（需非 None，透传给 add/remove 重排）。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。
@@ -386,7 +388,7 @@ def adjust_plan(
         day = adjustments.get("day")
         if day is None:
             # 用户意图未定（未指定天）→ 全局重排兜底（与 add_poi 分支对称）
-            from backend.agent.planning import remove_poi_from_plan
+            from backend.domain.planning import remove_poi_from_plan
 
             plan = remove_poi_from_plan(
                 spots_dict,
@@ -394,9 +396,10 @@ def adjust_plan(
                 dist_matrix,
                 routes,
                 adjustments["remove_poi"],
+                solver_factory=solver_factory,
             )
         else:
-            from backend.agent.planning import remove_poi_from_day
+            from backend.domain.planning import remove_poi_from_day
 
             plan = remove_poi_from_day(
                 spots_dict,
@@ -405,9 +408,10 @@ def adjust_plan(
                 routes,
                 adjustments["remove_poi"],
                 day,
+                solver_factory=solver_factory,
             )
     elif "add_poi" in adjustments:
-        from backend.agent.planning import add_poi_to_day
+        from backend.domain.planning import add_poi_to_day
         poi = adjustments["add_poi"]
         day = adjustments.get("day")
         poi_point = {"name": poi["name"], "lon": poi["lon"], "lat": poi["lat"]}
@@ -449,12 +453,12 @@ def adjust_plan(
             time.sleep(0.4)
 
         if day is not None:
-            plan = add_poi_to_day(working_spots, new_cost, new_dist, routes, new_idx, day)
+            plan = add_poi_to_day(working_spots, new_cost, new_dist, routes, new_idx, day, solver_factory=solver_factory)
         else:
             # 用户意图未定（未指定天）→ 全局重排兜底
-            from backend.agent.planning import add_poi_to_plan
+            from backend.domain.planning import add_poi_to_plan
 
-            plan = add_poi_to_plan(working_spots, new_cost, new_dist, routes)
+            plan = add_poi_to_plan(working_spots, new_cost, new_dist, routes, solver_factory=solver_factory)
         result_cost = new_cost
         result_dist = new_dist
     else:

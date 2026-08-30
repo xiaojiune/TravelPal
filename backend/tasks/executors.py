@@ -159,6 +159,7 @@ def _run_adjust(params: AdjustParams, cancel_check: Callable[[], bool] | None = 
             city=params["city"],
             cancel_check=cancel_check,
             driving=_driving,
+            solver_factory=get_solver,
         ),
     )
 

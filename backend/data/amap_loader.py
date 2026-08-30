@@ -3,14 +3,15 @@
 import datetime
 import re
 import time
+from typing import Callable
 
 import numpy as np
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
-from tenacity import retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.config import settings
 from backend.observability import driving_calls, driving_duration, matrix_build_duration
+from backend.typedefs import TaskCancelled
 from backend.utils.breaker import CircuitBreaker
 from backend.utils.decorators import legacy_only
 
@@ -293,7 +294,12 @@ def _get_driving_data(origin: tuple[float, float], destination: tuple[float, flo
 # ================== 批量构建成本矩阵 ==================
 
 
-def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], delay: float = 0.4):
+def build_real_data(
+    poi_names: list[str],
+    coords: list[tuple[float, float]],
+    delay: float = 0.4,
+    cancel_check: Callable[[], bool] | None = None,
+):
     """
     调用高德 API 构建完整的驾车成本矩阵。
 
@@ -304,6 +310,8 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
         poi_names: POI 名称列表（含酒店）。
         coords: 坐标列表，与 poi_names 一一对应。
         delay: API 调用间隔秒数，默认 0.4（高德 QPS 限制约 2-3 次/秒）。
+        cancel_check: 取消检查回调（每次 API 调用后探测一次）；返回 True 时
+            抛出 TaskCancelled，让任务被取消时快速中断逐段拉取（协作式取消）。
 
     Returns:
         Tuple[np.ndarray, np.ndarray, dict]: cost_matrix（分钟）、dist_matrix_km、polylines_dict。
@@ -312,6 +320,7 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
         RuntimeError: 存在驾车路径规划失败段时抛出，错误信息含失败段数
             与具体失败段（景点名描述，超过 8 段截断显示）。失败即整体失败，
             让任务进入 failed 由用户重新提交，不做 -1 降级（避免带洞矩阵）。
+        TaskCancelled: 取消检查回调返回 True 时抛出（用户取消任务）。
     """
     n = len(poi_names)
     cost = np.zeros((n, n))
@@ -322,6 +331,8 @@ def build_real_data(poi_names: list[str], coords: list[tuple[float, float]], del
     print(f"正在调用驾车API计算 {n}x{n} 矩阵...")
     for i in range(n):
         for j in range(n):
+            if cancel_check is not None and cancel_check():
+                raise TaskCancelled("用户已取消任务")
             if i == j:
                 continue
             # cost/dist 对称复用，polyline 因方向相关不作对称（由 pipeline._supplement_polylines 补调）

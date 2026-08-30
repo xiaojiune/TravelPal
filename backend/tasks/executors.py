@@ -55,14 +55,18 @@ def _build_poi_cache(params: TaskParams) -> PoiCache:
     return PoiCache(hotel=hotel, spots=spots)
 
 
-def _run_suggest(params: TaskParams) -> dict:
+def _run_suggest(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> dict:
     """suggest 任务执行体：CA 建议模式（n_days=None，自动搜索天数）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/penalty/day_start/min_days/cost_matrix 等）。
+        cancel_check: 取消检查回调（透传给 run_planning 的驾车 API 阶段）。
 
     Returns:
         dict: run_planning 建议分支完整结果（type="suggestion"，结构对应 schemas.SuggestResult）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
     from backend.domain.pipeline import run_planning
 
@@ -79,17 +83,22 @@ def _run_suggest(params: TaskParams) -> dict:
         min_days=params.get("min_days"),
         cost_matrix_override=params.get("cost_matrix"),
         dist_matrix_override=params.get("dist_matrix"),
+        cancel_check=cancel_check,
     )
 
 
-def _run_plan(params: TaskParams) -> PlanResult:
+def _run_plan(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
     """plan 任务执行体：指定天数求解（mode=fast 用 CA / deep 用 VNS）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/mode/n_days/day_start 等）。
+        cancel_check: 取消检查回调（透传给 run_planning 的驾车 API 阶段）。
 
     Returns:
         PlanResult: run_planning 求解分支完整结果（type="solution"）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
     from backend.domain.pipeline import run_planning
 
@@ -108,20 +117,25 @@ def _run_plan(params: TaskParams) -> PlanResult:
             min_days=params.get("min_days"),
             cost_matrix_override=params.get("cost_matrix"),
             dist_matrix_override=params.get("dist_matrix"),
+            cancel_check=cancel_check,
         ),
     )
 
 
-def _run_adjust(params: AdjustParams) -> PlanResult:
+def _run_adjust(params: AdjustParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
     """adjust 任务执行体：基于已有方案快照执行调整指令（add_poi 等）。
 
     走 pipeline.adjust_plan 分发（add_poi 分支驾车数据优先命中点对缓存）。
 
     Args:
         params: 调整任务参数（AdjustParams：快照 spots/矩阵/routes + adjustments）。
+        cancel_check: 取消检查回调（透传给 adjust_plan 的 add_poi 驾车阶段）。
 
     Returns:
         PlanResult: 调整后的完整方案（mode="adjust"）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
     from backend.domain.pipeline import adjust_plan
 
@@ -134,6 +148,7 @@ def _run_adjust(params: AdjustParams) -> PlanResult:
             params["routes"],
             params["adjustments"],
             city=params["city"],
+            cancel_check=cancel_check,
         ),
     )
 

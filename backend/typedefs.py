@@ -2,9 +2,20 @@
 
 API 边界用 Pydantic（schemas.py），内部数据传递用 TypedDict。
 TypedDict 零运行时开销，只做类型约束，可平滑升级为 Pydantic Model。
+同时存放跨层复用的哨兵异常（如协作式取消），用无依赖的公共层承载，
+避免 data/domain/tasks 之间循环导入。
 """
 
 from typing import NotRequired, TypedDict
+
+
+class TaskCancelled(Exception):
+    """协作式取消哨兵：任务执行中被用户取消时抛出。
+
+    由 tasks.worker 的取消监视器触发，经 pipeline/amap_loader 的
+    cancel_check 检查点往上抛，最终在 worker._execute_task 捕获并
+    将 plan_tasks.status 置为 canceled（终态，不写 error）。
+    """
 
 
 class SpotDict(TypedDict):

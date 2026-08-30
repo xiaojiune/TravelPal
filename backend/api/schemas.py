@@ -349,9 +349,9 @@ class TaskSubmitResponse(BaseModel):
 class TaskDetail(BaseModel):
     """异步规划任务的状态详情，供前端轮询。
 
-    status 为 pending/running/done/failed 四态。
+    status 为 pending/running/done/failed/canceled 五态。
     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
-    error 仅 failed 时存在。
+    error 仅 failed 时存在；canceled 表示用户主动取消（无 error）。
     """
 
     task_id: str
@@ -359,6 +359,29 @@ class TaskDetail(BaseModel):
     status: str
     result: TaskResult | None = None
     error: str | None = None
+
+
+class TaskListItem(BaseModel):
+    """异步任务列表项（面向任务面板的当前用户任务）。"""
+
+    task_id: str
+    task_type: str
+    status: str
+    created_at: str = ""
+    finished_at: str | None = None
+
+
+class TaskListResponse(BaseModel):
+    """当前用户异步任务列表响应。"""
+
+    tasks: list[TaskListItem]
+
+
+class TaskCancelResponse(BaseModel):
+    """取消异步规划任务的响应。"""
+
+    ok: bool
+    status: str
 
 
 # ================== 用户反馈（问卷） ==================

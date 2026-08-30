@@ -3,6 +3,7 @@
 import os
 import time
 import warnings
+from typing import Callable
 
 import numpy as np
 
@@ -13,7 +14,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 from backend.data.amap_loader import _get_driving_data, build_real_data  # noqa: E402
 from backend.data.driving_cache import get_driving_matrix, set_driving_matrix  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
-from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict  # noqa: E402
+from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
 
 # ================== 常量 ==================
 
@@ -22,6 +23,7 @@ def _supplement_polylines(
     routes_list: list[list[list[int]]],
     coords: list[tuple[float, float]],
     polylines: dict[tuple[int, int], str],
+    cancel_check: Callable[[], bool] | None = None,
 ) -> None:
     """扫描 routes 涉及的缺失 polyline 段，逐段补调驾车 API。
 
@@ -32,6 +34,11 @@ def _supplement_polylines(
         routes_list: 所有方案的 route 列表，每项为 [[0, ...], [0, ...]] 格式。
         coords: 坐标列表，与索引一一对应。
         polylines: 已有 polyline 字典，函数会原地追加缺失项。
+        cancel_check: 取消检查回调（每次 API 调用后探测一次）；返回 True 时
+            抛出 TaskCancelled，让任务取消时快速中断逐段补调。
+
+    Raises:
+        TaskCancelled: 取消检查回调返回 True 时抛出。
     """
     needed: set[tuple[int, int]] = set()
     for routes in routes_list:
@@ -46,6 +53,8 @@ def _supplement_polylines(
 
     print(f"正在补调 {len(needed)} 段缺失 polyline...")
     for f, t in sorted(needed):
+        if cancel_check is not None and cancel_check():
+            raise TaskCancelled("用户已取消任务")
         _, _, poly = _get_driving_data(coords[f], coords[t])  # pyright: ignore[reportGeneralTypeIssues]
         if poly:
             polylines[(f, t)] = poly
@@ -69,6 +78,7 @@ def run_planning(
     min_days: int | None = None,
     cost_matrix_override: list[list[float]] | None = None,
     dist_matrix_override: list[list[float]] | None = None,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> PlanResult | dict:
     """
     双阶段流程编排入口。
@@ -88,10 +98,15 @@ def run_planning(
         min_days: 建议模式最小搜索天数（默认由引擎自动推断）。
         cost_matrix_override: 复用 suggest 阶段的成本矩阵，传入时跳过驾车 API。
         dist_matrix_override: 与 cost_matrix_override 一同传入的距离矩阵。
+        cancel_check: 取消检查回调（驾车 API 逐段调用后探测）；返回 True 时抛出
+            TaskCancelled，实现协作式取消（任务被取消时快速中断长耗时拉取）。
 
     Returns:
         dict: type="suggestion"（未指定天数）时含 suggestions、algo_time、cost_matrix、dist_matrix、polylines；
               规划模式时含 solution、best_days、daily_schedules、cost_matrix、dist_matrix、polylines、commentary 等。
+
+    Raises:
+        TaskCancelled: cancel_check 返回 True 时抛出（用户取消任务）。
     """
     total_start = time.time()
 
@@ -115,7 +130,7 @@ def run_planning(
             print("已命中驾车矩阵快照缓存，跳过驾车API调用。\n")
         else:
             print("正在调用驾车API计算成本矩阵...")
-            cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords)
+            cost_matrix, dist_matrix, polylines = build_real_data(poi_names, coords, cancel_check=cancel_check)
             set_driving_matrix(
                 city,
                 poi_names,
@@ -182,6 +197,7 @@ def run_planning(
             [s["routes"] for s in result["suggestions"]],
             coords,
             polylines,
+            cancel_check,
         )
         polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
         result["algo_time"] = round(time.time() - total_start, 2)
@@ -194,7 +210,7 @@ def run_planning(
         result["polylines"] = polylines_serial
         return result
 
-    _supplement_polylines([result["solution"]["routes"]], coords, polylines)
+    _supplement_polylines([result["solution"]["routes"]], coords, polylines, cancel_check)
     polylines_serial = {f"{k[0]}_{k[1]}": v for k, v in polylines.items()}
 
     solution = result["solution"]
@@ -330,6 +346,7 @@ def adjust_plan(
     routes: list,
     adjustments: dict,
     city: str = "",
+    cancel_check: Callable[[], bool] | None = None,
 ) -> PlanResult:
     """
     对已有方案执行调整（移除景点、添加景点）。
@@ -347,6 +364,8 @@ def adjust_plan(
             remove_poi / add_poi 带 day 为单日重排；day 缺失（用户意图未定）时走全局重排\
             （remove_poi_from_plan / add_poi_to_plan 兜底）。
         city: 所在城市（add_poi 分支驾车数据点对缓存的 key 前缀；其余分支不影响）。
+        cancel_check: 取消检查回调（add_poi 分支逐点拉驾车数据时探测）；返回 True 时
+            抛出 TaskCancelled，实现协作式取消。
 
     Returns:
         dict: 与 run_planning 相同格式的完整规划结果。
@@ -354,6 +373,7 @@ def adjust_plan(
     Raises:
         ValueError: adjustments 中未识别的指令类型 / 必要字段缺失。
         RuntimeError: 分支未能产出结果（理论不可达，防御性兜底）。
+        TaskCancelled: cancel_check 返回 True 时抛出（用户取消任务）。
     """
     cost_matrix = np.array(cost_matrix_list)
     dist_matrix = np.array(dist_matrix_list)
@@ -419,6 +439,8 @@ def adjust_plan(
         new_dist[: new_n - 1, : new_n - 1] = dist_matrix
 
         for i, spot in working_spots.items():
+            if cancel_check is not None and cancel_check():
+                raise TaskCancelled("用户已取消任务")
             if i == new_idx:
                 new_cost[i][i] = 0
                 new_dist[i][i] = 0

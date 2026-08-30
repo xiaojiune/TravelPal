@@ -25,7 +25,10 @@ from backend.api.schemas import (
     ShareDetail,
     ShareListResponse,
     ShareSummary,
+    TaskCancelResponse,
     TaskDetail,
+    TaskListItem,
+    TaskListResponse,
     TaskSubmitResponse,
 )
 from backend.data.amap_loader import get_poi_details
@@ -477,6 +480,87 @@ async def get_task_detail(task_id: UUID, session: AsyncSession = Depends(get_ses
         result=task.result,  # type: ignore[arg-type]
         error=task.error,  # type: ignore[arg-type]
     )
+
+
+@router.get("/api/tasks", response_model=TaskListResponse)
+async def list_tasks(
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+    limit: int = Query(20, ge=1, le=100),
+):
+    """列出当前登录用户最近的任务（供任务面板展示）。
+
+    归属：登录用户按 user_id 过滤；匿名用户无任务归属键，返回空列表。
+
+    Args:
+        session: DB 会话。
+        current: 当前登录用户（可选），匿名返回空。
+        limit: 返回条数上限，默认 20。
+
+    Returns:
+        TaskListResponse: { tasks: [...] }。
+    """
+    if current is None:
+        return TaskListResponse(tasks=[])
+    rows = (
+        (
+            await session.execute(
+                select(PlanTask)
+                .where(PlanTask.user_id == current.id)
+                .order_by(PlanTask.created_at.desc())
+                .limit(limit)
+            )
+        ).scalars()
+    ).all()
+    return TaskListResponse(
+        tasks=[
+            TaskListItem(
+                task_id=str(t.id),
+                task_type=t.task_type,  # type: ignore[arg-type]
+                status=t.status,  # type: ignore[arg-type]
+                created_at=t.created_at.isoformat() if t.created_at is not None else "",
+                finished_at=t.finished_at.isoformat() if t.finished_at is not None else None,
+            )
+            for t in rows
+        ]
+    )
+
+
+@router.post("/api/tasks/{task_id}/cancel", response_model=TaskCancelResponse)
+async def cancel_task(
+    task_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """请求取消一个异步规划任务（pending/running → canceled）。
+
+    协作式取消：端点只把 status 置为 canceled，worker 在执行前/执行中探测到后
+    协作退出（秒级中断）；finished_at 由 worker 收尾，避免与进行中的任务竞态覆盖。
+
+    Args:
+        task_id: 任务 UUID。
+        current: 当前登录用户（可选，用于归属校验）。
+
+    Returns:
+        TaskCancelResponse: { ok, status }。
+
+    Raises:
+        HTTPException 404: 任务不存在。
+        HTTPException 403: 归属校验失败（登录用户仅可取消自己的任务）。
+        HTTPException 409: 任务已终态（done/failed），无法取消。
+    """
+    task = await session.get(PlanTask, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if current is not None and task.user_id is not None and task.user_id != current.id:  # pyright: ignore[reportGeneralTypeIssues]
+        raise HTTPException(status_code=403, detail="无权取消此任务")
+    cur_status: str = task.status  # type: ignore[assignment]
+    if cur_status == "done" or cur_status == "failed":
+        raise HTTPException(status_code=409, detail="任务已结束，无法取消")
+    if cur_status != "canceled":
+        task.status = "canceled"  # type: ignore[assignment]
+        await session.commit()
+    return TaskCancelResponse(ok=True, status=cur_status)
 
 
 @router.delete("/api/tasks/{task_id}")

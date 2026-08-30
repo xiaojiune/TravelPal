@@ -84,7 +84,7 @@ class PlanTask(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空）")
     task_type = Column(String(16), nullable=False, comment="任务类型：suggest 或 plan")
-    status = Column(String(16), nullable=False, default="pending", comment="pending/running/done/failed")
+    status = Column(String(16), nullable=False, default="pending", comment="pending/running/done/failed/canceled")
     request_params = Column(JSONB, nullable=False, comment="提交的完整请求参数（PlanRequest 结构）")
     result = Column(JSONB, nullable=True, comment="成功结果（suggest 完整响应或完整 PlanResult）")
     error = Column(Text, nullable=True, comment="失败错误信息")

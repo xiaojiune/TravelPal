@@ -3,7 +3,7 @@ name: travelpal-architecture
 description: TravelPal 架构编排：判断代码放哪层、模块怎么组织、公共逻辑怎么抽、文件该不该拆。只管分层与编排，不涉注释/风格。加功能、重构目录、抽公共模块时使用。
 whenToUse:
   - 用户明确指令：新增功能、升级/重构目录结构、抽公共模块
-  - 特定场景：犹豫一段代码该放 backend 哪层（api/domain/agent/infrastructure/engine/data/tasks）、文件太长不知拆不拆
+  - 特定场景：犹豫一段代码该放 backend 哪层（api/domain/agent/infrastructure）、文件太长不知拆不拆
   - 关键词提及：放哪层、怎么组织、抽公共、拆文件、架构、模块
   - 不触发：只改注释/风格、单点逻辑改动无需分层判断
 ---

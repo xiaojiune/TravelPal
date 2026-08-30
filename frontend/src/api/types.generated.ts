@@ -1095,8 +1095,8 @@ export interface components {
             mode: string;
             /**
              * Day Start
-             * @description 一天启程时间（距午夜分钟数），0=午夜
-             * @default 0
+             * @description 一天启程时间（距午夜分钟数），默认 08:00
+             * @default 480
              */
             day_start: number;
             /**

@@ -380,9 +380,9 @@ const folderCards = computed(() => {
       icon: '⏰',
       title: '启程时间',
       done: departDone,
-      warning: store.dayStart === 0, // 默认值未改 → 黄!
+      warning: store.dayStart === 480, // 用户未编辑（仍为默认 08:00）→ 黄
       showBadge: true,
-      summary: store.dayStart === 0 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
+      summary: store.dayStart === 480 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
     },
     {
       key: 'search' as const,

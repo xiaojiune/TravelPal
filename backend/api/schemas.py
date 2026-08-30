@@ -105,7 +105,7 @@ class PlanRequest(BaseModel):
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
     mode: str = Field(default="fast", pattern="^(fast|deep)$", description="求解模式：fast(CA) 或 deep(VNS)")
-    day_start: float = Field(default=0, ge=0, le=1440, description="一天启程时间（距午夜分钟数），0=午夜")
+    day_start: float = Field(default=480, ge=0, le=1440, description="一天启程时间（距午夜分钟数），默认 08:00")
     cost_matrix: list[list[float]] | None = Field(
         default=None,
         description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API",

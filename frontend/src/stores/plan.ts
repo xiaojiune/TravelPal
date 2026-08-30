@@ -55,7 +55,8 @@ export const usePlanStore = defineStore('plan', () => {
   const hotelAddress = ref('')
   const hotelTwStart = ref(0)
   const hotelTwEnd = ref(1440)
-  const dayStart = ref(0)
+  /** 默认启程时间（分钟）：480 = 08:00；未填即默认 8 点出发，可手动设 0 = 午夜。 */
+  const dayStart = ref(480)
   const spots = ref<SpotFormItem[]>([])
   const penaltyWeight = ref(100)
   const earlyWaitWeight = ref(0.1)
@@ -331,7 +332,7 @@ export const usePlanStore = defineStore('plan', () => {
     hotelAddress.value = ''
     hotelTwStart.value = 0
     hotelTwEnd.value = 1440
-    dayStart.value = 0
+    dayStart.value = 480
     spots.value = []
     minDays.value = null
     historyRecordId.value = null

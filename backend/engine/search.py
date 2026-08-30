@@ -4,10 +4,10 @@ import time
 
 import numpy as np
 
-from backend.engine.ca import CA_DEFAULT_PARAMS, CASolver
+from backend.engine.ca import CA_DEFAULT_PARAMS
 from backend.engine.clustering import CLUSTER_METHODS, call_cluster
 from backend.engine.fitness import analyze_solution
-from backend.engine.vns import VNSSolver
+from backend.engine.solver import get_solver
 from backend.typedefs import RouteResult, SpotDict
 
 # ================== 分组求解 ==================
@@ -46,22 +46,14 @@ def solve_groups(
     for g in groups:
         if not g:
             continue
-        if solver_type == "VNS":
-            solver = VNSSolver(
-                g,
-                spots,
-                penalty_weight=penalty_weight,
-                early_wait_weight=early_wait_weight,
-                late_return_weight=late_return_weight,
-            )
-        else:
-            solver = CASolver(
-                g,
-                spots,
-                penalty_weight=penalty_weight,
-                early_wait_weight=early_wait_weight,
-                late_return_weight=late_return_weight,
-            )
+        solver_cls = get_solver(solver_type)
+        solver = solver_cls(
+            g,
+            spots,
+            penalty_weight=penalty_weight,
+            early_wait_weight=early_wait_weight,
+            late_return_weight=late_return_weight,
+        )
         res = solver.solve(cost_mat)
         routes.append(res["best_solution"])
         histories.append(res["convergence_history"])

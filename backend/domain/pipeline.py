@@ -11,9 +11,12 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 os.environ["OMP_NUM_THREADS"] = "1"
 
-from backend.data.driving_service import get_matrix, get_pair, get_polyline  # noqa: E402
+from backend.data.driving_service import AmapDrivingProvider, DrivingDataProvider  # noqa: E402
 from backend.engine.search import cluster_and_solve  # noqa: E402
 from backend.typedefs import PlanResult, PoiCache, ScheduleItem, SpotDict, TaskCancelled  # noqa: E402
+
+# 驾车数据提供者（端口-适配器）：OR 层只依赖 DrivingDataProvider，未来换数据源即换实例
+_driving: DrivingDataProvider = AmapDrivingProvider()
 
 # ================== 常量 ==================
 
@@ -54,7 +57,7 @@ def _supplement_polylines(
     for f, t in sorted(needed):
         if cancel_check is not None and cancel_check():
             raise TaskCancelled("用户已取消任务")
-        poly = get_polyline(coords[f], coords[t])
+        poly = _driving.get_polyline(coords[f], coords[t])
         if poly:
             polylines[(f, t)] = poly
         time.sleep(0.4)
@@ -124,7 +127,7 @@ def run_planning(
         print("已复用 suggest 阶段成本矩阵，跳过驾车API调用。\n")
     else:
         # 驾车数据服务：缓存命中复用整矩阵，未命中拉 API 并写缓存（数据获取与算法解耦）
-        matrix = get_matrix(city, poi_names, coords, cancel_check)
+        matrix = _driving.get_matrix(city, poi_names, coords, cancel_check)
         cost_matrix = np.array(matrix["cost"], dtype=np.float64)
         dist_matrix = np.array(matrix["dist"], dtype=np.float64)
         polylines = matrix["polylines"]
@@ -429,7 +432,7 @@ def adjust_plan(
                 new_dist[i][i] = 0
                 continue
             target_point = {"name": spot["name"], "lon": spot["x"], "lat": spot["y"]}
-            pair = get_pair(city, poi_point, target_point)
+            pair = _driving.get_pair(city, poi_point, target_point)
             if pair is not None:
                 # 数据服务：点对缓存命中或成功拉取（含写缓存），直接复用
                 new_cost[new_idx][i] = new_cost[i][new_idx] = pair["duration_min"]

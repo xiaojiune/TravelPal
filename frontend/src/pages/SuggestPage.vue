@@ -188,7 +188,11 @@ async function runDeep() {
     deepAlgoTime.value = data.algo_time || 0
     deepNDays.value = null
   } catch (e: unknown) {
-    message.error('深度规划失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    if (e instanceof Error && e.message === '任务已取消') {
+      message.warning('任务已取消')
+    } else {
+      message.error('深度规划失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    }
   } finally {
     store.loading = false
   }

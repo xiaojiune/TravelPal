@@ -23,6 +23,16 @@ export function getTask(taskId: string): Promise<TaskDetail> {
   return http.get(`/tasks/${taskId}`)
 }
 
+/** 取消一个异步规划任务（pending/running → canceled，任务面板调用）。 */
+export function cancelTask(taskId: string): Promise<components['schemas']['TaskCancelResponse']> {
+  return http.post(`/tasks/${taskId}/cancel`)
+}
+
+/** 获取当前用户的任务列表（任务面板展示；匿名返回空）。 */
+export function listTasks(limit = 20): Promise<components['schemas']['TaskListResponse']> {
+  return http.get('/tasks', { params: { limit } })
+}
+
 // ================== 方案分享 ==================
 
 /** 获取设备 ID：首次访问时生成匿名随机标识，存入 localStorage。 */

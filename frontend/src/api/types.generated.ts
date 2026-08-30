@@ -371,6 +371,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tasks
+         * @description 列出当前登录用户最近的任务（供任务面板展示）。
+         *
+         *     归属：登录用户按 user_id 过滤；匿名用户无任务归属键，返回空列表。
+         *
+         *     Args:
+         *         session: DB 会话。
+         *         current: 当前登录用户（可选），匿名返回空。
+         *         limit: 返回条数上限，默认 20。
+         *
+         *     Returns:
+         *         TaskListResponse: { tasks: [...] }。
+         */
+        get: operations["list_tasks_api_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Task
+         * @description 请求取消一个异步规划任务（pending/running → canceled）。
+         *
+         *     协作式取消：端点只把 status 置为 canceled，worker 在执行前/执行中探测到后
+         *     协作退出（秒级中断）；finished_at 由 worker 收尾，避免与进行中的任务竞态覆盖。
+         *
+         *     Args:
+         *         task_id: 任务 UUID。
+         *         current: 当前登录用户（可选，用于归属校验）。
+         *
+         *     Returns:
+         *         TaskCancelResponse: { ok, status }。
+         *
+         *     Raises:
+         *         HTTPException 404: 任务不存在。
+         *         HTTPException 403: 归属校验失败（登录用户仅可取消自己的任务）。
+         *         HTTPException 409: 任务已终态（done/failed），无法取消。
+         */
+        post: operations["cancel_task_api_tasks__task_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auth/register": {
         parameters: {
             query?: never;
@@ -1261,7 +1326,7 @@ export interface components {
          * SpotDictItem
          * @description 规划结果中的景点/酒店字典项（result.spots 字段值）。
          *
-         *     与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+         *     与 backend/domain/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
          *     (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
          */
         SpotDictItem: {
@@ -1342,12 +1407,22 @@ export interface components {
             daily_schedules?: components["schemas"]["ScheduleItem"][][] | null;
         };
         /**
+         * TaskCancelResponse
+         * @description 取消异步规划任务的响应。
+         */
+        TaskCancelResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Status */
+            status: string;
+        };
+        /**
          * TaskDetail
          * @description 异步规划任务的状态详情，供前端轮询。
          *
-         *     status 为 pending/running/done/failed 四态。
+         *     status 为 pending/running/done/failed/canceled 五态。
          *     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
-         *     error 仅 failed 时存在。
+         *     error 仅 failed 时存在；canceled 表示用户主动取消（无 error）。
          */
         TaskDetail: {
             /** Task Id */
@@ -1360,6 +1435,33 @@ export interface components {
             result?: components["schemas"]["SuggestResult"] | components["schemas"]["PlanResult"] | null;
             /** Error */
             error?: string | null;
+        };
+        /**
+         * TaskListItem
+         * @description 异步任务列表项（面向任务面板的当前用户任务）。
+         */
+        TaskListItem: {
+            /** Task Id */
+            task_id: string;
+            /** Task Type */
+            task_type: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * TaskListResponse
+         * @description 当前用户异步任务列表响应。
+         */
+        TaskListResponse: {
+            /** Tasks */
+            tasks: components["schemas"]["TaskListItem"][];
         };
         /**
          * TaskSubmitResponse
@@ -1799,6 +1901,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_api_tasks_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_task_api_tasks__task_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCancelResponse"];
                 };
             };
             /** @description Validation Error */

@@ -51,10 +51,34 @@
       </template>
     </template>
 
-    <!-- 操作 / 任务面板：v1.1 占位 -->
+    <!-- 异步任务面板：当前用户任务列表 + 取消入口 -->
+    <template v-else-if="active === 'tasks'">
+      <div class="panel-head">
+        <span class="panel-title">📋 异步任务</span>
+        <n-button size="tiny" quaternary class="panel-refresh" @click="loadTasks">↻ 刷新</n-button>
+      </div>
+      <div v-if="tasksLoading" class="panel-empty">加载中…</div>
+      <div v-else-if="tasks.length === 0" class="panel-empty">暂无任务</div>
+      <div v-for="t in tasks" :key="t.task_id" class="panel-card">
+        <div class="panel-card-head">
+          <span class="panel-card-tool">{{ taskTypeLabel(t.task_type) }}</span>
+          <span class="panel-task-status" :style="{ color: statusColor(t.status) }">
+            {{ statusLabel(t.status) }}
+          </span>
+        </div>
+        <div class="panel-task-meta">创建于 {{ t.created_at ? formatTime(t.created_at) : '—' }}</div>
+        <div v-if="canCancel(t.status)" class="panel-actions">
+          <n-button size="tiny" tertiary type="error" @click="doCancel(t.task_id)">
+            ✕ 取消
+          </n-button>
+        </div>
+      </div>
+    </template>
+
+    <!-- 操作面板：v1.1 占位 -->
     <template v-else>
       <div class="panel-head">
-        <span class="panel-title">{{ active === 'ops' ? '🛠️ 方案操作' : '📋 异步任务' }}</span>
+        <span class="panel-title">🛠️ 方案操作</span>
       </div>
       <div class="panel-placeholder">
         <n-empty description="开发中">
@@ -76,9 +100,14 @@
  *
  * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
  *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
- * - 操作/任务面板：v1.1 占位，点击显示「未实现，v1.1 接入」（页面占位即记忆，不写文档）。
+ * - 异步任务面板：列出当前登录用户任务（GET /api/tasks），非终态（pending/running）
+ *   可取消，激活时拉取 + 5s 周期刷新，离开清理定时器。
+ * - 操作面板：v1.1 占位，点击显示「未实现，v1.1 接入」。
  */
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useMessage } from 'naive-ui'
+import type { TaskListItem } from '@/types'
+import { cancelTask, listTasks } from '@/services/api'
 import { usePlanStore, isPoiQuery } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
@@ -88,9 +117,101 @@ type ToolPanelKind = 'query' | 'ops' | 'tasks'
 const props = defineProps<{ active: ToolPanelKind | null }>()
 
 const store = usePlanStore()
+const message = useMessage()
 
 /** 非 POI 型查询结果（仅展示，不可添加行程）。 */
 const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery(q.tool)))
+
+// ================== 异步任务面板 ==================
+
+const tasks = ref<TaskListItem[]>([])
+const tasksLoading = ref(false)
+let tasksTimer: number | null = null
+
+/** 状态展示元数据。 */
+const STATUS_META: Record<string, { label: string; color: string; cancellable: boolean }> = {
+  pending: { label: '排队中', color: '#d4a72c', cancellable: true },
+  running: { label: '执行中', color: '#2f6fed', cancellable: true },
+  done: { label: '已完成', color: '#2fa84f', cancellable: false },
+  failed: { label: '失败', color: '#e5484d', cancellable: false },
+  canceled: { label: '已取消', color: '#8a8f99', cancellable: false },
+}
+
+const TASK_TYPE_LABEL: Record<string, string> = {
+  suggest: '建议',
+  plan: '规划',
+  adjust: '调整',
+}
+
+function statusLabel(status: string): string {
+  return STATUS_META[status]?.label ?? status
+}
+function statusColor(status: string): string {
+  return STATUS_META[status]?.color ?? '#8a8f99'
+}
+function canCancel(status: string): boolean {
+  return STATUS_META[status]?.cancellable ?? false
+}
+function taskTypeLabel(type: string): string {
+  return TASK_TYPE_LABEL[type] ?? type
+}
+function formatTime(iso: string): string {
+  // Iso 字符串 → YYYY-MM-DD HH:mm（本地时区）
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+async function loadTasks() {
+  tasksLoading.value = true
+  try {
+    const res = await listTasks(20)
+    tasks.value = res.tasks
+  } catch {
+    // 网络/权限异常：保留现有列表，不打断面板
+  } finally {
+    tasksLoading.value = false
+  }
+}
+
+async function doCancel(taskId: string) {
+  try {
+    const res = await cancelTask(taskId)
+    message.success(res.status === 'canceled' ? '任务已取消' : '操作完成')
+    void loadTasks()
+  } catch (e: unknown) {
+    message.error('取消失败: ' + (e instanceof Error ? e.message : '未知错误'))
+  }
+}
+
+function startTasksTimer() {
+  stopTasksTimer()
+  tasksTimer = window.setInterval(() => void loadTasks(), 5000)
+}
+function stopTasksTimer() {
+  if (tasksTimer !== null) {
+    clearInterval(tasksTimer)
+    tasksTimer = null
+  }
+}
+
+// 切换到任务面板时拉取一次并启动周期刷新；离开清理
+watch(
+  () => props.active,
+  (a) => {
+    if (a === 'tasks') {
+      void loadTasks()
+      startTasksTimer()
+    } else {
+      stopTasksTimer()
+    }
+  },
+)
+
+onMounted(() => {
+  if (props.active === 'tasks') startTasksTimer()
+})
+onUnmounted(() => stopTasksTimer())
 </script>
 
 <style scoped>
@@ -116,6 +237,9 @@ const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery
   font-weight: 600;
   font-size: 14px;
   user-select: none;
+}
+.panel-refresh {
+  margin-left: auto;
 }
 .panel-count {
   background: var(--tp-primary);
@@ -171,6 +295,15 @@ const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery
   margin-right: auto;
 }
 .panel-card-del {
+  color: var(--tp-text-3);
+}
+.panel-task-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+}
+.panel-task-meta {
+  font-size: 11px;
   color: var(--tp-text-3);
 }
 .panel-actions {

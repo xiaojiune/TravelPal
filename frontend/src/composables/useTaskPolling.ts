@@ -1,6 +1,6 @@
 /**
  * 异步任务轮询：提交后端异步规划任务后周期性查询 GET /api/tasks/{id}，
- * 直到 done/failed。
+ * 直到 done/failed/canceled。
  *
  * 健壮性：
  * - 超时上限：超过 maxDurationMs（默认 5 分钟）仍无结果时 reject，避免
@@ -60,6 +60,8 @@ export function useTaskPolling() {
             finish(() => resolve((t.result as Record<string, unknown>) || {}))
           } else if (t.status === 'failed') {
             finish(() => reject(new Error(t.error || '规划任务失败')))
+          } else if (t.status === 'canceled') {
+            finish(() => reject(new Error('任务已取消')))
           }
         } catch {
           // 网络抖动：跳过本次，下一轮继续（超时仍会兜底）

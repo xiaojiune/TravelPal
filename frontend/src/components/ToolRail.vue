@@ -18,11 +18,11 @@
     >
       🛠️
     </button>
-    <!-- 任务面板（占位：v1.1 接入 Celery 任务列表） -->
+    <!-- 任务面板：当前用户异步任务列表 + 取消入口 -->
     <button
       class="rail-btn"
       :class="{ active: active === 'tasks' }"
-      title="异步任务（v1.1 接入）"
+      title="异步任务"
       @click="toggle('tasks')"
     >
       📋
@@ -34,9 +34,9 @@
 /**
  * 左侧工具栏竖条：面板切换骨架（点击图标 toggle 展开/收起）。
  *
- * 当前仅「查询」面板可用（Agent 对话查询结果暂存区）；
- * 「操作 / 任务」面板为占位（v1.1 接入 add_poi/remove_poi 历史与 Celery 任务列表），
- * 点击显示「开发中」占位内容（见 ToolPanel）。
+ * 当前「查询」面板可用（Agent 对话查询结果暂存区）；
+ * 「异步任务」面板已接入 Celery 任务列表（见 ToolPanel，可取消非终态任务）；
+ * 「操作」面板仍为占位（v1.1 接入 add_poi/remove_poi 历史），点击显示「开发中」。
  * 反馈入口已迁至「关于项目」页（见 AboutPage），本工具栏不再承载 📮。
  */
 defineOptions({ name: 'ToolRail' })

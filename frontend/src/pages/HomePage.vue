@@ -534,7 +534,11 @@ async function fetchSuggest() {
     if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
     router.push('/suggest')
   } catch (e: unknown) {
-    message.error('获取建议失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    if (e instanceof Error && e.message === '任务已取消') {
+      message.warning('任务已取消')
+    } else {
+      message.error('获取建议失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    }
   } finally {
     store.loading = false
   }

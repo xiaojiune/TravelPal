@@ -31,8 +31,17 @@ export type SpotDictItem = components['schemas']['SpotDictItem']
 /** suggest 任务完成时的完整响应（TaskDetail.result，由 OpenAPI 生成）。 */
 export type SuggestResult = components['schemas']['SuggestResult']
 
-/** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed）。 */
+/** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed/canceled）。 */
 export type TaskDetail = components['schemas']['TaskDetail']
+
+/** 异步任务列表项（任务面板）。 */
+export type TaskListItem = components['schemas']['TaskListItem']
+
+/** 当前用户异步任务列表响应。 */
+export type TaskListResponse = components['schemas']['TaskListResponse']
+
+/** 取消异步规划任务的响应。 */
+export type TaskCancelResponse = components['schemas']['TaskCancelResponse']
 
 /** 方案分享列表项（摘要，由 OpenAPI 生成）。 */
 export type ShareSummary = components['schemas']['ShareSummary']

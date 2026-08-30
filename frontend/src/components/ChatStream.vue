@@ -284,9 +284,13 @@ async function handlePlanTask(taskId: string) {
     if (data.amap_api_key) store.amapApiKey = data.amap_api_key
     if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
     router.push('/suggest')
-  } catch {
-    // 任务失败：通过打字机追加一条提示（不打断当前对话流）
-    append('（规划失败，请检查首页表单内容后重试）')
+  } catch (e: unknown) {
+    // 任务失败/取消：通过打字机追加一条提示（不打断当前对话流）
+    append(
+      e instanceof Error && e.message === '任务已取消'
+        ? '（任务已取消）'
+        : '（规划失败，请检查首页表单内容后重试）',
+    )
   }
 }
 

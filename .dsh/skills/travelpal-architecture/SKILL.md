@@ -27,6 +27,7 @@ whenToUse:
 
 ### 一、演进式架构
 按多 Agent 设计、按单 Agent 执行；**一次只动一个轴**；占位优于提前引；用**度量**说话，不凭感觉。
+**屎山是"先这样，后面再改"累计出来的（熵增），对抗它不是靠一次重写，而是靠演进式架构**：旧系统旁建新模块（如 `engine/orchestrator.py`），**拦截入口 → 逐步替换实现 → 绞杀退役旧代码**（如 CA/VNS → OR），风险隔离、可持续交付。做法见 `references/evolution.md`。
 
 ### 二、深度解耦
 依赖方向单一（domain 零依赖 → infrastructure 只依赖 domain → api 只做接入）；**接口先行、实现可插拔**；防腐层真防腐。
@@ -73,3 +74,4 @@ whenToUse:
 
 - `references/backend.md` — 后端各层职责边界明细 + 放错层信号 + 选层判断方法（做法）。
 - `references/frontend.md` — 前端目录职责边界 + 拆分/抽取方法论 + 类型单一来源检查（做法）。
+- `references/evolution.md` — 绞杀者模式：怎么用新架构安全绞杀旧系统（做法）。见「一、演进式架构」。

@@ -1,0 +1,54 @@
+name: Deploy
+
+# 仅在 CI（ci.yml）于 main push 成功后自动触发部署；PR 触发的 CI 不部署。
+# 用 workflow_run 而非 needs：跨 workflow 无法直接 needs，workflow_run 保证
+# 只在 CI 全绿后触发，等价原 ci.yml 中 deploy 的 `needs:[test, frontend]`。
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+# 避免 main 连续 push 时多次部署并发
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # 仅当 CI 由 push(main) 触发且成功时才部署（排除 PR 触发的 CI）
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_TARGET: ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SERVER_DEPLOY_KEY }}
+          known_hosts: ${{ secrets.SERVER_KNOWN_HOSTS }}
+
+      - name: Verify SSH connection
+        run: ssh $DEPLOY_TARGET "echo 'SSH OK'"
+
+      - name: Rsync to server
+        run: |
+          rsync -avz --delete \
+            --exclude='.venv' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.pytest_cache' \
+            --exclude='.ruff_cache' \
+            --exclude='frontend/dist' \
+            --exclude='.git' \
+            ./ $DEPLOY_TARGET:~/TravelPal/
+
+      # 先 build（含新镜像）→ 再 run --rm 跑迁移（compose 会拉起 postgres/redis 依赖）
+      # → 最后 up -d 起全栈。避免"服务先跑在新 schema 之前"的窗口。
+      - name: Build & migrate & deploy
+        run: |
+          ssh $DEPLOY_TARGET \
+            "cd ~/TravelPal && docker compose build && docker compose run --rm backend alembic upgrade head && docker compose up -d"

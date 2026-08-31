@@ -25,7 +25,7 @@
         粤公网安备 44030002015955号
       </a>
       <span class="footer-sep" aria-hidden="true">·</span>
-      <span class="footer-version">v0.1.0</span>
+      <span class="footer-version">v0.2.0</span>
     </div>
   </footer>
 </template>

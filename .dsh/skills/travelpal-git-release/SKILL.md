@@ -25,11 +25,11 @@ allowed-tools: read, edit, write, grep, glob, bash
   - 对齐点2：README 当前阶段（`README.md` Roadmap 的"当前阶段"行）
   - **不一致 → 阻断**，提醒对齐后再发布。
 
-## 二、日常开发（只 commit）
+## 二、日常开发（commit + 普通 push）
 
-- commit 规范：`<type>: <中文描述>`。
-- type：`feat` / `fix` / `docs` / `chore` / `refactor` / `test`。
-- 在 `dev` 分支开发、提交、`push origin dev`。**不打 tag**。
+- commit 规范：`<type>: <中文描述>`。type：`feat` / `fix` / `docs` / `chore` / `refactor` / `test`。
+- 在 `dev` 分支开发、提交；需要同步远程就**直接 `git push origin dev`**。
+- **这是"普通同步"，不是发布**：**不写交接文档、不打 tag、不核验版本**。只有用户明确说"发布 / 打 tag / 推送 v某版本"，才走「四」的发布流程（含确认交接文档 + 打 tag）。
 - 分支：`main`=发布分支（只从 GitHub PR 合并）；`dev`=开发分支（所有工作在此提交）。当前早期阶段直接在 dev 开发，不设特性分支。
 
 ## 三、PR 规范（dev → main）
@@ -39,7 +39,9 @@ allowed-tools: read, edit, write, grep, glob, bash
 - 合并方式：统一 **Squash and merge**。
 - **外部贡献（Fork 工作流）**：Fork 到个人账号 → 在 Fork 建分支提改进 → 向本仓库 `dev` 分支发 PR → PR 过 CI 后维护者合并。
 
-## 四、推送 GitHub（引入 tag 流）
+## 四、发布：打 tag 到 dev（仅发布时走此流）
+
+> 只用于**发布打 tag**；普通 `push origin dev` 同步（不发布）看「二」。
 
 用户说"推送 vX.Y.Z / 打 tag / 发布"时，按此流：
 
@@ -99,4 +101,4 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 ## 口诀
 
-> 日常只 commit；发布打 tag 到 dev、push 触发 Release；同步走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明 + 交接文档（CURRENT_*）已更新并阅读。说明缺失就阻断，不硬推。
+> 日常 commit + push dev（普通同步，不发布）；发布才打 tag 到 dev 触发 Release；同步 main 走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明 + 交接文档（CURRENT_*）已更新并阅读。说明缺失就阻断，不硬推。

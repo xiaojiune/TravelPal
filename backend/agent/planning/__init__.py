@@ -7,4 +7,6 @@
 
 from backend.agent.planning.commentator import generate_commentary
 
-__all__ = ["generate_commentary"]
+__all__ = [
+    "generate_commentary",
+]

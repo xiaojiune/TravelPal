@@ -9,13 +9,13 @@ run_planning 保持函数内延迟 import：worker 启动时不加载引擎，
 
 from typing import Callable, cast
 
+from backend.di import get_driving_provider
 from backend.domain.types import PlanResult, PoiCache, PoiCacheItem
-from backend.infrastructure.data.driving_service import AmapDrivingProvider
 from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.types import AdjustParams, TaskParams
 
-# 驾车数据提供者（组合根装配）：executor 是应用层，向 domain pipeline 注入实现。
-_driving = AmapDrivingProvider()
+# 驾车数据提供者（组合根取用）：executor 是应用层，向 domain pipeline 注入实现。
+_driving = get_driving_provider()
 
 __all__ = ["TASK_EXECUTORS", "_build_poi_cache"]
 

@@ -32,7 +32,7 @@ from backend.api.schemas import (
     TaskSubmitResponse,
 )
 from backend.di import get_conversation_store
-from backend.infrastructure.session.postgres_conversation_store import SqlAlchemyConversationSession
+from backend.infrastructure.auth.postgres_conversation_store import SqlAlchemyConversationSession
 from backend.infrastructure.db.checkpointer import get_checkpointer
 from backend.infrastructure.db.database import get_session
 from backend.infrastructure.db.models import FeedbackRecord, PlanTask, SharedPlan, User

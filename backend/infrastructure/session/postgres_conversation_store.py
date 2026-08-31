@@ -1,18 +1,17 @@
 """会话服务实现（Postgres）：Conversation 表 + LangGraph checkpoint 存取。
 
-implements 会话端口（backend/domain/conversations.py）：
+implements 会话端口（backend/domain/ports.py）：
 - ``SqlAlchemyConversationSession``：AsyncSession → ``ConversationSession`` 的适配器
   （负责 ORM ``Conversation`` ↔ domain ``Conversation`` 的映射、新建会话 id 回填）。
 - ``PostgresConversationStore``：implements ``ConversationStore``（会话建/取/历史读取）。
 
 轴6 会话/记忆地基（与旧域服务一致）：
-- ``Conversation`` 表只存会话**元数据**（归属 user_id / TTL / 标题），消息历史由
-  LangGraph 的 AsyncPostgresSaver 持久化在 **checkpoint** 表（单一来源，见
-  ``db/checkpointer.py``）。
+- ``Conversation`` 表只存会话**元数据**（归属 user_id / TTL），消息历史由 LangGraph 的
+  AsyncPostgresSaver 持久化在 **checkpoint** 表（单一来源，见 ``db/checkpointer.py``）。
 - 归属规则：登录用户（user_id 非 None）会话持久、可跨刷新恢复（复用最近未过期会话）；
   游客（user_id None）会话每次新建、可被覆盖；归属不符时当作新会话（防串）。
 
-领域规则（归属/TTL）复用 domain（``_belongs``/``_expires_for``），本文件只做存取实现。
+领域规则（归属/TTL）复用 domain（``domain/conversation_rules``），本文件只做存取实现。
 """
 
 from datetime import datetime, timezone
@@ -21,13 +20,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.domain.conversations import (
-    Conversation,
-    ConversationSession,
-    ConversationStore,
-    _belongs,
-    _expires_for,
-)
+from backend.domain.conversation_rules import Conversation, _belongs, _expires_for
+from backend.domain.ports import ConversationSession, ConversationStore
 from backend.infrastructure.db.checkpointer import get_checkpointer
 from backend.infrastructure.db.models import Conversation as ORMConversation
 

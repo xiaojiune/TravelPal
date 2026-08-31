@@ -2,7 +2,7 @@
 
 TravelPal 后端收拢为六边形（整洁）架构：
 - domain：端口（ports.py）+ 核心编排 + 纯算法，零外部实现依赖。
-- infrastructure：端口实现（data/engine/llm/weather/retrieval/auth），只依赖 domain。
+- infrastructure：端口实现（data/engine/llm/weather/retrieval/session），只依赖 domain。
 - 应用/接入层：api/tasks/agent/mcp（消费 domain 端口，向下依赖）。
 - utils/observability/config/typedefs：跨层通用纯工具 / 旁路指标 / 叶子模块，
   允许被任意层依赖（observability 供各层上报指标，见 infra/api/tasks 的引用）。

@@ -5,8 +5,11 @@
 """
 
 from typing import Protocol, runtime_checkable
+from uuid import UUID
 
 import numpy as np
+
+from backend.domain.conversation_rules import Conversation
 
 
 @runtime_checkable
@@ -59,3 +62,46 @@ class SessionStore(Protocol):
     def get(self, session_id: str | None) -> str | None: ...
 
     def revoke(self, session_id: str | None) -> None: ...
+
+
+class ConversationSession(Protocol):
+    """会话存储端口：抽象会话表的域操作集（domain 不碰 sqlalchemy）。
+
+    infra 提供一个 Adapter，由 ``AsyncSession`` 实现本协议（把 ORM 存取
+    映射到 ``Conversation``）。domain 端只调用这些域级方法。
+    """
+
+    async def get(self, conversation_id: UUID) -> Conversation | None: ...
+
+    async def find_recent(self, user_id: UUID | None) -> Conversation | None: ...
+
+    def add(self, conversation: Conversation) -> None: ...
+
+    async def delete(self, conversation: Conversation) -> None: ...
+
+    async def commit(self) -> None: ...
+
+    async def refresh(self, conversation: Conversation) -> None: ...
+
+
+class ConversationStore(Protocol):
+    """会话服务端口：上层（api/agent）取会话、建会话、读历史。
+
+    实现由基础设施提供（PostgresConversationStore）——会话存取的
+    DB 细节（Conversation 表 + checkpoint）都在实现侧。
+    """
+
+    async def get_or_create(
+        self,
+        session: ConversationSession,
+        conversation_id: str | None,
+        user_id: UUID | None,
+    ) -> tuple[Conversation, bool]: ...
+
+    async def get_recent(
+        self,
+        session: ConversationSession,
+        user_id: UUID | None,
+    ) -> Conversation | None: ...
+
+    async def get_history_messages(self, thread_id: str) -> list[dict]: ...

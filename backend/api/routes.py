@@ -31,16 +31,16 @@ from backend.api.schemas import (
     TaskListResponse,
     TaskSubmitResponse,
 )
-from backend.infrastructure.data.amap_loader import get_poi_details
-from backend.infrastructure.data.checkpointer import get_checkpointer
-from backend.infrastructure.data.conversations import (
-    get_history_messages,
-    get_or_create_conversation,
-    get_recent_conversation,
-)
-from backend.infrastructure.data.model.database import get_session
-from backend.infrastructure.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
+from backend.di import get_conversation_store
+from backend.infrastructure.auth.postgres_conversation_store import SqlAlchemyConversationSession
+from backend.infrastructure.db.checkpointer import get_checkpointer
+from backend.infrastructure.db.database import get_session
+from backend.infrastructure.db.models import FeedbackRecord, PlanTask, SharedPlan, User
+from backend.infrastructure.external.amap.amap_loader import get_poi_details
 from backend.tasks.submit import submit_task
+
+# 会话存储单例（组合根取用）：会话服务实现来自 di，按请求注入 session。
+_conversation_store = get_conversation_store()
 
 router = APIRouter()
 
@@ -182,10 +182,12 @@ async def chat_history(
     Returns:
         ChatHistoryResponse: { conversation_id, messages }。
     """
-    conv = await get_recent_conversation(session, current.id if current else None)  # pyright: ignore[reportArgumentType]
+    conv = await _conversation_store.get_recent(
+        SqlAlchemyConversationSession(session), current.id if current else None  # pyright: ignore[reportArgumentType]
+    )
     if conv is None:
         return ChatHistoryResponse()
-    history = await get_history_messages(str(conv.id))
+    history = await _conversation_store.get_history_messages(str(conv.id))
     messages = [m for m in history if m.get("role") != "system"]
     return ChatHistoryResponse(conversation_id=str(conv.id), messages=messages)
 
@@ -215,14 +217,14 @@ async def chat(
         HTTPException 500: LLM 调用异常或数据格式错误。
     """
     try:
-        conv, created = await get_or_create_conversation(
-            session, req.conversation_id, current.id if current else None  # pyright: ignore[reportArgumentType]
+        conv, created = await _conversation_store.get_or_create(
+            SqlAlchemyConversationSession(session), req.conversation_id, current.id if current else None  # pyright: ignore[reportArgumentType]
         )
         if created:
             # 新建会话（首条/过期重建）：build_chat_messages（system + 当前消息）
             messages = build_chat_messages(req.message, req.plan_result, req.form_context)
         else:
-            history = await get_history_messages(str(conv.id))
+            history = await _conversation_store.get_history_messages(str(conv.id))
             messages = (
                 list(history) + [{"role": "user", "content": req.message}]
                 if history

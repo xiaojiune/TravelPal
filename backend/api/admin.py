@@ -16,8 +16,8 @@ from backend.api.schemas import (
     AdminUser,
     AdminUsersResponse,
 )
-from backend.infrastructure.data.model.database import get_session
-from backend.infrastructure.data.model.models import FeedbackRecord, PlanTask, User
+from backend.infrastructure.db.database import get_session
+from backend.infrastructure.db.models import FeedbackRecord, PlanTask, User
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 

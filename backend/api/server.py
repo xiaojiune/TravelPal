@@ -11,8 +11,8 @@ from backend.api.admin import router as admin_router
 from backend.api.auth import router as auth_router
 from backend.api.routes import router
 from backend.config import settings
-from backend.infrastructure.data.checkpointer import checkpointer_context
-from backend.infrastructure.data.model.database import close_db
+from backend.infrastructure.db.checkpointer import checkpointer_context
+from backend.infrastructure.db.database import close_db
 from backend.observability import http_duration, http_requests, metrics_response
 
 

@@ -7,8 +7,8 @@
 
 import uuid
 
-from backend.infrastructure.data.model.database import async_session
-from backend.infrastructure.data.model.models import PlanTask
+from backend.infrastructure.db.database import async_session
+from backend.infrastructure.db.models import PlanTask
 
 
 async def submit_task(task_type: str, params: dict, user_id: uuid.UUID | None = None) -> str:

@@ -6,7 +6,7 @@ get_walking/get_bicycling/get_transit），复用 amap_loader 新增的
 私有函数，TOOL_REGISTRY 增项即可，不破坏现有契约。
 """
 
-from backend.infrastructure.data.amap_loader import _get_driving_data
+from backend.infrastructure.external.amap.amap_loader import _get_driving_data
 
 
 def get_driving(origin: dict, destination: dict) -> dict:

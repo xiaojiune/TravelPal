@@ -126,7 +126,8 @@ class SqlAlchemyConversationSession:
         orm = self._pending.get(conversation)
         if orm is not None:
             await self._session.refresh(orm)
-            conversation.id = orm.id
+            # ORM 实例属性运行时为 UUID 值；类型 stub 误判为 Column，故忽略赋值类型。
+            conversation.id = orm.id  # type: ignore[assignment]
 
 
 class PostgresConversationStore:

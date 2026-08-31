@@ -21,12 +21,15 @@ TTL_LOGGED_IN = timedelta(days=7)
 TTL_ANONYMOUS = timedelta(days=1)
 
 
-@dataclass
+@dataclass(eq=False)  # eq=False → 保留对象身份哈希，可作字典键（infra 的 _pending 会话找回用）
 class Conversation:
     """领域会话（轻量）：infra 的 ORM Conversation 映射到它。
 
     user_id 为归属用户（None=游客）；id 为会话主键（= LangGraph thread_id），
     新建会话在持久化前为 None（由 infra 落库后回填）。
+
+    注：``eq=False`` 使其按「对象身份」比较/哈希（可作字典键），而非按字段值比较；
+    字段比较（如 ``conv.id == x``）仍按需显式进行。
     """
 
     user_id: UUID | None

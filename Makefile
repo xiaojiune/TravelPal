@@ -53,7 +53,8 @@ dev: ## 启动前端开发服务器（Vite HMR）
 lint: ## 前端 lint 自动修复（ESLint --fix）
 	cd frontend && npm run lint:fix
 
-format: ## 前端代码格式化（Prettier）
+format: ## 前端代码格式化（Prettier，全量 --write；慎用）
+	@echo '==> 警示：format 全量 --write 会重排不符合 prettier 规则的文件、破坏 Vue 内联多语句表达式；改动后请跑前端编译验证（make build）确认无破坏'
 	cd frontend && npx prettier --write src/
 
 typecheck: ## 前端 TypeScript 类型检查
@@ -71,7 +72,7 @@ ruff-format: ## 后端 Python 代码格式化（ruff）
 pyright: ## 后端 Python 类型检查
 	.venv/bin/pyright backend/
 
-check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类型 + 测试 + 一致性）
+check: ## 全量检查（明确要求时使用：格式 + lint + 类型 + 测试 + 一致性）
 	@echo '==> ruff format --check（后端格式）'
 	.venv/bin/ruff format --check backend/
 	@echo '==> ruff check（后端 lint）'
@@ -92,6 +93,8 @@ check: ## 全量检查（推送前/明确要求时使用：格式 + lint + 类�
 	cd frontend && npx prettier --check src/
 	@echo '==> vue-tsc（前端类型）'
 	cd frontend && npx vue-tsc --noEmit
+	@echo '==> vite build（前端编译验证：抓 prettier 破坏的模板表达式）'
+	cd frontend && npm run build
 	@echo '==> OpenAPI 类型同步'
 	cd frontend && npm run gen:api && git diff --exit-code -- src/api/types.generated.ts
 
@@ -114,8 +117,8 @@ test-contract: ## 契约测试（tests/test_contract/，改动工具/编排/API 
 
 # ======== Docker ========
 
-dc-up: ## 启动基础设施（PostgreSQL + Redis，后台）
-	docker compose up -d postgres redis
+dc-up: ## 启动基础设施（PostgreSQL + Redis + LavinMQ，后台）
+	docker compose up -d postgres redis lavinmq
 
 dc-logs: ## 查看 Docker 日志
 	docker compose logs -f

@@ -9,7 +9,13 @@ run_planning 保持函数内延迟 import：worker 启动时不加载引擎，
 
 from typing import Callable, cast
 
-from backend.typedefs import AdjustParams, PlanResult, PoiCache, PoiCacheItem, TaskParams
+from backend.domain.types import PlanResult, PoiCache, PoiCacheItem
+from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.engine.solver import get_solver
+from backend.tasks.types import AdjustParams, TaskParams
+
+# 驾车数据提供者（组合根装配）：executor 是应用层，向 domain pipeline 注入实现。
+_driving = AmapDrivingProvider()
 
 __all__ = ["TASK_EXECUTORS", "_build_poi_cache"]
 
@@ -55,16 +61,20 @@ def _build_poi_cache(params: TaskParams) -> PoiCache:
     return PoiCache(hotel=hotel, spots=spots)
 
 
-def _run_suggest(params: TaskParams) -> dict:
-    """suggest 任务执行体：CA 建议模式（n_days=None，自动搜索天数）。
+def _run_or_ca(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> dict:
+    """or-ca 任务执行体：CA 建议模式（n_days=None，自动搜索天数）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/penalty/day_start/min_days/cost_matrix 等）。
+        cancel_check: 取消检查回调（透传给 run_planning 的驾车 API 阶段）。
 
     Returns:
         dict: run_planning 建议分支完整结果（type="suggestion"，结构对应 schemas.SuggestResult）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
-    from backend.engine.pipeline import run_planning
+    from backend.domain.pipeline import run_planning
 
     return run_planning(  # type: ignore[return-value]
         _build_poi_cache(params),
@@ -79,19 +89,26 @@ def _run_suggest(params: TaskParams) -> dict:
         min_days=params.get("min_days"),
         cost_matrix_override=params.get("cost_matrix"),
         dist_matrix_override=params.get("dist_matrix"),
+        cancel_check=cancel_check,
+        driving=_driving,
+        solver_factory=get_solver,
     )
 
 
-def _run_plan(params: TaskParams) -> PlanResult:
-    """plan 任务执行体：指定天数求解（mode=fast 用 CA / deep 用 VNS）。
+def _run_or_vns(params: TaskParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
+    """or-vns 任务执行体：指定天数求解（mode=fast 用 CA / deep 用 VNS）。
 
     Args:
         params: 请求参数字典（含 hotel_*/spots/mode/n_days/day_start 等）。
+        cancel_check: 取消检查回调（透传给 run_planning 的驾车 API 阶段）。
 
     Returns:
         PlanResult: run_planning 求解分支完整结果（type="solution"）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
-    from backend.engine.pipeline import run_planning
+    from backend.domain.pipeline import run_planning
 
     return cast(
         PlanResult,
@@ -108,22 +125,29 @@ def _run_plan(params: TaskParams) -> PlanResult:
             min_days=params.get("min_days"),
             cost_matrix_override=params.get("cost_matrix"),
             dist_matrix_override=params.get("dist_matrix"),
+            cancel_check=cancel_check,
+            driving=_driving,
+            solver_factory=get_solver,
         ),
     )
 
 
-def _run_adjust(params: AdjustParams) -> PlanResult:
+def _run_adjust(params: AdjustParams, cancel_check: Callable[[], bool] | None = None) -> PlanResult:
     """adjust 任务执行体：基于已有方案快照执行调整指令（add_poi 等）。
 
     走 pipeline.adjust_plan 分发（add_poi 分支驾车数据优先命中点对缓存）。
 
     Args:
         params: 调整任务参数（AdjustParams：快照 spots/矩阵/routes + adjustments）。
+        cancel_check: 取消检查回调（透传给 adjust_plan 的 add_poi 驾车阶段）。
 
     Returns:
         PlanResult: 调整后的完整方案（mode="adjust"）。
+
+    Raises:
+        TaskCancelled: 用户取消任务时由 cancel_check 透传抛出。
     """
-    from backend.engine.pipeline import adjust_plan
+    from backend.domain.pipeline import adjust_plan
 
     return cast(
         PlanResult,
@@ -134,14 +158,17 @@ def _run_adjust(params: AdjustParams) -> PlanResult:
             params["routes"],
             params["adjustments"],
             city=params["city"],
+            cancel_check=cancel_check,
+            driving=_driving,
+            solver_factory=get_solver,
         ),
     )
 
 
 # 任务类型 → 执行函数注册表（worker._execute_task 按 task_type 分发）。
-# suggest 返回 dict（结构对应 schemas.SuggestResult），plan/adjust 返回 PlanResult。
+# or-ca 返回 dict（结构对应 schemas.SuggestResult），or-vns/adjust 返回 PlanResult。
 TASK_EXECUTORS: dict[str, Callable[..., PlanResult | dict]] = {
-    "suggest": _run_suggest,
-    "plan": _run_plan,
+    "or-ca": _run_or_ca,
+    "or-vns": _run_or_vns,
     "adjust": _run_adjust,
 }

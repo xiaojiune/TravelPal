@@ -36,7 +36,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Client["前端（deploy 于 Nginx 容器）"]
-    SPA["🖥️ Vue3 SPA<br/>HomePage / SuggestPage / PlanPage / HistoryPage"]
+    SPA["🖥️ Vue3 SPA<br/>HomePage / SuggestPage / PlanPage / SharePage"]
     AgentPanel["🤖 Agent 面板<br/>ChatStream + ToolRail / ToolPanel"]
   end
 
@@ -54,7 +54,7 @@ flowchart TB
   end
 
   subgraph Infra["基础设施"]
-    PG[("🗄️ PostgreSQL<br/>history_records / plan_tasks / feedback_records")]
+    PG[("🗄️ PostgreSQL<br/>share_records / plan_tasks / feedback_records")]
     Redis[("📮 Redis<br/>Celery broker + 驾车缓存")]
   end
 

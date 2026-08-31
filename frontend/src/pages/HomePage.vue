@@ -1,7 +1,15 @@
 <template>
   <div class="page-home">
-    <h1>TravelPal</h1>
-    <p class="subtitle">输入城市与景点，获取最优行程方案</p>
+    <!-- 标题行：左=品牌标题+副标题，右=新建规划（内容区标题行右侧，与右上角 AI 助手分离） -->
+    <div class="home-title-row">
+      <div class="home-title-block">
+        <h1>TravelPal</h1>
+        <p class="subtitle">输入城市与景点，获取最优行程方案</p>
+      </div>
+      <button class="btn-new-plan" type="button" @click="startNewPlan">
+        ➕ 新建规划
+      </button>
+    </div>
 
     <n-steps class="page-steps" size="small">
       <n-step v-for="(t, i) in steps" :key="t" :title="t" :status="stepStatus[i]" />
@@ -262,18 +270,12 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { usePlanStore } from '@/stores/plan'
 import { submitTask } from '@/services/api'
-import type { SuggestResult } from '@/services/api'
 import { usePoiSearch } from '@/composables/usePoiSearch'
 import { useEditTable } from '@/composables/useEditTable'
-import { useTaskPolling } from '@/composables/useTaskPolling'
-import { useSuggestCache } from '@/composables/useSuggestCache'
 
 const store = usePlanStore()
-const cache = useSuggestCache()
 const router = useRouter()
 const message = useMessage()
-
-const { startPolling } = useTaskPolling()
 
 const {
   spotText,
@@ -330,6 +332,12 @@ onMounted(() => {
   activeSection.value = nextUndone()
 })
 
+/** 新建规划：清空全部规划状态并留当前工作区首页（/home），不清空回到门户。 */
+function startNewPlan() {
+  store.reset()
+  router.push('/home')
+}
+
 // ====== 大文件夹（手风琴） ======
 /** 当前展开的卡片（手风琴：一次仅一张），null 表示全部收起。 */
 type CardKey = 'city' | 'hotel' | 'depart' | 'search' | 'minDays' | 'manage'
@@ -372,9 +380,9 @@ const folderCards = computed(() => {
       icon: '⏰',
       title: '启程时间',
       done: departDone,
-      warning: store.dayStart === 0, // 默认值未改 → 黄!
+      warning: store.dayStart === 480, // 用户未编辑（仍为默认 08:00）→ 黄
       showBadge: true,
-      summary: store.dayStart === 0 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
+      summary: store.dayStart === 480 ? '默认 08:00' : `已设 ${fmtMinutes(store.dayStart)}`,
     },
     {
       key: 'search' as const,
@@ -510,17 +518,12 @@ async function fetchSuggest() {
   store.planResult = null
   store.loading = true
   try {
-    const { task_id } = await submitTask('suggest', store.buildRequest(null))
-    const data = (await startPolling(task_id)) as unknown as SuggestResult
-    store.suggestions = data.suggestions || []
-    if (data.spots) cache.suggestSpots.value = data.spots
-    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time // 搜索总耗时
-    if (data.polylines) cache.suggestPolylines.value = data.polylines // 真实轨迹
-    if (data.amap_api_key) store.amapApiKey = data.amap_api_key
-    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
-    router.push('/suggest')
+    const { task_id } = await submitTask('or-ca', store.buildRequest(null))
+    // 任务生命周期统一由工具栏维护：登记进任务集合，不阻塞页面等结果
+    store.registerTask({ task_id, task_type: 'or-ca' })
+    message.success('任务已提交，可到 📋 任务面板查看进度')
   } catch (e: unknown) {
-    message.error('获取建议失败: ' + (e instanceof Error ? e.message : '未知错误'))
+    message.error('提交失败: ' + (e instanceof Error ? e.message : '未知错误'))
   } finally {
     store.loading = false
   }
@@ -530,7 +533,39 @@ async function fetchSuggest() {
 <style scoped>
 .page-home {
   max-width: 860px;
-  margin: 0;
+  /* 水平居中：无论左侧工具轨/工具窗口是否弹出，内容在剩余区域内居中 */
+  margin: 0 auto;
+}
+/* 标题行：品牌标题+副标题（左）与新建规划（右）横向排版 */
+.home-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.home-title-block .subtitle {
+  margin-bottom: 24px;
+}
+/* 新建规划：内容区标题行右侧，干净品牌 outline 按钮 */
+.btn-new-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  border: 1px solid var(--tp-primary);
+  border-radius: 8px;
+  background: var(--tp-surface);
+  color: var(--tp-primary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-new-plan:hover {
+  background: var(--tp-primary);
+  color: var(--tp-on-primary);
 }
 .subtitle {
   color: var(--tp-text-2);

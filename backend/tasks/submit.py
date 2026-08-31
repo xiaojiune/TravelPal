@@ -5,16 +5,20 @@
 不依赖引擎——提交与执行解耦，新增任务类型无需改本模块。
 """
 
-from backend.data.model.database import async_session
-from backend.data.model.models import PlanTask
+import uuid
+
+from backend.infrastructure.data.model.database import async_session
+from backend.infrastructure.data.model.models import PlanTask
 
 
-async def submit_task(task_type: str, params: dict) -> str:
+async def submit_task(task_type: str, params: dict, user_id: uuid.UUID | None = None) -> str:
     """创建异步任务记录并投递到 Celery 队列。
 
     Args:
-        task_type: 任务类型，固定 "suggest" 或 "plan"。
+        task_type: 任务类型，固定 "or-ca" 或 "or-vns"。
         params: 完整请求参数字典（PlanRequest 结构，含 hotel_*/spots/penalty 等）。
+        user_id: 归属用户 UUID 字符串（可空）；HTTP 端点登录时传入，
+            MCP/Agent 工具路径无登录上下文则省略（默认 None，走匿名）。
 
     Returns:
         str: 新创建任务的 UUID 字符串（供调用方返回 task_id）。
@@ -23,7 +27,7 @@ async def submit_task(task_type: str, params: dict) -> str:
         Exception: 数据库写入失败时向上抛出，由调用方转为 HTTP 500 或工具 error。
     """
     async with async_session() as session:
-        task = PlanTask(task_type=task_type, status="pending", request_params=params)
+        task = PlanTask(task_type=task_type, status="pending", request_params=params, user_id=user_id)
         session.add(task)
         await session.commit()
         from backend.tasks.worker import run_plan_task

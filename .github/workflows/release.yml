@@ -20,7 +20,9 @@ jobs:
           if [ -f "$NOTES_FILE" ]; then
             {
               echo 'NOTES<<RELEASE_EOF'
-              sed '1,5d' "$NOTES_FILE"
+              # 剥离 YAML frontmatter（首尾两条 '---' 之间），保留正文；
+              # 不依赖 frontmatter 恰好 5 行，模板注释块未删也能稳健处理
+              awk '/^---[[:space:]]*$/ { if (!f) { f=1; next } else if (f && !d) { d=1; next } } d { print }' "$NOTES_FILE"
               echo 'RELEASE_EOF'
             } >> "$GITHUB_OUTPUT"
           else

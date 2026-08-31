@@ -28,6 +28,53 @@ export type ScheduleItem = components['schemas']['ScheduleItem']
 /** 规划结果中的景点字典项（result.spots 值） */
 export type SpotDictItem = components['schemas']['SpotDictItem']
 
+/** suggest 任务完成时的完整响应（TaskDetail.result，由 OpenAPI 生成）。 */
+export type SuggestResult = components['schemas']['SuggestResult']
+
+/** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed/canceled）。 */
+export type TaskDetail = components['schemas']['TaskDetail']
+
+/** 异步任务列表项（任务面板）。 */
+export type TaskListItem = components['schemas']['TaskListItem']
+
+/** 当前用户异步任务列表响应。 */
+export type TaskListResponse = components['schemas']['TaskListResponse']
+
+/** 取消异步规划任务的响应。 */
+export type TaskCancelResponse = components['schemas']['TaskCancelResponse']
+
+/** 方案分享列表项（摘要，由 OpenAPI 生成）。 */
+export type ShareSummary = components['schemas']['ShareSummary']
+
+/** 方案分享分页响应（由 OpenAPI 生成）。 */
+export type ShareListResponse = components['schemas']['ShareListResponse']
+
+/** 方案分享完整详情（由 OpenAPI 生成）。 */
+export type ShareDetail = components['schemas']['ShareDetail']
+
+/** 当前登录用户（由 OpenAPI 生成；id/role/email/nickname/is_active）。 */
+export type UserOut = components['schemas']['UserOut']
+
+// ==================== 管理员操作台（轴5） ====================
+
+/** 管理人员：用户列表项（由 OpenAPI 生成）。 */
+export type AdminUser = components['schemas']['AdminUser']
+
+/** 管理人员：异步任务列表项（由 OpenAPI 生成）。 */
+export type AdminTask = components['schemas']['AdminTask']
+
+/** 管理人员：用户反馈列表项（由 OpenAPI 生成）。 */
+export type AdminFeedback = components['schemas']['AdminFeedback']
+
+/** 用户列表分页响应（由 OpenAPI 生成）。 */
+export type AdminUsersResponse = components['schemas']['AdminUsersResponse']
+
+/** 任务列表分页响应（由 OpenAPI 生成）。 */
+export type AdminTasksResponse = components['schemas']['AdminTasksResponse']
+
+/** 反馈列表分页响应（由 OpenAPI 生成）。 */
+export type AdminFeedbackResponse = components['schemas']['AdminFeedbackResponse']
+
 // ==================== 纯前端类型（不与后端 schema 对应） ====================
 
 /** 前端输入表单中的景点项 */
@@ -48,6 +95,13 @@ export interface ChatMessage {
   content: string
   time?: string
   data?: unknown
+}
+
+/** 从后端恢复的历史消息（OpenAI dict 形态：user/assistant/tool；后端已过滤 system）。 */
+export interface HistoryMessage {
+  role: 'user' | 'assistant' | 'tool'
+  content: string
+  [key: string]: unknown
 }
 
 /** Agent 对话查询到的 POI（待选栏暂存项，tool_result 事件载荷） */

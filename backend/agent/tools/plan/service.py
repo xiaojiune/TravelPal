@@ -11,8 +11,8 @@
 
 from uuid import UUID
 
-from backend.data.model.database import async_session
-from backend.data.model.models import PlanTask
+from backend.infrastructure.data.model.database import async_session
+from backend.infrastructure.data.model.models import PlanTask
 from backend.tasks.submit import submit_task
 
 
@@ -83,7 +83,7 @@ async def get_plan(
         params["cost_matrix"] = cost_matrix
         params["dist_matrix"] = dist_matrix
     try:
-        task_id = await submit_task("plan", params)
+        task_id = await submit_task("or-vns", params)
         return {"task_id": task_id, "status": "pending"}
     except Exception as e:
         return {"error": str(e)}
@@ -97,14 +97,14 @@ async def submit_plan_form(
     """基于表单上下文提交规划任务（表单驱动版规划入口）。
 
     LLM 不拼参数：form_context 由编排层注入（前端 send() 携带首页表单快照），
-    后端从中构造 PlanRequest 提交 suggest/plan 异步任务。n_days 缺失时按 suggest
-    （自动推断天数），指定时按 plan（mode 决定 CA/VNS）。
+    后端从中构造 PlanRequest 提交 or-ca/or-vns 异步任务。n_days 缺失时按 or-ca
+    （自动推断天数），指定时按 or-vns（mode 决定 CA/VNS）。
 
     Args:
         form_context: 表单输入快照（编排层注入），含 city/hotel_name/hotel_lon/
             hotel_lat/hotel_tw_start/hotel_tw_end/day_start/min_days/spots
             {name,lon,lat,tw_start,tw_end,stay,expected_arrival}/惩罚权重。
-        n_days: 行程天数。缺失 → suggest（自动推断）；指定 → plan。
+        n_days: 行程天数。缺失 → or-ca（自动推断）；指定 → or-vns。
         mode: 求解模式，"fast"(CA) 或 "deep"(VNS)，仅指定 n_days 时生效。
 
     Returns:
@@ -131,9 +131,9 @@ async def submit_plan_form(
         if n_days is not None:
             params["n_days"] = n_days
             params["mode"] = mode
-            task_type = "plan"
+            task_type = "or-vns"
         else:
-            task_type = "suggest"
+            task_type = "or-ca"
         task_id = await submit_task(task_type, params)
         return {"task_id": task_id, "status": "pending"}
     except Exception as e:

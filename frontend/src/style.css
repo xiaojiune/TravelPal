@@ -11,9 +11,12 @@ body {
 }
 
 #travelpal-app {
-  min-height: 100vh;
+  /* 视口高度锁定：nav / 标题栏 / footer 固定，.app-body(flex:1) 内 .main-content 滚动，
+     确保工具轨/工具面板顶部不被内容撑出裁切 */
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* 主体区：左侧待选栏 + 主内容，撑满导航栏与 footer 之间 */
@@ -21,6 +24,7 @@ body {
   display: flex;
   flex: 1;
   min-height: 0;
+  align-items: stretch;
 }
 
 .nav-bar {
@@ -38,8 +42,8 @@ body {
 
 .nav-brand-area {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  gap: 12px;
   line-height: 1.25;
 }
 
@@ -115,60 +119,32 @@ body {
 .main-content {
   flex: 1;
   min-width: 0;
-  /* 左侧约一个「TravelPal」标题宽的距离（160px），其余保持 24px */
-  padding: 24px 24px 24px 160px;
-  overflow-y: auto;
-}
-
-.footer {
-  text-align: center;
-  padding: 16px;
-  color: var(--tp-text-3);
-  font-size: 12px;
-}
-
-.footer a {
-  color: var(--tp-text-3);
-  text-decoration: none;
-}
-
-/* 底部多备案/版本链接：居中横向排列，窄屏自动换行 */
-.footer-links {
+  /* flex column：内容滚动区(content-scroll) flex:1 可滚 + 底部备案页脚(AppFooter) 固定 */
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
-
-/* 备案项之间的分隔点 */
-.footer-sep {
-  color: var(--tp-text-3);
-  opacity: 0.6;
+/* 内容滚动区：撑满 main-content 剩余空间，内部滚动；承载右上 AI 浮动锚点 */
+.content-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* 对称内边距：页面容器（max-width + margin:0 auto）在剩余空间内水平居中 */
+  padding: 24px;
 }
-
-/* 公安联网备案链接：盾牌图标 + 文案对齐 */
-.footer-beian {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+/* 工具面板展开/收起：左侧滑入滑出动效（宽度 + 透明度，主内容随 flex 让宽） */
+.tool-slide-enter-active,
+.tool-slide-leave-active {
+  transition:
+    width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    min-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
 }
-
-/* 公安备案盾牌图标（内联 SVG） */
-.beian-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-/* 当前版本徽标 */
-.footer-version {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 8px;
-  border: 1px solid var(--tp-border);
-  border-radius: 10px;
-  color: var(--tp-text-3);
-  font-size: 11px;
-  line-height: 1.4;
+.tool-slide-enter-from,
+.tool-slide-leave-to {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
 }

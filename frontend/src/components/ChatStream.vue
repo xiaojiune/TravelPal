@@ -1,9 +1,7 @@
 <template>
   <div class="chat-stream">
     <div ref="historyRef" class="chat-history">
-      <div v-if="messages.length === 0" class="welcome">
-        我不懂你的全部，但我懂你的旅途。
-      </div>
+      <div v-if="messages.length === 0" class="welcome">今天想聊点什么？</div>
       <template v-for="(msg, i) in messages" :key="i">
         <!-- 工具调用状态行：详情富卡片由左侧查询面板渲染，对话内仅回显工具名 -->
         <div v-if="msg.role === 'tool'" class="msg-tool-line">
@@ -45,13 +43,12 @@
  */
 import { ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
 import ChatMessage from '@/components/ChatMessage.vue'
 import { useTypewriter } from '@/composables/useTypewriter'
-import { useTaskPolling } from '@/composables/useTaskPolling'
-import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore } from '@/stores/plan'
-import type { SuggestResult } from '@/services/api'
+import { useUserStore } from '@/stores/user'
+import type { ChatMessage as ChatMessageType, HistoryMessage } from '@/types'
+import { fetchChatHistory, streamChat } from '@/services/agent'
 
 interface Props {
   apiPath?: string
@@ -68,9 +65,7 @@ defineOptions({ name: 'ChatStream' })
 const props = withDefaults(defineProps<Props>(), { apiPath: '/api/chat' })
 const emit = defineEmits<{ (e: 'tool-result', payload: ToolResultPayload): void }>()
 const store = usePlanStore()
-const cache = useSuggestCache()
-const router = useRouter()
-const { startPolling } = useTaskPolling()
+const userStore = useUserStore()
 
 const historyRef = ref<HTMLDivElement | null>(null)
 const inputText = ref('')
@@ -128,10 +123,47 @@ function sayHello() {
 }
 
 /**
- * 发送用户消息，读取 SSE 流式响应并逐字打字机渲染。
+ * 将后端恢复的历史消息（OpenAI dict）映射为前端气泡格式。
+ * - user/assistant → 直接气泡；
+ * - tool → 简化提示行「🛠️ 工具结果」（不重建富卡片，与订阅端 tool 行一致的降级呈现）。
+ * 历史消息无 time 字段，气泡时间留空。
+ */
+function mapHistory(history: HistoryMessage[]): ChatMessageType[] {
+  const out: ChatMessageType[] = []
+  for (const m of history) {
+    if (m.role === 'user' || m.role === 'assistant') {
+      out.push({ role: m.role, content: String(m.content ?? '') })
+    } else if (m.role === 'tool') {
+      out.push({ role: 'tool', content: '', data: { tool: '工具' } })
+    }
+  }
+  return out
+}
+
+/**
+ * 打开 Agent 面板时恢复登录用户最近会话上下文。
+ * 仅当：已登录 + 当前无会话 id + 消息为空（避免覆盖同一次规划内已有对话态）时触发；
+ * 拉取成功后回填 messages 与 conversationId，使后续发送续接同一会话（记忆不断）。
+ * 失败静默（历史恢复是非阻塞的增强，不打扰用户）。
+ */
+async function loadHistory() {
+  if (!userStore.isLoggedIn || store.chatConversationId || messages.value.length > 0) return
+  try {
+    const { conversation_id, messages: history } = await fetchChatHistory()
+    if (!history.length) return
+    messages.value = mapHistory(history)
+    if (conversation_id) store.chatConversationId = conversation_id
+    nextTick(() => forceScrollBottom())
+  } catch {
+    // 历史恢复失败不阻断：保持空对话态，用户可直接发新消息
+  }
+}
+
+/**
+ * 发送用户消息，经 services/agent.ts 读取 SSE 流式响应并逐字打字机渲染。
  *
- * 使用 fetch + ReadableStream 而非 EventSource，因为需要 POST 方法传递消息体。
- * 后端返回 SSE text/event-stream，前端手动 parse 'data: ' 前缀。
+ * SSE 的接口接入与流解析（fetch + ReadableStream 手动 parse 'data: '）已收敛到
+ * services/agent.ts，本组件仅通过 onContent/onToolResult/onDone/onError 订阅事件。
  * tool_result 事件数据经 emit 抛给宿主，本组件不持有待选栏状态。
  */
 async function send() {
@@ -154,97 +186,72 @@ async function send() {
   try {
     // form_context：首页表单当前输入快照（供 submit_plan_form 等工具感知用户已填内容）
     const formContext = store.buildRequest(null)
-    const resp = await fetch(props.apiPath, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    await streamChat(
+      {
         message: text,
-        plan_result: store.planResult ?? null,
-        form_context: formContext,
-      }),
-      signal: abortController.signal,
-    })
-    if (!resp.ok) {
-      messages.value[msgIndex].content = '请求失败，请重试'
-      loading.value = false
-      return
-    }
-    // SSE 手动解析：逐 chunk 读取字节流，拼行长尾后按 \n 分割
-    const body = resp.body
-    if (!body) {
-      messages.value[msgIndex].content = '响应体为空'
-      loading.value = false
-      return
-    }
-    const reader = body.getReader()
-    const decoder = new TextDecoder()
-    let partial = ''
-    let streamDone = false
-    while (!streamDone) {
-      const { done, value } = await reader.read()
-      if (done) break
-      partial += decoder.decode(value, { stream: true })
-      const lines = partial.split('\n')
-      partial = lines.pop() || ''
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6)
-        try {
-          const parsed = JSON.parse(data)
-          if (parsed.type === 'done') {
-            // 优雅收尾：不调用 stop()（否则剩余缓冲一次性蹦出，打字机效果丢失），
-            // 让打字机按节奏弹完剩余缓冲后复位 streamingIndex 并解锁 loading。
-            // 注意此回调异步触发（缓冲弹空后），期间不能提前复位 streamingIndex
-            gracefulDone = true
-            finish(() => {
-              messages.value[msgIndex].content = displayText.value
-              streamingIndex = -1
-              loading.value = false
-              forceScrollBottom()
-            })
-            streamDone = true
-            break
-          }
-          if (parsed.type === 'error' && parsed.data) {
-            stop()
-            messages.value[msgIndex].content = String(parsed.data)
-            streamingIndex = -1
-            streamDone = true
-            break
-          }
-          if (parsed.type === 'content' && parsed.data) {
-            append(parsed.data)
-            messages.value[msgIndex].content = displayText.value
-          }
-          if (parsed.type === 'tool_result' && parsed.data) {
-            // 结构化 tool_result：{ tool, result, city? }。富卡片交由左侧查询面板
-            // （store.queryResults）渲染，对话内仅回显「🛠️ 已查询 {tool}」状态行，
-            // 同时整包 emit 供宿主（AgentPanel）写入查询结果区
-            const tool = String(parsed.data.tool ?? 'tool')
-            const result = parsed.data.result ?? parsed.data
-            messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
-            // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
-            // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
-            if (tool === 'submit_plan_form' && typeof result === 'object' && result !== null && 'task_id' in result) {
-              void handlePlanTask(String((result as { task_id: string }).task_id))
-            } else {
-              emit('tool-result', { tool, result, city: parsed.data.city })
-            }
-            scrollToBottom()
-          }
-        } catch {
-          append(data)
+        planResult: store.planResult ?? null,
+        formContext,
+        conversation_id: store.chatConversationId,
+      },
+      props.apiPath,
+      {
+        onConversation: (conversationId) => {
+          // 会话 id 回填 store：后端懒建返回后存下，供后续轮携带续接历史
+          store.chatConversationId = conversationId
+        },
+        onContent: (chunk) => {
+          // SSE content 事件：追加给打字机并回写当前气泡（displayText watch 会触发滚底）
+          append(chunk)
           messages.value[msgIndex].content = displayText.value
-        }
-      }
-      await nextTick()
-      scrollToBottom()
-    }
+        },
+        onToolResult: ({ tool, result, city }) => {
+          // 工具结果富卡片内嵌消息流，同时整包 emit 供宿主（AgentPanel）写入查询结果区
+          messages.value.push({ role: 'tool', content: '', time: now, data: { tool, result } })
+          // submit_plan_form 是「规划任务」语义：返回 task_id，需轮询任务完成
+          // 后把方案建议写入 store 并跳转 SuggestPage（与 HomePage 提交行为一致）
+          if (
+            tool === 'submit_plan_form' &&
+            typeof result === 'object' &&
+            result !== null &&
+            'task_id' in result
+          ) {
+            void handlePlanTask(String((result as { task_id: string }).task_id))
+          } else {
+            emit('tool-result', { tool, result, city })
+          }
+          scrollToBottom()
+        },
+        onDone: () => {
+          // 优雅收尾：不调用 stop()（否则剩余缓冲一次性蹦出，打字机效果丢失），
+          // 让打字机按节奏弹完剩余缓冲后复位 streamingIndex 并解锁 loading。
+          // 注意此回调异步触发（缓冲弹空后），期间不能提前复位 streamingIndex
+          gracefulDone = true
+          finish(() => {
+            messages.value[msgIndex].content = displayText.value
+            streamingIndex = -1
+            loading.value = false
+            forceScrollBottom()
+          })
+        },
+        onError: (errMsg) => {
+          // error 事件：停止打字机并把错误写入气泡；loading 由统一收尾复位
+          stop()
+          messages.value[msgIndex].content = errMsg
+        },
+      },
+      { signal: abortController.signal },
+    )
   } catch (e) {
     // 组件卸载主动 abort 时静默退出，不覆盖消息内容
     if (e instanceof DOMException && e.name === 'AbortError') return
     stop()
-    messages.value[msgIndex].content = '网络错误，请检查连接'
+    // HTTP/响应体错误（services 抛中文 message）直接展示；网络层失败（TypeError）给统一提示
+    messages.value[msgIndex].content =
+      e instanceof TypeError
+        ? '网络错误，请检查连接'
+        : e instanceof Error
+          ? e.message
+          : '网络错误，请检查连接'
   }
 
   abortController = null
@@ -257,24 +264,12 @@ async function send() {
 }
 
 /**
- * 处理规划任务工具（submit_plan_form）的异步轮询：
- * 轮询任务到 done → 把 SuggestResult 写入 store.suggestions + 缓存 → 跳转 /suggest。
- * 与 HomePage.fetchSuggest 的写入/跳转行为保持一致（done 即跳转）。
+ * 处理规划任务工具（submit_plan_form）：提交后登记进任务集合，生命周期交工具栏。
+ * 不再阻塞等待/自动跳转（任务状态与结果在 📋 任务面板查看）。
  */
 async function handlePlanTask(taskId: string) {
-  try {
-    const data = (await startPolling(taskId)) as unknown as SuggestResult
-    store.suggestions = data.suggestions || []
-    if (data.spots) cache.suggestSpots.value = data.spots
-    if (data.algo_time) cache.suggestAlgoTime.value = data.algo_time
-    if (data.polylines) cache.suggestPolylines.value = data.polylines
-    if (data.amap_api_key) store.amapApiKey = data.amap_api_key
-    if (data.amap_security_code) store.amapSecurityCode = data.amap_security_code
-    router.push('/suggest')
-  } catch {
-    // 任务失败：通过打字机追加一条提示（不打断当前对话流）
-    append('（规划失败，请检查首页表单内容后重试）')
-  }
+  store.registerTask({ task_id: taskId, task_type: 'or-vns' })
+  append('（任务已提交，可在 📋 任务面板查看进度）')
 }
 
 /**
@@ -299,6 +294,7 @@ function forceScrollBottom() {
 
 onMounted(() => {
   forceScrollBottom()
+  void loadHistory()
 })
 </script>
 

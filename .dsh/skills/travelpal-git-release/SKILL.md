@@ -1,7 +1,11 @@
 ---
 name: travelpal-git-release
-description: TravelPal 版本发布与 git 操作规范。涉及推送 GitHub（打 tag）、本地同步 main、或版本一致性核验时使用。它把项目 git 操作分成几层：日常开发只 commit；推送 GitHub 时打 tag 到 dev 触发自动 Release；本地同步走"切 main → 拉取 → 切 dev → merge"流程。发布前会先核验版本同步（pyproject/footer/README 三处），确保可推送再动手。
-whenToUse: 用户说"推送 / 打 tag / 发布 v某版本 / 同步 main / 拉取 origin / 版本核验"或涉及 git commit、tag、push、merge、PR 时使用，用于规范发布、同步与 PR 流程。
+description: TravelPal 版本发布与 git 操作规范：日常只 commit、打 tag 到 dev 触发 Release、本地同步流程。涉及 git 操作或发布时使用。
+whenToUse:
+  - 用户明确指令：推送、打 tag、发布 v某版本、同步 main、拉取 origin、版本核验
+  - 特定场景：涉及 git commit、tag、push、merge、PR 时
+  - 关键词提及：git、push、tag、release、版本、PR、merge、commit
+  - 不触发：与 git/发布无关的编码或文档任务
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 
@@ -21,11 +25,11 @@ allowed-tools: read, edit, write, grep, glob, bash
   - 对齐点2：README 当前阶段（`README.md` Roadmap 的"当前阶段"行）
   - **不一致 → 阻断**，提醒对齐后再发布。
 
-## 二、日常开发（只 commit）
+## 二、日常开发（commit + 普通 push）
 
-- commit 规范：`<type>: <中文描述>`。
-- type：`feat` / `fix` / `docs` / `chore` / `refactor` / `test`。
-- 在 `dev` 分支开发、提交、`push origin dev`。**不打 tag**。
+- commit 规范：`<type>: <中文描述>`。type：`feat` / `fix` / `docs` / `chore` / `refactor` / `test`。
+- 在 `dev` 分支开发、提交；需要同步远程就**直接 `git push origin dev`**。
+- **这是"普通同步"，不是发布**：**不写交接文档、不打 tag、不核验版本**。只有用户明确说"发布 / 打 tag / 推送 v某版本"，才走「四」的发布流程（含确认交接文档 + 打 tag）。
 - 分支：`main`=发布分支（只从 GitHub PR 合并）；`dev`=开发分支（所有工作在此提交）。当前早期阶段直接在 dev 开发，不设特性分支。
 
 ## 三、PR 规范（dev → main）
@@ -35,10 +39,13 @@ allowed-tools: read, edit, write, grep, glob, bash
 - 合并方式：统一 **Squash and merge**。
 - **外部贡献（Fork 工作流）**：Fork 到个人账号 → 在 Fork 建分支提改进 → 向本仓库 `dev` 分支发 PR → PR 过 CI 后维护者合并。
 
-## 四、推送 GitHub（引入 tag 流）
+## 四、发布：打 tag 到 dev（仅发布时走此流）
+
+> 只用于**发布打 tag**；普通 `push origin dev` 同步（不发布）看「二」。
 
 用户说"推送 vX.Y.Z / 打 tag / 发布"时，按此流：
 
+0. **确认交接文档已更新并阅读**（联动 session-handoff）：`docs/handoff/CURRENT_CODE.md`（或 `CURRENT_DOC.md`，视本次改动类型）需**已更新到最新**、反映本会话至今的完整事件并已阅读。若过期/未反映最新 → **先更新 → 再读 → 再继续**。详见 session-handoff 的"何时读 / 何时写"。
 1. **核验版本同步**（单一事实源）：
    - 读 pyproject.toml 的 `version`，确定基准版本。
    - 比对前端 footer 版本 → 若缺失，**提示"前端未标记版本，需先补"（不阻断）**；若与基准不符，**阻断**并提醒。
@@ -60,6 +67,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 - **文件名 = tag 名**：`v<X.Y.Z>.md` 或 `v<X.Y.Z>-beta.md`，严格与 pyproject 的 version 及要打的 tag 一致。
 - **每版本一份**，人工精炼。正文分两层：**「主要变化」**（面向读者，这版带来什么价值，偏 feat）+ **「主要修改」**（面向技术，具体改动明细，偏 fix）。**不逐条列 commit**。
+- **frontmatter 规范**（与 docs/handoff 及各 md 模板一致）：开头用 `---`，其中 **date 必须**，`version`/`status` 可选。date 是 GitHub Release 原材料解析所需，也标注文档"生命"。
 
 **内容模板**：用 `assets/release-template.md`（不留在 docs/，收敛于 skill；发布时复制为 `docs/releases/<tag>.md`）。
 
@@ -85,6 +93,7 @@ allowed-tools: read, edit, write, grep, glob, bash
 5. **不越权读**：只读与发布相关的版本/状态，不全量读取无关历史。
 6. **版本说明缺失即阻断**：`docs/releases/<tag>.md` 未就绪（不存在或空），不推送、不打 tag。
 7. **不擅自生成/落盘发布正文**：agent 可提炼草稿，但必须用户确认后才写入；正文分"主要变化"（读者价值）与"主要修改"（技术明细），不逐条列 commit。
+8. **发布前确认交接文档**：打 tag 前须确认 `docs/handoff/CURRENT_*.md` 已更新并阅读（联动 session-handoff），否则读到的是过期状态。
 
 ## assets
 
@@ -92,4 +101,4 @@ allowed-tools: read, edit, write, grep, glob, bash
 
 ## 口诀
 
-> 日常只 commit；发布打 tag 到 dev、push 触发 Release；同步走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明。说明缺失就阻断，不硬推。
+> 日常 commit + push dev（普通同步，不发布）；发布才打 tag 到 dev 触发 Release；同步 main 走"切main→pull→切dev→merge"。版本以 pyproject 为唯一源，发布前核验 footer + README + docs/releases 版本说明 + 交接文档（CURRENT_*）已更新并阅读。说明缺失就阻断，不硬推。

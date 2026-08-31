@@ -4,6 +4,7 @@
 
 - **语言**：推理内容（Thought）与对话内容必须使用中文。代码、变量名、API 字段保留英文，注释用中文。
 - **搜索源**：Web 拉取时优先检索国内可达的中文源（如百度百科、知乎、CSDN 等）。
+- **技能位置**：`travelpal-*` 前缀的 skill 是项目级（`.dsh/skills/` 下、git 跟踪）；其余是用户级（`.dsh/skills/` 下为软链、实际在 `~/.dsh/skills/`）。
 
 ## 指令纪律（常驻底线）
 
@@ -11,18 +12,3 @@
 - **纪律2**：禁止主动执行可能影响用户判断或较复杂的操作（如 git commit/push/pull/merge/checkout、前后端联调等）。这类操作遵循对应 skill 并先征得用户同意。
 - **纪律3**：新对话开始，若用户未提供上下文，主动询问是否回顾当前项目状态或关键决策，不自作主张假设已知上下文。
 - **边界**：查看代码发现阻塞性 bug **先与用户商议**再操作；依赖外部环境（PostgreSQL/Redis/Celery 等）的操作**先探测端口**，不可用则提醒用户先启动。
-
-## 规范指引（按需加载对应 skill）
-
-| 场景 | 加载 skill | 覆盖 |
-|------|-----------|------|
-| 编码规范（注释/代码风格/接口清单/数据模型/VNS 引擎） | `travelpal-coding` | backend / frontend / engine 三块 |
-| 架构编排（代码放哪层/模块怎么组织/公共逻辑怎么抽/文件要不要拆） | `travelpal-architecture` | 架构思想 + 分层决策 |
-| 测试规范（何时跑/划范围/环境探测/依赖分组/测试风格） | `travelpal-testing` | 测试全流程 |
-| 版本发布（git/tag/推送/同步 main） | `travelpal-git-release` | 发布与同步流 |
-| 运维与排障（部署/日志/重启/域名/故障排查） | `travelpal-ops` | deploy / troubleshooting 两类 |
-| 会话交接（跨会话上下文） | `session-handoff` | 交接文档读写 |
-| 文档维护（新增/修改任何 .md、ADR、入口文档、index.rst 导航） | `project-docs` | 全项目 md 文档 |
-| 任务执行（plan/build 行为） | `plan-build-protocol` | 响应节奏 |
-
-> 规范原文不在此注入常驻，涉及相应场景时加载对应 skill 即可；"遗忘时加载"，不随 AGENTS.md 常驻。

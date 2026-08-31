@@ -1,7 +1,7 @@
 /** API 客户端：基于统一 http 实例（services/http.ts）的类型化接口调用。 */
 import type { components } from '@/api/types.generated'
 import http from '@/services/http'
-import type { POILookupResponse, PlanRequestPayload } from '@/types'
+import type { POILookupResponse, PlanRequestPayload, TaskDetail, ShareListResponse, ShareDetail } from '@/types'
 
 /** POI 查询：根据城市和名称列表批量获取坐标/地址/营业时间。 */
 export function postPoiLookup(city: string, names: string[]): Promise<POILookupResponse> {
@@ -10,15 +10,9 @@ export function postPoiLookup(city: string, names: string[]): Promise<POILookupR
 
 // ================== 异步规划任务 ==================
 
-/** suggest 任务完成时的完整响应（TaskDetail.result，由 OpenAPI 生成）。 */
-export type SuggestResult = components['schemas']['SuggestResult']
-
-/** 异步规划任务状态详情（由 OpenAPI 生成，status: pending/running/done/failed）。 */
-export type TaskDetail = components['schemas']['TaskDetail']
-
-/** 提交异步规划任务。suggest/plan 立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。 */
+/** 提交异步规划任务。or-ca/or-vns 立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。 */
 export function submitTask(
-  type: 'suggest' | 'plan',
+  type: 'or-ca' | 'or-vns',
   data: PlanRequestPayload,
 ): Promise<components['schemas']['TaskSubmitResponse']> {
   return http.post(`/${type}`, data)
@@ -29,16 +23,17 @@ export function getTask(taskId: string): Promise<TaskDetail> {
   return http.get(`/tasks/${taskId}`)
 }
 
-// ================== 历史记录（分享站） ==================
+/** 取消一个异步规划任务（pending/running → canceled，任务面板调用）。 */
+export function cancelTask(taskId: string): Promise<components['schemas']['TaskCancelResponse']> {
+  return http.post(`/tasks/${taskId}/cancel`)
+}
 
-/** 历史记录列表项（摘要，由 OpenAPI 生成）。 */
-export type HistorySummary = components['schemas']['HistorySummary']
+/** 获取当前用户的任务列表（任务面板展示；匿名返回空）。 */
+export function listTasks(limit = 20): Promise<components['schemas']['TaskListResponse']> {
+  return http.get('/tasks', { params: { limit } })
+}
 
-/** 历史记录分页响应（由 OpenAPI 生成）。 */
-export type HistoryListResponse = components['schemas']['HistoryListResponse']
-
-/** 历史记录完整详情（由 OpenAPI 生成）。 */
-export type HistoryDetail = components['schemas']['HistoryDetail']
+// ================== 方案分享 ==================
 
 /** 获取设备 ID：首次访问时生成匿名随机标识，存入 localStorage。 */
 export function getDeviceId(): string {
@@ -51,26 +46,26 @@ export function getDeviceId(): string {
   return id
 }
 
-/** 获取历史记录列表（分页）。 */
-export function getHistoryList(page = 1, pageSize = 20): Promise<HistoryListResponse> {
-  return http.get('/history', { params: { page, page_size: pageSize } })
+/** 获取方案分享列表（分页）。 */
+export function getShareList(page = 1, pageSize = 20): Promise<ShareListResponse> {
+  return http.get('/shares', { params: { page, page_size: pageSize } })
 }
 
-/** 获取单条历史记录完整数据。 */
-export function getHistoryDetail(id: string): Promise<HistoryDetail> {
-  return http.get(`/history/${id}`)
+/** 获取单条方案分享完整数据。 */
+export function getShareDetail(id: string): Promise<ShareDetail> {
+  return http.get(`/shares/${id}`)
 }
 
-/** 保存一条历史记录（分享方案），请求体由 OpenAPI 的 HistoryCreate 约束。 */
-export function postHistory(
-  data: components['schemas']['HistoryCreate'],
+/** 保存一条方案分享（分享方案），请求体由 OpenAPI 的 ShareCreate 约束。 */
+export function postShare(
+  data: components['schemas']['ShareCreate'],
 ): Promise<{ id: string }> {
-  return http.post('/history', data)
+  return http.post('/shares', data)
 }
 
-/** 删除一条历史记录（需 device_id 匹配）。 */
-export function deleteHistory(id: string, deviceId: string): Promise<{ ok: boolean }> {
-  return http.delete(`/history/${id}`, { data: { device_id: deviceId } })
+/** 删除一条方案分享（需 device_id 匹配）。 */
+export function deleteShare(id: string, deviceId: string): Promise<{ ok: boolean }> {
+  return http.delete(`/shares/${id}`, { data: { device_id: deviceId } })
 }
 
 /** 提交一条用户反馈（/about 页面问卷），请求体由 OpenAPI 的 FeedbackCreate 约束。 */

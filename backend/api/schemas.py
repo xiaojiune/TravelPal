@@ -105,7 +105,7 @@ class PlanRequest(BaseModel):
     spots: list[POIItem] = Field(min_length=1, description="景点列表，至少 1 个")
     n_days: int | None = Field(default=None, description="行程天数，None 时返回建议")
     mode: str = Field(default="fast", pattern="^(fast|deep)$", description="求解模式：fast(CA) 或 deep(VNS)")
-    day_start: float = Field(default=0, ge=0, le=1440, description="一天启程时间（距午夜分钟数），0=午夜")
+    day_start: float = Field(default=480, ge=0, le=1440, description="一天启程时间（距午夜分钟数），默认 08:00")
     cost_matrix: list[list[float]] | None = Field(
         default=None,
         description="成本矩阵（分钟），复用 suggest 结果时传入以跳过驾车 API",
@@ -126,11 +126,29 @@ class ChatRequest(BaseModel):
     plan_result: 可选的规划结果上下文，供 Agent 参考。
     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
+    conversation_id: 可选会话 id（首条为空时后端懒建，后续携带以续接历史）。
     """
 
     message: str = Field(min_length=1, description="用户输入的消息")
     plan_result: dict | None = Field(default=None, description="规划结果上下文")
     form_context: dict | None = Field(default=None, description="表单输入快照（城市/酒店/景点）")
+    conversation_id: str | None = Field(default=None, description="会话 id（首条为空懒建，后续携带续接）")
+
+
+class ChatHistoryResponse(BaseModel):
+    """Agent 对话历史响应（GET /api/chat/history）。
+
+    用于登录用户打开 Agent 面板时恢复最近未过期会话的上下文：
+    - conversation_id：最近会话 id（无历史时为 None，前端据此新建）；
+    - messages：该会话的 checkpoint 历史消息（已过滤 system，OpenAI dict 形态）。
+
+    Attributes:
+        conversation_id: 最近会话 id；游客或无历史时为 None。
+        messages: 可回显的消息列表（user/assistant/tool），不含 system。
+    """
+
+    conversation_id: str | None = Field(default=None, description="最近会话 id；无历史为 None")
+    messages: list[dict] = Field(default_factory=list, description="历史消息（已过滤 system，OpenAI dict）")
 
 
 # ================== 方案调整 ==================
@@ -149,11 +167,11 @@ class PlanAdjustRequest(BaseModel):
     adjustments: dict = Field(default_factory=lambda: {"balance": True}, description="调整指令，如 {'balance': true}")
 
 
-# ================== 历史记录（分享站） ==================
+# ================== 方案分享 ==================
 
 
-class HistoryCreate(BaseModel):
-    """保存历史记录的请求体。
+class ShareCreate(BaseModel):
+    """保存方案分享的请求体。
 
     device_id 由前端 localStorage 生成，仅用于删除鉴权。
     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
@@ -171,8 +189,8 @@ class HistoryCreate(BaseModel):
     request_params: dict | None = None
 
 
-class HistorySummary(BaseModel):
-    """历史记录列表中的摘要信息。"""
+class ShareSummary(BaseModel):
+    """方案分享列表中的摘要信息。"""
 
     id: str
     city: str
@@ -184,8 +202,8 @@ class HistorySummary(BaseModel):
     created_at: str
 
 
-class HistoryDetail(BaseModel):
-    """历史记录完整信息，含全量 plan_result。"""
+class ShareDetail(BaseModel):
+    """方案分享完整信息，含全量 plan_result。"""
 
     id: str
     city: str
@@ -199,17 +217,17 @@ class HistoryDetail(BaseModel):
     created_at: str
 
 
-class HistoryListResponse(BaseModel):
-    """历史记录分页列表响应。"""
+class ShareListResponse(BaseModel):
+    """方案分享分页列表响应。"""
 
-    items: list[HistorySummary]
+    items: list[ShareSummary]
     total: int
     page: int
     page_size: int
 
 
-class HistoryDeleteRequest(BaseModel):
-    """删除历史记录的请求体，需与创建时的 device_id 一致。"""
+class ShareDeleteRequest(BaseModel):
+    """删除方案分享的请求体，需与创建时的 device_id 一致。"""
 
     device_id: str
 
@@ -220,7 +238,7 @@ class HistoryDeleteRequest(BaseModel):
 class SpotDictItem(BaseModel):
     """规划结果中的景点/酒店字典项（result.spots 字段值）。
 
-    与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+    与 backend/domain/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
     (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
     """
 
@@ -331,9 +349,9 @@ class TaskSubmitResponse(BaseModel):
 class TaskDetail(BaseModel):
     """异步规划任务的状态详情，供前端轮询。
 
-    status 为 pending/running/done/failed 四态。
+    status 为 pending/running/done/failed/canceled 五态。
     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
-    error 仅 failed 时存在。
+    error 仅 failed 时存在；canceled 表示用户主动取消（无 error）。
     """
 
     task_id: str
@@ -341,6 +359,29 @@ class TaskDetail(BaseModel):
     status: str
     result: TaskResult | None = None
     error: str | None = None
+
+
+class TaskListItem(BaseModel):
+    """异步任务列表项（面向任务面板的当前用户任务）。"""
+
+    task_id: str
+    task_type: str
+    status: str
+    created_at: str = ""
+    finished_at: str | None = None
+
+
+class TaskListResponse(BaseModel):
+    """当前用户异步任务列表响应。"""
+
+    tasks: list[TaskListItem]
+
+
+class TaskCancelResponse(BaseModel):
+    """取消异步规划任务的响应。"""
+
+    ok: bool
+    status: str
 
 
 # ================== 用户反馈（问卷） ==================
@@ -358,3 +399,140 @@ class FeedbackCreate(BaseModel):
     content: str = Field(min_length=1, max_length=2000, description="反馈内容（必填）")
     rating: int | None = Field(default=None, ge=1, le=5, description="评分 1-5（可选）")
     page: str | None = Field(default=None, max_length=50, description="来源页面路径，如 /about")
+
+
+# ================== 认证（用户系统） ==================
+
+
+class AuthRegister(BaseModel):
+    """注册请求体。
+
+    Attributes:
+        email: 登录邮箱。
+        password: 密码，至少 6 位。
+        nickname: 昵称（可选）。
+    """
+
+    email: str = Field(min_length=3, max_length=255, description="邮箱")
+    password: str = Field(min_length=6, max_length=128, description="密码，至少 6 位")
+    nickname: str | None = Field(default=None, max_length=100, description="昵称")
+
+
+class AuthLogin(BaseModel):
+    """登录请求体。
+
+    Attributes:
+        email: 登录邮箱。
+        password: 密码。
+    """
+
+    email: str = Field(min_length=3, max_length=255, description="邮箱")
+    password: str = Field(min_length=1, max_length=128, description="密码")
+
+
+class UserOut(BaseModel):
+    """当前用户信息响应。
+
+    Attributes:
+        id: 用户 UUID。
+        email: 邮箱。
+        nickname: 昵称。
+        role: 角色（user/guest/admin）。
+        is_active: 是否启用。
+    """
+
+    id: str
+    email: str | None = None
+    nickname: str | None = None
+    role: str
+    is_active: bool
+
+
+# ================== 管理员操作台 ==================
+
+
+class AdminUser(BaseModel):
+    """管理人员：用户列表项。
+
+    Attributes:
+        id: 用户 UUID。
+        email: 邮箱。
+        nickname: 昵称。
+        role: 角色（user/admin/super_admin）。
+        is_active: 是否启用。
+        created_at: 创建时间（ISO 字符串）。
+    """
+
+    id: str
+    email: str | None = None
+    nickname: str | None = None
+    role: str
+    is_active: bool
+    created_at: str = ""
+
+
+class AdminTask(BaseModel):
+    """管理人员：异步任务列表项。
+
+    Attributes:
+        id: 任务 UUID。
+        task_type: 任务类型（or-ca/or-vns）。
+        status: 状态（pending/running/done/failed）。
+        created_at: 创建时间（ISO 字符串）。
+        finished_at: 结束时间（ISO 字符串；未结束为空）。
+    """
+
+    id: str
+    task_type: str
+    status: str
+    created_at: str = ""
+    finished_at: str | None = None
+
+
+class AdminFeedback(BaseModel):
+    """管理人员：用户反馈列表项。
+
+    Attributes:
+        id: 反馈 UUID。
+        name: 用户称呼（可选）。
+        contact: 联系方式（可选）。
+        content: 反馈内容。
+        rating: 评分 1-5（可选）。
+        page: 来源页面路径（可选）。
+        created_at: 创建时间（ISO 字符串）。
+    """
+
+    id: str
+    name: str | None = None
+    contact: str | None = None
+    content: str
+    rating: int | None = None
+    page: str | None = None
+    created_at: str = ""
+
+
+class AdminUsersResponse(BaseModel):
+    """用户列表分页响应。"""
+
+    items: list[AdminUser]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminTasksResponse(BaseModel):
+    """任务列表分页响应。"""
+
+    items: list[AdminTask]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminFeedbackResponse(BaseModel):
+    """反馈列表分页响应。"""
+
+    items: list[AdminFeedback]
+    total: int
+    page: int
+    page_size: int

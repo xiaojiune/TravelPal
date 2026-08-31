@@ -43,6 +43,11 @@
 - 不用 `defineEmits`（回调 prop）。
 - Props 不用对象展开传递。
 
+## 格式化与提交（前端）
+
+- **不要用 `make format`（prettier --write src/ 全量）**：会重排项目里本就不符合 prettier 规则的文件，还会破坏 Vue 内联多语句表达式（如 `@click="a; b"`）。
+- 格式化后**何时验证、用什么验证**（`make build` / `make check` 怎么选）见 `travelpal-testing`。
+
 ## 注释具体写法
 
 - **页面级（`pages/`）**：段注释区分逻辑区域：

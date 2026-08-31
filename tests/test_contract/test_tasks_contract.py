@@ -48,7 +48,7 @@ class TestTaskExecutorsRegistry:
     """任务执行注册表契约。"""
 
     def test_registry_keys(self):
-        assert set(TASK_EXECUTORS.keys()) == {"suggest", "plan", "adjust"}
+        assert set(TASK_EXECUTORS.keys()) == {"or-ca", "or-vns", "adjust"}
 
     def test_executors_are_callable(self):
         for fn in TASK_EXECUTORS.values():

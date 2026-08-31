@@ -51,10 +51,46 @@
       </template>
     </template>
 
-    <!-- 操作 / 任务面板：v1.1 占位 -->
+    <!-- 异步任务面板：任务集合（生命周期在 store，后台轮询更新状态） -->
+    <template v-else-if="active === 'tasks'">
+      <div class="panel-head">
+        <span class="panel-title">📋 异步任务</span>
+      </div>
+      <div v-if="taskItems.length === 0" class="panel-empty">暂无任务（提交后在此查看进度）</div>
+      <template v-for="(t, index) in taskItems" :key="t.task_id">
+        <div v-if="index === 1" class="panel-section-title">历史</div>
+        <div class="panel-card" :style="{ borderColor: statusColor(t.status) }">
+        <div class="panel-card-head">
+          <span class="panel-task-name"
+            >任务{{ taskItems.length - index }}-{{ taskTypeLabel(t.task_type) }}</span
+          >
+          <span class="panel-task-status" :style="{ color: statusColor(t.status) }">
+            {{ statusLabel(t.status) }}
+          </span>
+        </div>
+        <div class="panel-task-meta">提交于 {{ t.created_at ? formatTime(t.created_at) : '—' }}</div>
+        <div v-if="canCancel(t.status) || t.status === 'done'" class="panel-actions">
+          <n-button
+            v-if="canCancel(t.status)"
+            size="tiny"
+            tertiary
+            type="error"
+            @click="doCancel(t.task_id)"
+          >
+            ✕ 取消
+          </n-button>
+          <n-button v-if="t.status === 'done'" size="tiny" type="primary" @click="viewResult(t.task_id)">
+            查看结果
+          </n-button>
+        </div>
+        </div>
+      </template>
+    </template>
+
+    <!-- 操作面板：v1.1 占位 -->
     <template v-else>
       <div class="panel-head">
-        <span class="panel-title">{{ active === 'ops' ? '🛠️ 方案操作' : '📋 异步任务' }}</span>
+        <span class="panel-title">🛠️ 方案操作</span>
       </div>
       <div class="panel-placeholder">
         <n-empty description="开发中">
@@ -76,9 +112,17 @@
  *
  * - 查询面板两节：POI 待选（上，可添加/全部加入/取消，收编自原 PendingPanel，
  *   由 store.pendingPois 派生）+ 其它查询结果（下，仅展示，如 get_driving）。
- * - 操作/任务面板：v1.1 占位，点击显示「未实现，v1.1 接入」（页面占位即记忆，不写文档）。
+ * - 异步任务面板：渲染 store.taskItems（任务生命周期单点在 store，后台轮询更新状态）；
+ *   非终态可取消，已完成可查看结果（暂跳 /or，端点问题后续修）。
+ * - 操作面板：v1.1 占位，点击显示「未实现，v1.1 接入」。
  */
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
+import type { SuggestionItem, SpotDictItem } from '@/types'
+import { cancelTask, getTask } from '@/services/api'
+import { useSuggestCache } from '@/composables/useSuggestCache'
 import { usePlanStore, isPoiQuery } from '@/stores/plan'
 import ToolResultCard from '@/components/ToolResultCard.vue'
 
@@ -88,9 +132,90 @@ type ToolPanelKind = 'query' | 'ops' | 'tasks'
 const props = defineProps<{ active: ToolPanelKind | null }>()
 
 const store = usePlanStore()
+const message = useMessage()
+const router = useRouter()
+const cache = useSuggestCache()
+
+/** 任务集合（生命周期在 store；后台轮询更新 status）。 */
+const { taskItems } = storeToRefs(store)
 
 /** 非 POI 型查询结果（仅展示，不可添加行程）。 */
 const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery(q.tool)))
+
+// ================== 异步任务面板 ==================
+
+/** 状态展示元数据。 */
+const STATUS_META: Record<string, { label: string; color: string; cancellable: boolean }> = {
+  pending: { label: '排队中', color: '#d4a72c', cancellable: true },
+  running: { label: '执行中', color: '#2f6fed', cancellable: true },
+  done: { label: '已完成', color: '#2fa84f', cancellable: false },
+  failed: { label: '失败', color: '#e5484d', cancellable: false },
+  canceled: { label: '已取消', color: '#8a8f99', cancellable: false },
+}
+
+const TASK_TYPE_LABEL: Record<string, string> = {
+  'or-ca': '求解',
+  'or-vns': '求解',
+  adjust: '调整',
+}
+
+function statusLabel(status: string): string {
+  return STATUS_META[status]?.label ?? status
+}
+function statusColor(status: string): string {
+  return STATUS_META[status]?.color ?? '#8a8f99'
+}
+function canCancel(status: string): boolean {
+  return STATUS_META[status]?.cancellable ?? false
+}
+function taskTypeLabel(type: string): string {
+  return TASK_TYPE_LABEL[type] ?? type
+}
+function formatTime(iso: string): string {
+  // Iso 字符串 → YYYY-MM-DD HH:mm（本地时区）
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+async function doCancel(taskId: string) {
+  try {
+    await cancelTask(taskId)
+    store.setTaskStatus(taskId, 'canceled')
+    message.success('任务已取消')
+  } catch (e: unknown) {
+    message.error('取消失败: ' + (e instanceof Error ? e.message : '未知错误'))
+  }
+}
+
+/** 查看已完成任务结果：拉取 result → 写入 store 建议区 → 跳 /or（后续端点修好再细化）。 */
+async function viewResult(taskId: string) {
+  try {
+    const detail = await getTask(taskId)
+    const result = detail.result as
+      | (Record<string, unknown> & { suggestions?: unknown[]; amap_api_key?: unknown; amap_security_code?: unknown })
+      | undefined
+    if (result) {
+      if (Array.isArray(result.suggestions)) {
+        store.suggestions = result.suggestions as SuggestionItem[]
+      }
+      if (typeof result.amap_api_key === 'string') store.amapApiKey = result.amap_api_key
+      if (typeof result.amap_security_code === 'string') store.amapSecurityCode = result.amap_security_code
+      // 回填 suggest 缓存：/or 页点建议卡 buildPlanResultFromSuggestion 依赖 spots/polylines；
+      // 不补则 /show 地图无覆盖物、setFitView 失效而停留在默认中心(北京)，且无道路。
+      if (result.spots && typeof result.spots === 'object') {
+        cache.suggestSpots.value = result.spots as Record<string, SpotDictItem>
+      }
+      if (result.polylines && typeof result.polylines === 'object') {
+        cache.suggestPolylines.value = result.polylines as Record<string, string>
+      }
+      if (typeof result.algo_time === 'number') cache.suggestAlgoTime.value = result.algo_time
+    }
+    router.push('/or')
+  } catch (e: unknown) {
+    message.error('获取结果失败: ' + (e instanceof Error ? e.message : '未知错误'))
+  }
+}
 </script>
 
 <style scoped>
@@ -165,12 +290,26 @@ const otherResults = computed(() => store.queryResults.filter((q) => !isPoiQuery
   color: var(--tp-primary);
   font-weight: 600;
 }
+.panel-task-name {
+  font-size: 11px;
+  color: var(--tp-text);
+  font-weight: 600;
+}
 .panel-card-time {
   font-size: 11px;
   color: var(--tp-text-3);
   margin-right: auto;
 }
 .panel-card-del {
+  color: var(--tp-text-3);
+}
+.panel-task-status {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+}
+.panel-task-meta {
+  font-size: 11px;
   color: var(--tp-text-3);
 }
 .panel-actions {

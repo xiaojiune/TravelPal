@@ -1,8 +1,6 @@
 # TravelPal
 
-**不占有的陪伴，不缺席的可靠。**
-
-> 基于约束求解的可执行旅行规划工具——你提需求，它算行程。
+> 基于约束求解 + LLM 的可执行旅行规划Agent——你提需求，它算行程。
 
 [![在线体验](https://img.shields.io/website?url=https://trippal.site&label=trippal.site)](https://trippal.site)
 [![Release](https://img.shields.io/github/v/release/xiaojiune/TravelPal?include_prereleases)](https://github.com/xiaojiune/TravelPal/releases)
@@ -15,7 +13,7 @@
 - 🏗️ 架构总览：[ARCHITECTURE.md](ARCHITECTURE.md)（C4 图）
 - 📦 版本记录：[Releases](https://github.com/xiaojiune/TravelPal/releases)（tag 驱动自动生成）
 
-📌 **版本状态**：🟠 新功能预发布 · 🔵 稳定版已部署（[dev 预览](https://github.com/xiaojiune/TravelPal/tree/dev) · [在线体验](https://trippal.site)）
+📌 （[dev 预览](https://github.com/xiaojiune/TravelPal/tree/dev) · [在线体验](https://trippal.site)）
 
 🏷️ `AI 行程决策引擎 · AI 辅助规划 · 全栈工程化`
 

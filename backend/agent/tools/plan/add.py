@@ -19,8 +19,13 @@ plan 参数（当前方案快照）由编排层注入：内部 FC 经 orchestrat
 from typing import cast
 
 from backend.agent.tools.plan._common import ensure_matrix
-from backend.data.driving_cache import get_driving_pair
+from backend.infrastructure.data.driving_cache import get_driving_pair
+from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.submit import submit_task
+
+# 组合根装配：应用层向 domain adjust_plan 注入驾车数据提供者。
+_driving = AmapDrivingProvider()
 
 
 async def _extract_poi(poi: dict) -> dict:
@@ -112,7 +117,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
             "adjustments": {"add_poi": poi},
         }
         try:
-            from backend.engine.pipeline import adjust_plan
+            from backend.domain.pipeline import adjust_plan
 
             return cast(
                 dict,
@@ -123,6 +128,8 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
                     plan["solution"]["routes"],
                     {"add_poi": poi},
                     city=city,
+                    driving=_driving,
+                    solver_factory=get_solver,
                 ),
             )
         except Exception as e:
@@ -143,7 +150,7 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
     all_hit = all(get_driving_pair(city, poi_point, t) is not None for t in check_points)
 
     if all_hit:
-        from backend.engine.pipeline import adjust_plan
+        from backend.domain.pipeline import adjust_plan
 
         try:
             return cast(
@@ -155,6 +162,8 @@ async def add_poi(city: str, poi: dict, day: int | None = None, plan: dict | Non
                     plan["solution"]["routes"],
                     {"add_poi": poi, "day": day},
                     city=city,
+                    driving=_driving,
+                    solver_factory=get_solver,
                 ),
             )
         except Exception as e:

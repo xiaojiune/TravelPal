@@ -1,4 +1,4 @@
-"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话、历史记录、异步任务。"""
+"""FastAPI 路由定义：POI 查询、行程规划、Agent 对话、方案分享、异步任务。"""
 
 import json
 import traceback
@@ -11,24 +11,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agent.chat import build_chat_messages, stream_orchestrator
 from backend.agent.tools import parse_biz_hours
+from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
+    ChatHistoryResponse,
     ChatRequest,
     FeedbackCreate,
-    HistoryCreate,
-    HistoryDeleteRequest,
-    HistoryDetail,
-    HistoryListResponse,
-    HistorySummary,
     PlanRequest,
     POILookupItem,
     POILookupRequest,
     POILookupResponse,
+    ShareCreate,
+    ShareDeleteRequest,
+    ShareDetail,
+    ShareListResponse,
+    ShareSummary,
+    TaskCancelResponse,
     TaskDetail,
+    TaskListItem,
+    TaskListResponse,
     TaskSubmitResponse,
 )
-from backend.data.amap_loader import get_poi_details
-from backend.data.model.database import get_session
-from backend.data.model.models import FeedbackRecord, HistoryRecord, PlanTask
+from backend.infrastructure.data.amap_loader import get_poi_details
+from backend.infrastructure.data.checkpointer import get_checkpointer
+from backend.infrastructure.data.conversations import (
+    get_history_messages,
+    get_or_create_conversation,
+    get_recent_conversation,
+)
+from backend.infrastructure.data.model.database import get_session
+from backend.infrastructure.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
 from backend.tasks.submit import submit_task
 
 router = APIRouter()
@@ -88,9 +99,12 @@ async def poi_lookup(req: POILookupRequest):
 # ---------- 规划相关 ----------
 
 
-@router.post("/api/suggest", response_model=TaskSubmitResponse)
-async def suggest(req: PlanRequest):
-    """提交方案建议任务（异步执行）。
+@router.post("/api/or-ca", response_model=TaskSubmitResponse)
+async def or_ca(
+    req: PlanRequest,
+    current: User | None = Depends(get_current_user_optional),
+):
+    """提交 OR-CA 方案建议任务（异步执行）。
 
     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
     改为提交异步任务，立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。
@@ -98,6 +112,7 @@ async def suggest(req: PlanRequest):
 
     Args:
         req: 规划请求，n_days 不指定，mode 固定走建议模式。
+        current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -106,16 +121,19 @@ async def suggest(req: PlanRequest):
         HTTPException 500: 任务创建失败。
     """
     try:
-        task_id = await submit_task("suggest", req.model_dump())
+        task_id = await submit_task("or-ca", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/api/plan", response_model=TaskSubmitResponse)
-async def plan(req: PlanRequest):
-    """提交完整规划任务（异步执行）。
+@router.post("/api/or-vns", response_model=TaskSubmitResponse)
+async def or_vns(
+    req: PlanRequest,
+    current: User | None = Depends(get_current_user_optional),
+):
+    """提交 OR-VNS 完整规划任务（异步执行）。
 
     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
@@ -124,6 +142,7 @@ async def plan(req: PlanRequest):
 
     Args:
         req: 规划请求，含 n_days 与求解模式。
+        current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
 
     Returns:
         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -135,7 +154,7 @@ async def plan(req: PlanRequest):
     if req.n_days is None:
         raise HTTPException(status_code=400, detail="n_days is required for planning")
     try:
-        task_id = await submit_task("plan", req.model_dump())
+        task_id = await submit_task("or-vns", req.model_dump(), user_id=current.id if current else None)  # pyright: ignore[reportArgumentType]
         return TaskSubmitResponse(task_id=task_id)
     except Exception as e:
         traceback.print_exc()
@@ -145,33 +164,85 @@ async def plan(req: PlanRequest):
 # ---------- Agent 对话 ----------
 
 
+@router.get("/api/chat/history", response_model=ChatHistoryResponse)
+async def chat_history(
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """取登录用户最近未过期会话的历史（不含 system），供打开 Agent 面板恢复上下文。
+
+    只读通道：**不创建会话**（避免只读访问落库）。返回最近会话 id 与该会话的
+    checkpoint 历史消息；游客或用户无历史时返回 { conversation_id: None, messages: [] }，
+    前端据此走新建会话路径。
+
+    Args:
+        session: 数据库会话（会话记录只读查询）。
+        current: 当前登录用户（可选）；仅登录用户可恢复历史，游客返回空。
+
+    Returns:
+        ChatHistoryResponse: { conversation_id, messages }。
+    """
+    conv = await get_recent_conversation(session, current.id if current else None)  # pyright: ignore[reportArgumentType]
+    if conv is None:
+        return ChatHistoryResponse()
+    history = await get_history_messages(str(conv.id))
+    messages = [m for m in history if m.get("role") != "system"]
+    return ChatHistoryResponse(conversation_id=str(conv.id), messages=messages)
+
+
 @router.post("/api/chat")
-async def chat(req: ChatRequest):
-    """LLM Agent 对话接口，SSE 流式输出。
+async def chat(
+    req: ChatRequest,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """LLM Agent 对话接口，SSE 流式输出（含会话记忆）。
 
     编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
+    会话（conversation）懒创建：首条消息不带 conversation_id 时新建，SSE 首事件返回
+    会话 id 供前端存下续接；后续携带 conversation_id 时读取历史续接（跨轮次记忆）。
 
     Args:
-        req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
+        req: 聊天请求，含 message 和可选的 plan_result / form_context / conversation_id。
+        session: 数据库会话（会话记录存取）。
+        current: 当前登录用户（可选）；登录时会话归属该 user_id。
 
     Returns:
-        StreamingResponse: SSE 流式响应，逐 token 推送内容。
+        StreamingResponse: SSE 流式响应，逐 token 推送内容（首事件为 conversation id）。
 
     Raises:
         HTTPException 500: LLM 调用异常或数据格式错误。
     """
     try:
-        messages = build_chat_messages(req.message, req.plan_result, req.form_context)
+        conv, created = await get_or_create_conversation(
+            session, req.conversation_id, current.id if current else None  # pyright: ignore[reportArgumentType]
+        )
+        if created:
+            # 新建会话（首条/过期重建）：build_chat_messages（system + 当前消息）
+            messages = build_chat_messages(req.message, req.plan_result, req.form_context)
+        else:
+            history = await get_history_messages(str(conv.id))
+            messages = (
+                list(history) + [{"role": "user", "content": req.message}]
+                if history
+                else build_chat_messages(req.message, req.plan_result, req.form_context)
+            )
+        thread_id = str(conv.id)
+        checkpointer = get_checkpointer()
 
         async def _stream():
-            """SSE 生成器：LangGraph 编排产出事件，映射为 SSE 事件流。"""
+            """SSE 生成器：先发会话 id，再映射 LangGraph 编排事件流。"""
+            # 懒建/复用的会话 id 通知前端（前端存下后后续轮携带续接）
+            yield f"data: {json.dumps({'type': 'conversation', 'conversation_id': thread_id})}\n\n"
             try:
                 async for event_type, data in stream_orchestrator(
                     messages,
                     exclude=_CHAT_EXCLUDE_TOOLS,
                     plan_result=req.plan_result,
                     form_context=req.form_context,
+                    checkpointer=checkpointer,
+                    thread_id=thread_id,
                 ):
                     if event_type == "content":
                         yield f"data: {json.dumps({'type': 'content', 'data': data})}\n\n"
@@ -196,16 +267,16 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ================== 历史记录（分享站） ==================
+# ================== 方案分享 ==================
 
 
-@router.get("/api/history", response_model=HistoryListResponse)
-async def list_history(
+@router.get("/api/shares", response_model=ShareListResponse)
+async def list_shares(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
 ):
-    """获取历史记录分页列表。
+    """获取方案分享分页列表。
 
     仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
     不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
@@ -215,16 +286,16 @@ async def list_history(
         page_size: 每页条数，最大 100。
 
     Returns:
-        HistoryListResponse: { items, total, page, page_size }。
+        ShareListResponse: { items, total, page, page_size }。
     """
-    count_q = select(func.count(HistoryRecord.id))
+    count_q = select(func.count(SharedPlan.id))
     total = (await session.execute(count_q)).scalar() or 0
 
-    q = select(HistoryRecord).order_by(HistoryRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+    q = select(SharedPlan).order_by(SharedPlan.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
     rows = (await session.execute(q)).scalars().all()
 
     items = [
-        HistorySummary(
+        ShareSummary(
             id=str(r.id),
             city=r.city,  # type: ignore[arg-type]
             hotel=r.hotel,  # type: ignore[arg-type]
@@ -236,26 +307,26 @@ async def list_history(
         )
         for r in rows
     ]
-    return HistoryListResponse(items=items, total=total, page=page, page_size=page_size)
+    return ShareListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.get("/api/history/{record_id}", response_model=HistoryDetail)
-async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
-    """获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+@router.get("/api/shares/{record_id}", response_model=ShareDetail)
+async def get_share_detail(record_id: UUID, session: AsyncSession = Depends(get_session)):
+    """获取单条方案分享的完整数据（含 plan_result 全量 JSONB）。
 
     Args:
         record_id: 记录 UUID。
 
     Returns:
-        HistoryDetail: 含 plan_result/request_params 等完整字段。
+        ShareDetail: 含 plan_result/request_params 等完整字段。
 
     Raises:
         HTTPException 404: 记录不存在。
     """
-    r = await session.get(HistoryRecord, record_id)
+    r = await session.get(SharedPlan, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    return HistoryDetail(
+    return ShareDetail(
         id=str(r.id),
         city=r.city,  # type: ignore[arg-type]
         hotel=r.hotel,  # type: ignore[arg-type]
@@ -269,18 +340,21 @@ async def get_history_detail(record_id: UUID, session: AsyncSession = Depends(ge
     )
 
 
-@router.post("/api/history", status_code=201)
-async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get_session)):
-    """保存一条历史记录（分享方案到分享站）。
+@router.post("/api/shares", status_code=201)
+async def create_share(
+    req: ShareCreate,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """保存一条方案分享（到分享站）。
 
-    设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
-    这是软鉴权设计。核心考量：
-    1. 不引入注册/登录系统，保持访客零门槛
-    2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
-    3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+    设计说明：登录用户归属 user_id；未登录访客仍零门槛可用（user_id 为 None），
+    device_id 由前端 localStorage 生成，仅用于匿名删除鉴权。
 
     Args:
-        req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+        req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
+        session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）；登录时写 user_id，匿名则为 None。
 
     Returns:
         dict: { id: str } 新创建的记录 UUID。
@@ -288,7 +362,8 @@ async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get
     Raises:
         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
     """
-    record = HistoryRecord(
+    record = SharedPlan(
+        user_id=current.id if current else None,
         device_id=req.device_id,
         note=req.note,
         city=req.city,
@@ -305,12 +380,17 @@ async def create_history(req: HistoryCreate, session: AsyncSession = Depends(get
 
 
 @router.post("/api/feedback", status_code=201)
-async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(get_session)):
+async def create_feedback(
+    req: FeedbackCreate,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
     """保存一条用户反馈（/about 页面问卷）。
 
     Args:
         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
         session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）；登录时归属该 user_id，匿名则为 None。
 
     Returns:
         dict: { id: str } 新创建的反馈 UUID。
@@ -319,6 +399,7 @@ async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(g
         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
     """
     record = FeedbackRecord(
+        user_id=current.id if current else None,
         name=req.name,
         contact=req.contact,
         content=req.content,
@@ -330,30 +411,40 @@ async def create_feedback(req: FeedbackCreate, session: AsyncSession = Depends(g
     return {"id": str(record.id)}
 
 
-@router.delete("/api/history/{record_id}")
-async def delete_history(
+@router.delete("/api/shares/{record_id}")
+async def delete_share(
     record_id: UUID,
-    req: HistoryDeleteRequest,
+    req: ShareDeleteRequest,
     session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
 ):
-    """删除一条历史记录（需 device_id 匹配创建者）。
+    """删除一条方案分享（登录按 user_id，匿名按 device_id）。
+
+    设计说明：登录用户只能删除归属自己（user_id 匹配）的记录，无法删除匿名记录；
+    未登录访客按 device_id 校验（软鉴权），与创建时一致。
 
     Args:
         record_id: 记录 UUID。
-        req: HistoryDeleteRequest，包含 device_id。
+        req: ShareDeleteRequest，包含 device_id。
+        session: 数据库会话（依赖注入）。
+        current: 当前登录用户（可选）。
 
     Returns:
         dict: { ok: true }
 
     Raises:
         HTTPException 404: 记录不存在。
-        HTTPException 403: device_id 不匹配，无权删除。
+        HTTPException 403: 无权删除（user_id 或 device_id 不匹配）。
     """
-    r = await session.get(HistoryRecord, record_id)
+    r = await session.get(SharedPlan, record_id)
     if not r:
         raise HTTPException(status_code=404, detail="记录不存在")
-    if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
-        raise HTTPException(status_code=403, detail="无权删除此记录")
+    if current is not None:
+        if r.user_id != current.id:  # pyright: ignore[reportGeneralTypeIssues]
+            raise HTTPException(status_code=403, detail="无权删除此记录")
+    else:
+        if r.device_id is not None and r.device_id != req.device_id:  # pyright: ignore[reportGeneralTypeIssues]
+            raise HTTPException(status_code=403, detail="无权删除此记录")
     await session.delete(r)
     await session.commit()
     return {"ok": True}
@@ -389,6 +480,87 @@ async def get_task_detail(task_id: UUID, session: AsyncSession = Depends(get_ses
         result=task.result,  # type: ignore[arg-type]
         error=task.error,  # type: ignore[arg-type]
     )
+
+
+@router.get("/api/tasks", response_model=TaskListResponse)
+async def list_tasks(
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+    limit: int = Query(20, ge=1, le=100),
+):
+    """列出当前登录用户最近的任务（供任务面板展示）。
+
+    归属：登录用户按 user_id 过滤；匿名用户无任务归属键，返回空列表。
+
+    Args:
+        session: DB 会话。
+        current: 当前登录用户（可选），匿名返回空。
+        limit: 返回条数上限，默认 20。
+
+    Returns:
+        TaskListResponse: { tasks: [...] }。
+    """
+    if current is None:
+        return TaskListResponse(tasks=[])
+    rows = (
+        (
+            await session.execute(
+                select(PlanTask)
+                .where(PlanTask.user_id == current.id)
+                .order_by(PlanTask.created_at.desc())
+                .limit(limit)
+            )
+        ).scalars()
+    ).all()
+    return TaskListResponse(
+        tasks=[
+            TaskListItem(
+                task_id=str(t.id),
+                task_type=t.task_type,  # type: ignore[arg-type]
+                status=t.status,  # type: ignore[arg-type]
+                created_at=t.created_at.isoformat() if t.created_at is not None else "",
+                finished_at=t.finished_at.isoformat() if t.finished_at is not None else None,
+            )
+            for t in rows
+        ]
+    )
+
+
+@router.post("/api/tasks/{task_id}/cancel", response_model=TaskCancelResponse)
+async def cancel_task(
+    task_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    current: User | None = Depends(get_current_user_optional),
+):
+    """请求取消一个异步规划任务（pending/running → canceled）。
+
+    协作式取消：端点只把 status 置为 canceled，worker 在执行前/执行中探测到后
+    协作退出（秒级中断）；finished_at 由 worker 收尾，避免与进行中的任务竞态覆盖。
+
+    Args:
+        task_id: 任务 UUID。
+        current: 当前登录用户（可选，用于归属校验）。
+
+    Returns:
+        TaskCancelResponse: { ok, status }。
+
+    Raises:
+        HTTPException 404: 任务不存在。
+        HTTPException 403: 归属校验失败（登录用户仅可取消自己的任务）。
+        HTTPException 409: 任务已终态（done/failed），无法取消。
+    """
+    task = await session.get(PlanTask, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if current is not None and task.user_id is not None and task.user_id != current.id:  # pyright: ignore[reportGeneralTypeIssues]
+        raise HTTPException(status_code=403, detail="无权取消此任务")
+    cur_status: str = task.status  # type: ignore[assignment]
+    if cur_status == "done" or cur_status == "failed":
+        raise HTTPException(status_code=409, detail="任务已结束，无法取消")
+    if cur_status != "canceled":
+        task.status = "canceled"  # type: ignore[assignment]
+        await session.commit()
+    return TaskCancelResponse(ok=True, status=cur_status)
 
 
 @router.delete("/api/tasks/{task_id}")

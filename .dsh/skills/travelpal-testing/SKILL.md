@@ -1,7 +1,11 @@
 ---
 name: travelpal-testing
-description: TravelPal 测试规范。涉及跑测试、写测试、判断测试何时该跑、确定测试范围时使用。它规定何时跑测试（用户要求/改测试/验证功能）、如何划改动范围（git status 定本次改动、只跑对应模块）、依赖外部环境的测试要先探测端口、新增依赖按生产/开发分组、以及项目的测试风格（三档数据 fixture、纯函数测试、slow marker）。把 AGENTS.md 里的测试边界与项目实际测试约定固化于此。
-whenToUse: 用户要跑测试、写/改测试、判断某个改动是否需要测试、排测试失败、或涉及仓库集/数据 fixture/外部环境测试时使用。用户提到 pytest、conftest、fixture、测试范围、环境探测时尤其要用。
+description: TravelPal 测试规范：测试范围约定与测试风格。跑/写/改测试、判断要不要测时使用。
+whenToUse:
+  - 用户明确指令：跑/写/改测试、判断"这次改动要不要测"
+  - 特定场景：用 git status 划改动范围、只跑对应模块、排测试失败、涉及数据 fixture（三档）/纯函数/slow marker/外部环境（探测端口）
+  - 关键词提及：pytest、conftest、fixture、测试、test
+  - 不触发：纯编码/文档/运维任务，与测试无关
 allowed-tools: read, edit, write, grep, glob, bash
 ---
 
@@ -17,6 +21,11 @@ allowed-tools: read, edit, write, grep, glob, bash
 3. 用户**要求验证某功能**是否正常
 
 **执行前先 `git status`** 确定本次改动范围，**只跑本次改动对应模块的测试**，不跑无关测试。
+
+### 前端改动何时验证
+
+- 只改前端、想快速确认模板没被破坏 → 用 `make build`（vite 编译验证），**不必跑全量 `make check`**。
+- 全量检查（`make check`，已含 `vite build`，后端+前端一整套）太大，交给 CI / 明确要求时跑；本地前端改动用 `make build` 即可。
 
 ## 二、外部环境测试（边界判断）
 

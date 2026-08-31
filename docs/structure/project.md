@@ -20,7 +20,7 @@
 
 TravelPal 是一个**基于双引擎 + LLM Agent 的智能旅行规划系统**，前后端分离：前端为 Vue 3 + TypeScript + Vite SPA，后端为 FastAPI。核心由四部分构成：
 
-- **HTTPS 接口层**（`backend/api/`）：POI 查询、行程规划、Agent 对话、历史记录、异步任务、用户反馈等端点。
+- **HTTPS 接口层**（`backend/api/`）：POI 查询、行程规划、Agent 对话、方案分享、异步任务、用户反馈等端点。
 - **Agent 层**（`backend/agent/`）：LLM 对话编排（LangGraph）、规划能力（方案调整/评语）、工具包（TOOL_REGISTRY）。
 - **求解引擎层**（`backend/engine/`）：CA / VNS 双求解器 + 6 种聚类 + 适应度评估。
 - **数据与基础设施**（`backend/data/`、`backend/infrastructure/`、`backend/domain/`、`backend/tasks/`、`backend/observability/`）：高德数据、ORM、LLM/天气/检索实现、异步任务、指标。
@@ -44,10 +44,10 @@ TravelPal 是一个**基于双引擎 + LLM Agent 的智能旅行规划系统**�
   │
   ├── POST /api/chat (SSE)   → LLM Agent 流式对话（LangGraph 编排）
   │
-  ├── POST /api/history      → 保存方案到分享站
-  │      GET  /api/history       分页列表
-  │      GET  /api/history/{id}  完整详情
-  │      DELETE /api/history/{id} 删除（device_id 鉴权）
+  ├── POST /api/shares      → 保存方案到分享站
+  │      GET  /api/shares       分页列表
+  │      GET  /api/shares/{id}  完整详情
+  │      DELETE /api/shares/{id} 删除（device_id 鉴权）
   │
   ├── POST /api/feedback     → 保存用户反馈（/about 页面问卷）
   │

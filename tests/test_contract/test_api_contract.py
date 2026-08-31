@@ -55,7 +55,7 @@ class TestPlanRequestContract:
     def test_defaults(self):
         req = PlanRequest(**_valid_plan_payload())
         assert req.mode == "fast"
-        assert req.day_start == 0
+        assert req.day_start == 480
         assert req.penalty_weight == 100.0
         assert req.early_wait_weight == 0.1
         assert req.late_return_weight == 50.0

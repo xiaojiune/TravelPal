@@ -18,7 +18,7 @@ SSE 事件通过 LangGraph custom stream（StreamWriter）推送给调用方，�
 import inspect
 import json
 from collections.abc import AsyncIterator
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
@@ -145,18 +145,40 @@ def _route_after_agent(state: OrchestratorState) -> str:
     return "tools" if state["pending_tool_calls"] else "end"
 
 
-def _build_graph():
-    """构建并编译编排图。"""
+def _build_builder() -> StateGraph:
+    """构建编排 StateGraph（未编译；编译时按需带 checkpointer）。"""
     builder = StateGraph(OrchestratorState)
     builder.add_node("agent", _agent_node)
     builder.add_node("tools", _tools_node)
     builder.add_edge(START, "agent")
     builder.add_edge("tools", "agent")
     builder.add_conditional_edges("agent", _route_after_agent, {"tools": "tools", "end": END})
-    return builder.compile()
+    return builder
 
 
-_graph = _build_graph()
+_graph = _build_builder().compile()
+
+# 带 checkpointer 的编译图缓存（lifespan 后首次用到时编译，其后按实例复用）
+_compiled_graph: Any | None = None
+_compiled_checkpointer: Any | None = None
+
+
+def _get_graph(checkpointer: Any | None) -> Any:
+    """返回编译图：无 checkpointer 用无状态图；有则按实例缓存 compile 结果。
+
+    Args:
+        checkpointer: LangGraph 会话状态持久化器（AsyncPostgresSaver）；None 表示无状态。
+
+    Returns:
+        Any: 已编译的 StateGraph。
+    """
+    global _compiled_graph, _compiled_checkpointer
+    if checkpointer is None:
+        return _graph
+    if _compiled_checkpointer is not checkpointer:
+        _compiled_graph = _build_builder().compile(checkpointer=checkpointer)
+        _compiled_checkpointer = checkpointer
+    return _compiled_graph
 
 
 async def stream_orchestrator(
@@ -165,11 +187,13 @@ async def stream_orchestrator(
     exclude: set[str] | None = None,
     plan_result: dict | None = None,
     form_context: dict | None = None,
+    checkpointer: Any | None = None,
+    thread_id: str | None = None,
 ) -> AsyncIterator[tuple]:
     """运行编排器，产出 (event_type, data) 事件流。
 
     Args:
-        messages: OpenAI 兼容消息列表（初始 system/user 消息）。
+        messages: OpenAI 兼容消息列表（初始 system/user 消息；有历史时含此前全部）。
         categories: 本次会话暴露的工具分类集合（如 {"poi"}）；
             其余分类的工具 schema 不注入 LLM，实现按上下文裁剪工具；
             None 表示暴露全部工具。
@@ -179,6 +203,9 @@ async def stream_orchestrator(
             透传，供 add_poi 等方案修改工具注入。
         form_context: 首页表单输入快照（可选）。前端透传，供 submit_plan_form
             等表单上下文工具注入（据此构造规划请求）。
+        checkpointer: LangGraph 会话状态持久化器（AsyncPostgresSaver）；None 表示不持久化。
+        thread_id: 会话线程标识（conversation id）；与 checkpointer 配合实现
+            跨轮次记忆。None 表示无状态单次。
 
     Yields:
         (event_type, data) 元组，event_type 为 content / tool_status / tool_result。
@@ -190,5 +217,7 @@ async def stream_orchestrator(
         "plan_result": plan_result,
         "form_context": form_context,
     }
-    async for mode, payload in _graph.astream(state, stream_mode="custom"):
+    graph = _get_graph(checkpointer)
+    config = {"configurable": {"thread_id": thread_id}} if thread_id else None
+    async for mode, payload in graph.astream(state, config=config, stream_mode="custom"):
         yield mode, payload

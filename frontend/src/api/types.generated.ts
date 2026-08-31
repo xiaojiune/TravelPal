@@ -57,7 +57,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/suggest": {
+    "/api/or-ca": {
         parameters: {
             query?: never;
             header?: never;
@@ -67,8 +67,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Suggest
-         * @description 提交方案建议任务（异步执行）。
+         * Or Ca
+         * @description 提交 OR-CA 方案建议任务（异步执行）。
          *
          *     建议模式（CA）需拉取完整驾车路径 API 构建成本矩阵，耗时可达数十秒；
          *     改为提交异步任务，立即返回 task_id，前端轮询 GET /api/tasks/{id} 获取结果。
@@ -76,6 +76,7 @@ export interface paths {
          *
          *     Args:
          *         req: 规划请求，n_days 不指定，mode 固定走建议模式。
+         *         current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -83,14 +84,14 @@ export interface paths {
          *     Raises:
          *         HTTPException 500: 任务创建失败。
          */
-        post: operations["suggest_api_suggest_post"];
+        post: operations["or_ca_api_or_ca_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/plan": {
+    "/api/or-vns": {
         parameters: {
             query?: never;
             header?: never;
@@ -100,8 +101,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Plan
-         * @description 提交完整规划任务（异步执行）。
+         * Or Vns
+         * @description 提交 OR-VNS 完整规划任务（异步执行）。
          *
          *     n_days 为必填，mode 可选 "fast"(CA) 或 "deep"(VNS)。
          *     若 req 携带 cost_matrix/dist_matrix（来自 suggest 响应），
@@ -110,6 +111,7 @@ export interface paths {
          *
          *     Args:
          *         req: 规划请求，含 n_days 与求解模式。
+         *         current: 当前登录用户（可选）；登录时任务归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         TaskSubmitResponse: { task_id: str }，前端据此轮询。
@@ -118,7 +120,38 @@ export interface paths {
          *         HTTPException 400: n_days 未指定时。
          *         HTTPException 500: 任务创建失败。
          */
-        post: operations["plan_api_plan_post"];
+        post: operations["or_vns_api_or_vns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chat/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chat History
+         * @description 取登录用户最近未过期会话的历史（不含 system），供打开 Agent 面板恢复上下文。
+         *
+         *     只读通道：**不创建会话**（避免只读访问落库）。返回最近会话 id 与该会话的
+         *     checkpoint 历史消息；游客或用户无历史时返回 { conversation_id: None, messages: [] }，
+         *     前端据此走新建会话路径。
+         *
+         *     Args:
+         *         session: 数据库会话（会话记录只读查询）。
+         *         current: 当前登录用户（可选）；仅登录用户可恢复历史，游客返回空。
+         *
+         *     Returns:
+         *         ChatHistoryResponse: { conversation_id, messages }。
+         */
+        get: operations["chat_history_api_chat_history_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -136,16 +169,20 @@ export interface paths {
         put?: never;
         /**
          * Chat
-         * @description LLM Agent 对话接口，SSE 流式输出。
+         * @description LLM Agent 对话接口，SSE 流式输出（含会话记忆）。
          *
          *     编排由 LangGraph 单 Agent（orchestrator.py）驱动：LLM 决策 → 工具分发
          *     （TOOL_REGISTRY，含 poi_lookup 等）→ SSE 事件流（content/tool_status/tool_result）。
+         *     会话（conversation）懒创建：首条消息不带 conversation_id 时新建，SSE 首事件返回
+         *     会话 id 供前端存下续接；后续携带 conversation_id 时读取历史续接（跨轮次记忆）。
          *
          *     Args:
-         *         req: 聊天请求，含 message 和可选的 plan_result / form_context 上下文。
+         *         req: 聊天请求，含 message 和可选的 plan_result / form_context / conversation_id。
+         *         session: 数据库会话（会话记录存取）。
+         *         current: 当前登录用户（可选）；登录时会话归属该 user_id。
          *
          *     Returns:
-         *         StreamingResponse: SSE 流式响应，逐 token 推送内容。
+         *         StreamingResponse: SSE 流式响应，逐 token 推送内容（首事件为 conversation id）。
          *
          *     Raises:
          *         HTTPException 500: LLM 调用异常或数据格式错误。
@@ -157,7 +194,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/history": {
+    "/api/shares": {
         parameters: {
             query?: never;
             header?: never;
@@ -165,8 +202,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List History
-         * @description 获取历史记录分页列表。
+         * List Shares
+         * @description 获取方案分享分页列表。
          *
          *     仅返回摘要字段（id/city/n_days/cost/spot_count/note/created_at），
          *     不加载 JSONB 大字段（plan_result），避免列表页传输大量数据。
@@ -176,22 +213,21 @@ export interface paths {
          *         page_size: 每页条数，最大 100。
          *
          *     Returns:
-         *         HistoryListResponse: { items, total, page, page_size }。
+         *         ShareListResponse: { items, total, page, page_size }。
          */
-        get: operations["list_history_api_history_get"];
+        get: operations["list_shares_api_shares_get"];
         put?: never;
         /**
-         * Create History
-         * @description 保存一条历史记录（分享方案到分享站）。
+         * Create Share
+         * @description 保存一条方案分享（到分享站）。
          *
-         *     设计说明：device_id 由前端 localStorage 自动生成，服务端不做强鉴权——
-         *     这是软鉴权设计。核心考量：
-         *     1. 不引入注册/登录系统，保持访客零门槛
-         *     2. device_id 仅用于删除时校验「是否是本人」，防止误删他人方案
-         *     3. device_id 无法防恶意攻击（前端可伪造），但此场景无敏感数据，可接受
+         *     设计说明：登录用户归属 user_id；未登录访客仍零门槛可用（user_id 为 None），
+         *     device_id 由前端 localStorage 生成，仅用于匿名删除鉴权。
          *
          *     Args:
-         *         req: HistoryCreate，包含 city/n_days/plan_result 等必填字段。
+         *         req: ShareCreate，包含 city/n_days/plan_result 等必填字段。
+         *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）；登录时写 user_id，匿名则为 None。
          *
          *     Returns:
          *         dict: { id: str } 新创建的记录 UUID。
@@ -199,14 +235,14 @@ export interface paths {
          *     Raises:
          *         HTTPException 422: 请求体校验失败（Pydantic 自动处理）。
          */
-        post: operations["create_history_api_history_post"];
+        post: operations["create_share_api_shares_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/history/{record_id}": {
+    "/api/shares/{record_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -214,37 +250,42 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get History Detail
-         * @description 获取单条历史记录的完整数据（含 plan_result 全量 JSONB）。
+         * Get Share Detail
+         * @description 获取单条方案分享的完整数据（含 plan_result 全量 JSONB）。
          *
          *     Args:
          *         record_id: 记录 UUID。
          *
          *     Returns:
-         *         HistoryDetail: 含 plan_result/request_params 等完整字段。
+         *         ShareDetail: 含 plan_result/request_params 等完整字段。
          *
          *     Raises:
          *         HTTPException 404: 记录不存在。
          */
-        get: operations["get_history_detail_api_history__record_id__get"];
+        get: operations["get_share_detail_api_shares__record_id__get"];
         put?: never;
         post?: never;
         /**
-         * Delete History
-         * @description 删除一条历史记录（需 device_id 匹配创建者）。
+         * Delete Share
+         * @description 删除一条方案分享（登录按 user_id，匿名按 device_id）。
+         *
+         *     设计说明：登录用户只能删除归属自己（user_id 匹配）的记录，无法删除匿名记录；
+         *     未登录访客按 device_id 校验（软鉴权），与创建时一致。
          *
          *     Args:
          *         record_id: 记录 UUID。
-         *         req: HistoryDeleteRequest，包含 device_id。
+         *         req: ShareDeleteRequest，包含 device_id。
+         *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）。
          *
          *     Returns:
          *         dict: { ok: true }
          *
          *     Raises:
          *         HTTPException 404: 记录不存在。
-         *         HTTPException 403: device_id 不匹配，无权删除。
+         *         HTTPException 403: 无权删除（user_id 或 device_id 不匹配）。
          */
-        delete: operations["delete_history_api_history__record_id__delete"];
+        delete: operations["delete_share_api_shares__record_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -266,6 +307,7 @@ export interface paths {
          *     Args:
          *         req: FeedbackCreate，content 必填，name/contact/rating/page 可选。
          *         session: 数据库会话（依赖注入）。
+         *         current: 当前登录用户（可选）；登录时归属该 user_id，匿名则为 None。
          *
          *     Returns:
          *         dict: { id: str } 新创建的反馈 UUID。
@@ -329,10 +371,488 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tasks
+         * @description 列出当前登录用户最近的任务（供任务面板展示）。
+         *
+         *     归属：登录用户按 user_id 过滤；匿名用户无任务归属键，返回空列表。
+         *
+         *     Args:
+         *         session: DB 会话。
+         *         current: 当前登录用户（可选），匿名返回空。
+         *         limit: 返回条数上限，默认 20。
+         *
+         *     Returns:
+         *         TaskListResponse: { tasks: [...] }。
+         */
+        get: operations["list_tasks_api_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{task_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Task
+         * @description 请求取消一个异步规划任务（pending/running → canceled）。
+         *
+         *     协作式取消：端点只把 status 置为 canceled，worker 在执行前/执行中探测到后
+         *     协作退出（秒级中断）；finished_at 由 worker 收尾，避免与进行中的任务竞态覆盖。
+         *
+         *     Args:
+         *         task_id: 任务 UUID。
+         *         current: 当前登录用户（可选，用于归属校验）。
+         *
+         *     Returns:
+         *         TaskCancelResponse: { ok, status }。
+         *
+         *     Raises:
+         *         HTTPException 404: 任务不存在。
+         *         HTTPException 403: 归属校验失败（登录用户仅可取消自己的任务）。
+         *         HTTPException 409: 任务已终态（done/failed），无法取消。
+         */
+        post: operations["cancel_task_api_tasks__task_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description 注册用户并自动登录。
+         *
+         *     Args:
+         *         req: 注册请求（邮箱/密码/昵称）。
+         *         response: 响应对象，登录后写入会话 Cookie。
+         *         session: 数据库会话。
+         *
+         *     Returns:
+         *         UserOut: 新注册用户信息。
+         *
+         *     Raises:
+         *         HTTPException 409: 邮箱已注册。
+         */
+        post: operations["register_api_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description 登录：校验密码并创建会话。
+         *
+         *     Args:
+         *         req: 登录请求（邮箱/密码）。
+         *         response: 响应对象，成功后写入会话 Cookie。
+         *         session: 数据库会话。
+         *
+         *     Returns:
+         *         UserOut: 当前用户信息。
+         *
+         *     Raises:
+         *         HTTPException 401: 邮箱或密码错误。
+         *         HTTPException 503: 会话创建失败（会话不可用）。
+         */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description 登出：撤销会话并清除 Cookie。
+         *
+         *     Args:
+         *         request: 当前请求（读取会话 Cookie）。
+         *         response: 响应对象，用于清除 Cookie。
+         *
+         *     Returns:
+         *         dict: {"ok": True}。
+         */
+        post: operations["logout_api_auth_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description 返回当前登录用户信息。
+         *
+         *     Args:
+         *         current: 当前登录用户（依赖注入）。
+         *
+         *     Returns:
+         *         UserOut: 当前用户信息。
+         */
+        get: operations["me_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description 分页列出全部用户（含 guest/user/admin/super_admin）。
+         *
+         *     Args:
+         *         page: 页码，从 1 开始。
+         *         page_size: 每页条数，最大 100。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminUsersResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_users_api_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tasks
+         * @description 分页列出全部异步规划任务（or-ca/or-vns）。
+         *
+         *     Args:
+         *         page: 页码。
+         *         page_size: 每页条数。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminTasksResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_tasks_api_admin_tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Feedback
+         * @description 分页列出全部用户反馈。
+         *
+         *     Args:
+         *         page: 页码。
+         *         page_size: 每页条数。
+         *         session: 数据库会话。
+         *         current: 当前用户（require_admin 校验）。
+         *
+         *     Returns:
+         *         AdminFeedbackResponse: { items, total, page, page_size }。
+         *
+         *     Raises:
+         *         HTTPException 403: 当前用户非 admin/super_admin（require_admin）。
+         */
+        get: operations["list_feedback_api_admin_feedback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AdminFeedback
+         * @description 管理人员：用户反馈列表项。
+         *
+         *     Attributes:
+         *         id: 反馈 UUID。
+         *         name: 用户称呼（可选）。
+         *         contact: 联系方式（可选）。
+         *         content: 反馈内容。
+         *         rating: 评分 1-5（可选）。
+         *         page: 来源页面路径（可选）。
+         *         created_at: 创建时间（ISO 字符串）。
+         */
+        AdminFeedback: {
+            /** Id */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Contact */
+            contact?: string | null;
+            /** Content */
+            content: string;
+            /** Rating */
+            rating?: number | null;
+            /** Page */
+            page?: string | null;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+        };
+        /**
+         * AdminFeedbackResponse
+         * @description 反馈列表分页响应。
+         */
+        AdminFeedbackResponse: {
+            /** Items */
+            items: components["schemas"]["AdminFeedback"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * AdminTask
+         * @description 管理人员：异步任务列表项。
+         *
+         *     Attributes:
+         *         id: 任务 UUID。
+         *         task_type: 任务类型（or-ca/or-vns）。
+         *         status: 状态（pending/running/done/failed）。
+         *         created_at: 创建时间（ISO 字符串）。
+         *         finished_at: 结束时间（ISO 字符串；未结束为空）。
+         */
+        AdminTask: {
+            /** Id */
+            id: string;
+            /** Task Type */
+            task_type: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * AdminTasksResponse
+         * @description 任务列表分页响应。
+         */
+        AdminTasksResponse: {
+            /** Items */
+            items: components["schemas"]["AdminTask"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * AdminUser
+         * @description 管理人员：用户列表项。
+         *
+         *     Attributes:
+         *         id: 用户 UUID。
+         *         email: 邮箱。
+         *         nickname: 昵称。
+         *         role: 角色（user/admin/super_admin）。
+         *         is_active: 是否启用。
+         *         created_at: 创建时间（ISO 字符串）。
+         */
+        AdminUser: {
+            /** Id */
+            id: string;
+            /** Email */
+            email?: string | null;
+            /** Nickname */
+            nickname?: string | null;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+        };
+        /**
+         * AdminUsersResponse
+         * @description 用户列表分页响应。
+         */
+        AdminUsersResponse: {
+            /** Items */
+            items: components["schemas"]["AdminUser"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * AuthLogin
+         * @description 登录请求体。
+         *
+         *     Attributes:
+         *         email: 登录邮箱。
+         *         password: 密码。
+         */
+        AuthLogin: {
+            /**
+             * Email
+             * @description 邮箱
+             */
+            email: string;
+            /**
+             * Password
+             * @description 密码
+             */
+            password: string;
+        };
+        /**
+         * AuthRegister
+         * @description 注册请求体。
+         *
+         *     Attributes:
+         *         email: 登录邮箱。
+         *         password: 密码，至少 6 位。
+         *         nickname: 昵称（可选）。
+         */
+        AuthRegister: {
+            /**
+             * Email
+             * @description 邮箱
+             */
+            email: string;
+            /**
+             * Password
+             * @description 密码，至少 6 位
+             */
+            password: string;
+            /**
+             * Nickname
+             * @description 昵称
+             */
+            nickname?: string | null;
+        };
+        /**
+         * ChatHistoryResponse
+         * @description Agent 对话历史响应（GET /api/chat/history）。
+         *
+         *     用于登录用户打开 Agent 面板时恢复最近未过期会话的上下文：
+         *     - conversation_id：最近会话 id（无历史时为 None，前端据此新建）；
+         *     - messages：该会话的 checkpoint 历史消息（已过滤 system，OpenAI dict 形态）。
+         *
+         *     Attributes:
+         *         conversation_id: 最近会话 id；游客或无历史时为 None。
+         *         messages: 可回显的消息列表（user/assistant/tool），不含 system。
+         */
+        ChatHistoryResponse: {
+            /**
+             * Conversation Id
+             * @description 最近会话 id；无历史为 None
+             */
+            conversation_id?: string | null;
+            /**
+             * Messages
+             * @description 历史消息（已过滤 system，OpenAI dict）
+             */
+            messages?: {
+                [key: string]: unknown;
+            }[];
+        };
         /**
          * ChatRequest
          * @description LLM Agent 对话请求。
@@ -341,6 +861,7 @@ export interface components {
          *     plan_result: 可选的规划结果上下文，供 Agent 参考。
          *     form_context: 可选的表单上下文（首页输入快照：城市/酒店/景点等），
          *         Agent 据此感知用户已填内容，并供 submit_plan_form 工具构造规划请求。
+         *     conversation_id: 可选会话 id（首条为空时后端懒建，后续携带以续接历史）。
          */
         ChatRequest: {
             /**
@@ -362,6 +883,11 @@ export interface components {
             form_context?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Conversation Id
+             * @description 会话 id（首条为空懒建，后续携带续接）
+             */
+            conversation_id?: string | null;
         };
         /**
          * FeedbackCreate
@@ -401,118 +927,6 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
-        };
-        /**
-         * HistoryCreate
-         * @description 保存历史记录的请求体。
-         *
-         *     device_id 由前端 localStorage 生成，仅用于删除鉴权。
-         *     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
-         *     request_params 为用户输入参数，方便复现。
-         */
-        HistoryCreate: {
-            /**
-             * Device Id
-             * @description 匿名设备标识
-             */
-            device_id?: string | null;
-            /**
-             * Note
-             * @description 用户备注
-             */
-            note?: string | null;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Plan Result */
-            plan_result: {
-                [key: string]: unknown;
-            };
-            /** Request Params */
-            request_params?: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * HistoryDeleteRequest
-         * @description 删除历史记录的请求体，需与创建时的 device_id 一致。
-         */
-        HistoryDeleteRequest: {
-            /** Device Id */
-            device_id: string;
-        };
-        /**
-         * HistoryDetail
-         * @description 历史记录完整信息，含全量 plan_result。
-         */
-        HistoryDetail: {
-            /** Id */
-            id: string;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Note */
-            note?: string | null;
-            /** Plan Result */
-            plan_result: {
-                [key: string]: unknown;
-            };
-            /** Request Params */
-            request_params?: {
-                [key: string]: unknown;
-            } | null;
-            /** Created At */
-            created_at: string;
-        };
-        /**
-         * HistoryListResponse
-         * @description 历史记录分页列表响应。
-         */
-        HistoryListResponse: {
-            /** Items */
-            items: components["schemas"]["HistorySummary"][];
-            /** Total */
-            total: number;
-            /** Page */
-            page: number;
-            /** Page Size */
-            page_size: number;
-        };
-        /**
-         * HistorySummary
-         * @description 历史记录列表中的摘要信息。
-         */
-        HistorySummary: {
-            /** Id */
-            id: string;
-            /** City */
-            city: string;
-            /** Hotel */
-            hotel?: string | null;
-            /** N Days */
-            n_days: number;
-            /** Cost */
-            cost?: number | null;
-            /** Spot Count */
-            spot_count?: number | null;
-            /** Note */
-            note?: string | null;
-            /** Created At */
-            created_at: string;
         };
         /**
          * POIItem
@@ -681,8 +1095,8 @@ export interface components {
             mode: string;
             /**
              * Day Start
-             * @description 一天启程时间（距午夜分钟数），0=午夜
-             * @default 0
+             * @description 一天启程时间（距午夜分钟数），默认 08:00
+             * @default 480
              */
             day_start: number;
             /**
@@ -797,10 +1211,122 @@ export interface components {
             departure_status: string;
         };
         /**
+         * ShareCreate
+         * @description 保存方案分享的请求体。
+         *
+         *     device_id 由前端 localStorage 生成，仅用于删除鉴权。
+         *     plan_result 为完整 PlanResult JSON，含 routes/spots/polylines/commentary 等。
+         *     request_params 为用户输入参数，方便复现。
+         */
+        ShareCreate: {
+            /**
+             * Device Id
+             * @description 匿名设备标识
+             */
+            device_id?: string | null;
+            /**
+             * Note
+             * @description 用户备注
+             */
+            note?: string | null;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ShareDeleteRequest
+         * @description 删除方案分享的请求体，需与创建时的 device_id 一致。
+         */
+        ShareDeleteRequest: {
+            /** Device Id */
+            device_id: string;
+        };
+        /**
+         * ShareDetail
+         * @description 方案分享完整信息，含全量 plan_result。
+         */
+        ShareDetail: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Plan Result */
+            plan_result: {
+                [key: string]: unknown;
+            };
+            /** Request Params */
+            request_params?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
+         * ShareListResponse
+         * @description 方案分享分页列表响应。
+         */
+        ShareListResponse: {
+            /** Items */
+            items: components["schemas"]["ShareSummary"][];
+            /** Total */
+            total: number;
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+        };
+        /**
+         * ShareSummary
+         * @description 方案分享列表中的摘要信息。
+         */
+        ShareSummary: {
+            /** Id */
+            id: string;
+            /** City */
+            city: string;
+            /** Hotel */
+            hotel?: string | null;
+            /** N Days */
+            n_days: number;
+            /** Cost */
+            cost?: number | null;
+            /** Spot Count */
+            spot_count?: number | null;
+            /** Note */
+            note?: string | null;
+            /** Created At */
+            created_at: string;
+        };
+        /**
          * SpotDictItem
          * @description 规划结果中的景点/酒店字典项（result.spots 字段值）。
          *
-         *     与 backend/engine/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
+         *     与 backend/domain/pipeline.py 构建的 SpotDict 对齐：tw/original_tw 为
          *     (start, end) 分钟数对（JSON 序列化为两元素数组），x/y 为 GCJ-02 坐标。
          */
         SpotDictItem: {
@@ -881,12 +1407,22 @@ export interface components {
             daily_schedules?: components["schemas"]["ScheduleItem"][][] | null;
         };
         /**
+         * TaskCancelResponse
+         * @description 取消异步规划任务的响应。
+         */
+        TaskCancelResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Status */
+            status: string;
+        };
+        /**
          * TaskDetail
          * @description 异步规划任务的状态详情，供前端轮询。
          *
-         *     status 为 pending/running/done/failed 四态。
+         *     status 为 pending/running/done/failed/canceled 五态。
          *     result 仅 done 时存在（suggest 完整响应或完整 PlanResult），
-         *     error 仅 failed 时存在。
+         *     error 仅 failed 时存在；canceled 表示用户主动取消（无 error）。
          */
         TaskDetail: {
             /** Task Id */
@@ -901,12 +1437,62 @@ export interface components {
             error?: string | null;
         };
         /**
+         * TaskListItem
+         * @description 异步任务列表项（面向任务面板的当前用户任务）。
+         */
+        TaskListItem: {
+            /** Task Id */
+            task_id: string;
+            /** Task Type */
+            task_type: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * @default
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+        };
+        /**
+         * TaskListResponse
+         * @description 当前用户异步任务列表响应。
+         */
+        TaskListResponse: {
+            /** Tasks */
+            tasks: components["schemas"]["TaskListItem"][];
+        };
+        /**
          * TaskSubmitResponse
          * @description 提交异步规划任务后返回的响应，前端据此轮询任务状态。
          */
         TaskSubmitResponse: {
             /** Task Id */
             task_id: string;
+        };
+        /**
+         * UserOut
+         * @description 当前用户信息响应。
+         *
+         *     Attributes:
+         *         id: 用户 UUID。
+         *         email: 邮箱。
+         *         nickname: 昵称。
+         *         role: 角色（user/guest/admin）。
+         *         is_active: 是否启用。
+         */
+        UserOut: {
+            /** Id */
+            id: string;
+            /** Email */
+            email?: string | null;
+            /** Nickname */
+            nickname?: string | null;
+            /** Role */
+            role: string;
+            /** Is Active */
+            is_active: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -983,7 +1569,7 @@ export interface operations {
             };
         };
     };
-    suggest_api_suggest_post: {
+    or_ca_api_or_ca_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1016,7 +1602,7 @@ export interface operations {
             };
         };
     };
-    plan_api_plan_post: {
+    or_vns_api_or_vns_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1045,6 +1631,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chat_history_api_chat_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatHistoryResponse"];
                 };
             };
         };
@@ -1082,7 +1688,7 @@ export interface operations {
             };
         };
     };
-    list_history_api_history_get: {
+    list_shares_api_shares_get: {
         parameters: {
             query?: {
                 page?: number;
@@ -1100,7 +1706,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HistoryListResponse"];
+                    "application/json": components["schemas"]["ShareListResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1114,7 +1720,7 @@ export interface operations {
             };
         };
     };
-    create_history_api_history_post: {
+    create_share_api_shares_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1123,7 +1729,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HistoryCreate"];
+                "application/json": components["schemas"]["ShareCreate"];
             };
         };
         responses: {
@@ -1147,7 +1753,7 @@ export interface operations {
             };
         };
     };
-    get_history_detail_api_history__record_id__get: {
+    get_share_detail_api_shares__record_id__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1164,7 +1770,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HistoryDetail"];
+                    "application/json": components["schemas"]["ShareDetail"];
                 };
             };
             /** @description Validation Error */
@@ -1178,7 +1784,7 @@ export interface operations {
             };
         };
     };
-    delete_history_api_history__record_id__delete: {
+    delete_share_api_shares__record_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -1189,7 +1795,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["HistoryDeleteRequest"];
+                "application/json": components["schemas"]["ShareDeleteRequest"];
             };
         };
         responses: {
@@ -1295,6 +1901,270 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_api_tasks_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_task_api_tasks__task_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskCancelResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_api_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthRegister"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_auth_logout_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    me_api_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
+                };
+            };
+        };
+    };
+    list_users_api_admin_users_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tasks_api_admin_tasks_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTasksResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_feedback_api_admin_feedback_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeedbackResponse"];
                 };
             };
             /** @description Validation Error */

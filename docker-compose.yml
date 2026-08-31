@@ -34,6 +34,23 @@ services:
     volumes:
       - redis_data:/data
 
+  # Celery 消息代理：LavinMQ（AMQP 0-9-1，超轻量高性能，替代 redis 作 broker）
+  lavinmq:
+    image: cloudamqp/lavinmq:latest
+    container_name: travelpal-lavinmq
+    logging: *default-logging
+    environment:
+      LAVINMQ_AMQP_PORT: "5672"
+      LAVINMQ_HTTP_PORT: "15672"
+    ports:
+      # AMQP(Celery broker)：容器间经服务名 lavinmq 内网通信，宿主机仅回环可连（本地 worker 用），
+      # 不暴露公网；生产公网访问不到。
+      - "127.0.0.1:5672:5672"
+      # 管理台：仅回环可连（SSH 进服务器才能访问），公网不暴露——guest/默认凭据防公网攻击
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - lavinmq_data:/var/lib/lavinmq
+
   backend:
     build:
       context: .
@@ -45,8 +62,7 @@ services:
     logging: *default-logging
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
-      CELERY_BROKER_URL: redis://redis:6379/0
-      DB_INIT_MODE: none
+      CELERY_BROKER_URL: amqp://guest:guest@lavinmq:5672//
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -63,6 +79,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      lavinmq:
+        condition: service_started
 
   worker:
     build:
@@ -76,8 +94,7 @@ services:
     command: ["celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
-      CELERY_BROKER_URL: redis://redis:6379/0
-      DB_INIT_MODE: none
+      CELERY_BROKER_URL: amqp://guest:guest@lavinmq:5672//
       AMAP_API_KEY: ${AMAP_API_KEY}
       AMAP_JS_KEY: ${AMAP_JS_KEY}
       AMAP_JS_SECURITY_CODE: ${AMAP_JS_SECURITY_CODE}
@@ -91,6 +108,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      lavinmq:
         condition: service_started
 
   nginx:
@@ -117,3 +136,4 @@ volumes:
   postgres_data:
   redis_data:
   metrics_data:
+  lavinmq_data:

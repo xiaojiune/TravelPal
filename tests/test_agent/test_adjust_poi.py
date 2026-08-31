@@ -63,12 +63,12 @@ def test_missing_matrix_snapshot_hit_backfills(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["cost"] = cost
         captured["dist"] = dist
         return {"solution": {"routes": [[0, 1, 3, 0], [0, 2, 0]]}}
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     result = asyncio.run(
         add_poi_fn(
@@ -124,11 +124,11 @@ def test_add_poi_missing_day_global_path(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     def _should_not_submit(*a, **k):
         raise AssertionError("day 缺失应走同步全局路径，不应提交异步任务")
@@ -158,11 +158,11 @@ def test_add_poi_sync_fast_path(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     def _should_not_submit(*a, **k):
         raise AssertionError("不应提交异步任务")

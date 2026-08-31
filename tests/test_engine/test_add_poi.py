@@ -3,7 +3,8 @@
 import numpy as np
 import pytest
 
-from backend.agent.planning import add_poi_to_day
+from backend.domain.planning import add_poi_to_day
+from backend.infrastructure.engine.solver import get_solver
 
 
 def _expand(spots, cost_mat, name="新景点", stay=60) -> tuple[dict, np.ndarray, int]:
@@ -36,7 +37,7 @@ class TestAddPoiToDay:
         before_other = routes[1]  # 非目标天（目标天=0）路线
 
         new_spots, new_cost, new_idx = _expand(spots, cost_mat)
-        plan = add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=0)
+        plan = add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=0, solver_factory=get_solver)
 
         assert plan["solution"]["valid"] is True
         assert plan["best_days"] == 2
@@ -54,7 +55,7 @@ class TestAddPoiToDay:
         before_day0 = routes[0]
 
         new_spots, new_cost, new_idx = _expand(spots, cost_mat)
-        plan = add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=1)
+        plan = add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=1, solver_factory=get_solver)
 
         assert new_idx in plan["solution"]["routes"][1]
         assert plan["solution"]["routes"][0] == before_day0
@@ -65,11 +66,11 @@ class TestAddPoiToDay:
         spots, cost_mat, routes = base_adjust_plan
         new_spots, new_cost, new_idx = _expand(spots, cost_mat)
         with pytest.raises(ValueError, match="超出范围"):
-            add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=5)
+            add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=5, solver_factory=get_solver)
 
     def test_add_poi_to_day_negative_raises(self, base_adjust_plan):
         """day 为负数同样拒绝。"""
         spots, cost_mat, routes = base_adjust_plan
         new_spots, new_cost, new_idx = _expand(spots, cost_mat)
         with pytest.raises(ValueError, match="超出范围"):
-            add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=-1)
+            add_poi_to_day(new_spots, new_cost, new_cost, routes, new_idx, day=-1, solver_factory=get_solver)

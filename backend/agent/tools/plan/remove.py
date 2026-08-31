@@ -22,7 +22,12 @@ plan 参数（当前方案快照）由编排层注入：内部 FC 经 orchestrat
 from typing import cast
 
 from backend.agent.tools.plan._common import ensure_matrix
+from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.submit import submit_task
+
+# 组合根装配：应用层向 domain adjust_plan 注入驾车数据提供者。
+_driving = AmapDrivingProvider()
 
 
 async def remove_poi(
@@ -60,7 +65,7 @@ async def remove_poi(
     if day is not None:
         adjustments["day"] = day
 
-    from backend.engine.pipeline import adjust_plan
+    from backend.domain.pipeline import adjust_plan
 
     try:
         return cast(
@@ -72,6 +77,8 @@ async def remove_poi(
                 plan["solution"]["routes"],
                 adjustments,
                 city=city,
+                driving=_driving,
+                solver_factory=get_solver,
             ),
         )
     except Exception:

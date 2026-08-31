@@ -1,6 +1,6 @@
 import numpy as np
 
-from backend.engine.ca import CASolver
+from backend.infrastructure.engine.ca import CASolver
 
 # ================== CA 求解器 ==================
 

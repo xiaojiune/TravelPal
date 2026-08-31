@@ -28,8 +28,9 @@ class Settings(BaseSettings):
     LLM_MODEL: str = "deepseek-chat"
     # PostgreSQL 数据库连接地址
     DATABASE_URL: str = "postgresql+asyncpg://travelpal:travelpal123@localhost:5432/travelpal"
-    # Celery 消息代理地址（redis），异步任务队列
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    # Celery 消息代理地址（LavinMQ / AMQP 0-9-1），异步任务队列。
+    # 默认 guest@localhost 兜底（LavinMQ 默认账号）；本地/生产用 .env 覆盖为独立账号。
+    CELERY_BROKER_URL: str = "amqp://guest:guest@localhost:5672//"
     # Redis 缓存地址（驾车成本点对缓存），默认与 broker 同实例
     REDIS_URL: str = "redis://localhost:6379/0"
     # Embedding API Key（预留，当前未使用）
@@ -44,9 +45,11 @@ class Settings(BaseSettings):
     PROMETHEUS_MULTIPROC_DIR: str = "/tmp/travelpal_metrics"
     # uvicorn 开发热重载开关
     DEV_RELOAD: bool = False
-    # 启动时是否自动建表：create=应用启动时执行 create_all（本地开发），
-    # none=不建表（生产由 alembic 迁移管理，避免双轨 schema 冲突）
-    DB_INIT_MODE: str = "create"
+    # 认证：服务端会话签名/CSRF 用密钥（走 .env，不进 git）
+    SECRET_KEY: str = ""
+    # 服务端会话有效期（秒），默认 7 天
+    SESSION_TTL_SECONDS: int = 60 * 60 * 24 * 7
+
 
 
 settings = Settings()

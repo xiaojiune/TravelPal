@@ -1,6 +1,11 @@
 ---
 name: travelpal-architecture
-description: TravelPal 架构编排哲学与决策框架——判断"代码该放哪层、模块怎么组织、公共逻辑怎么抽、文件要不要拆"，而不是业务逻辑怎么写。当你要新增功能（如引用户系统）、改动/升级/重构目录结构、抽取公共模块、不确定某段代码该放 backend 哪一层（api/domain/agent/infrastructure/engine/data/tasks）、或犹豫某个文件是否太长该不该拆时使用。核心是"先探索现有结构+需求，再决策，后动手"；它承载的是项目的架构思想而非操作步骤，具体做法见 references/。与 travelpal-coding（管注释/风格/接口写法）互补，本 skill 只管分层与编排。
+description: TravelPal 架构编排：判断代码放哪层、模块怎么组织、公共逻辑怎么抽、文件该不该拆。只管分层与编排，不涉注释/风格。加功能、重构目录、抽公共模块时使用。
+whenToUse:
+  - 用户明确指令：新增功能、升级/重构目录结构、抽公共模块
+  - 特定场景：犹豫一段代码该放 backend 哪层（api/domain/agent/infrastructure）、文件太长不知拆不拆
+  - 关键词提及：放哪层、怎么组织、抽公共、拆文件、架构、模块
+  - 不触发：只改注释/风格、单点逻辑改动无需分层判断
 ---
 
 # TravelPal 架构编排哲学
@@ -22,6 +27,7 @@ description: TravelPal 架构编排哲学与决策框架——判断"代码该�
 
 ### 一、演进式架构
 按多 Agent 设计、按单 Agent 执行；**一次只动一个轴**；占位优于提前引；用**度量**说话，不凭感觉。
+**屎山是"先这样，后面再改"累计出来的（熵增），对抗它不是靠一次重写，而是靠演进式架构**：旧系统旁建新模块（如 `engine/orchestrator.py`），**拦截入口 → 逐步替换实现 → 绞杀退役旧代码**（如 CA/VNS → OR），风险隔离、可持续交付。做法见 `references/evolution.md`。
 
 ### 二、深度解耦
 依赖方向单一（domain 零依赖 → infrastructure 只依赖 domain → api 只做接入）；**接口先行、实现可插拔**；防腐层真防腐。
@@ -68,3 +74,4 @@ description: TravelPal 架构编排哲学与决策框架——判断"代码该�
 
 - `references/backend.md` — 后端各层职责边界明细 + 放错层信号 + 选层判断方法（做法）。
 - `references/frontend.md` — 前端目录职责边界 + 拆分/抽取方法论 + 类型单一来源检查（做法）。
+- `references/evolution.md` — 绞杀者模式：怎么用新架构安全绞杀旧系统（做法）。见「一、演进式架构」。

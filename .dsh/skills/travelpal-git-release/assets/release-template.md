@@ -1,6 +1,11 @@
 <!--
   空版发布说明模板。发布某版本时复制本文件为 docs/releases/<tag>.md（文件名 = tag 名，如 v0.1.0.md）。
   内容必须经用户确认后才落盘；主体写"主要变化"（面向读者价值），明细归"主要修改"（技术改动），不逐条列 commit。规范见 travelpal-git-release skill「四.5 版本说明目录」。
+
+  frontmatter 规范（与 docs/handoff 及各 md 模板一致）：
+  - date   必须（GitHub Release 原材料解析，也标注文档"生命"）
+  - version 可选（与 tag 一致）
+  - status  可选（released / 草稿等）
 -->
 
 ---

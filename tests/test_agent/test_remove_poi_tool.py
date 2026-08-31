@@ -43,11 +43,11 @@ def test_remove_poi_day_specified_passes_day(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     def _should_not_submit(*a, **k):
         raise AssertionError("同步成功不应提交异步任务")
@@ -66,11 +66,11 @@ def test_remove_poi_missing_day_global(monkeypatch):
 
     captured = {}
 
-    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city=""):
+    def fake_adjust_plan(spots, cost, dist, routes, adjustments, city="", driving=None, solver_factory=None):
         captured["adjustments"] = adjustments
         return fake_result
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     result = asyncio.run(remove_poi_fn("广州", "广州塔", plan=plan))
     assert result is fake_result
@@ -84,7 +84,7 @@ def test_remove_poi_sync_failure_submits_async(monkeypatch):
     def fake_adjust_plan(*a, **k):
         raise ValueError("day 越界")
 
-    monkeypatch.setattr("backend.engine.pipeline.adjust_plan", fake_adjust_plan)
+    monkeypatch.setattr("backend.domain.pipeline.adjust_plan", fake_adjust_plan)
 
     async def fake_submit(task_type, params):
         assert task_type == "adjust"

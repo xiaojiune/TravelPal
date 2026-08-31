@@ -3,8 +3,9 @@
 import numpy as np
 import pytest
 
-from backend.agent.planning import remove_poi_from_day
-from backend.engine.pipeline import adjust_plan
+from backend.domain.planning import remove_poi_from_day
+from backend.domain.pipeline import adjust_plan
+from backend.infrastructure.engine.solver import get_solver
 
 
 def _single_spot_plan():
@@ -32,6 +33,7 @@ class TestRemovePoi:
             cost_mat.tolist(),
             routes,
             {"remove_poi": target_name, "day": 0},
+            solver_factory=get_solver,
         )
 
         all_names = {item["name"] for day in plan["daily_schedules"] for item in day}
@@ -45,7 +47,7 @@ class TestRemovePoi:
         spots, cost_mat, routes = base_adjust_plan
         target_name = next(spots[i]["name"] for i in spots if i != 0)
 
-        plan = adjust_plan(spots, cost_mat.tolist(), cost_mat.tolist(), routes, {"remove_poi": target_name})
+        plan = adjust_plan(spots, cost_mat.tolist(), cost_mat.tolist(), routes, {"remove_poi": target_name}, solver_factory=get_solver)
 
         assert plan["solution"]["valid"] is True
         all_names = {item["name"] for day in plan["daily_schedules"] for item in day}
@@ -62,6 +64,7 @@ class TestRemovePoi:
                 cost_mat.tolist(),
                 routes,
                 {"remove_poi": "不存在的景点", "day": 0},
+                solver_factory=get_solver,
             )
 
 
@@ -72,14 +75,14 @@ class TestRemovePoiEdge:
         """不能删除酒店（depot，索引 0）。"""
         spots, cost, routes = _single_spot_plan()
         with pytest.raises(ValueError, match="不能删除酒店"):
-            remove_poi_from_day(spots, cost, cost, routes, "酒店", day=0)
+            remove_poi_from_day(spots, cost, cost, routes, "酒店", day=0, solver_factory=get_solver)
 
     def test_remove_day_empties_discards_day(self):
         """单天删除后该天空 → 废弃该天（best_days - 1）+ UserWarning。"""
         spots, cost, routes = _single_spot_plan()
 
         with pytest.warns(UserWarning, match="该天已废弃"):
-            plan = remove_poi_from_day(spots, cost, cost, routes, "广州塔", day=0)
+            plan = remove_poi_from_day(spots, cost, cost, routes, "广州塔", day=0, solver_factory=get_solver)
 
         assert plan["best_days"] == 0
         assert plan["solution"]["valid"] is True
@@ -94,7 +97,7 @@ class TestRemovePoiEdge:
         # 非目标天（第 1 天）的景点名称集合
         other_names = {spots[n]["name"] for n in routes[1] if n != 0}
 
-        plan = remove_poi_from_day(spots, cost_mat, cost_mat, routes, target_name, day=0)
+        plan = remove_poi_from_day(spots, cost_mat, cost_mat, routes, target_name, day=0, solver_factory=get_solver)
 
         assert plan["solution"]["valid"] is True
         assert plan["best_days"] == 2

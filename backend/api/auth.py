@@ -9,8 +9,8 @@ from backend.api.schemas import AuthLogin, AuthRegister, UserOut
 from backend.config import settings
 from backend.domain.security import hash_password, verify_password
 from backend.infrastructure.auth.session_store import RedisSessionStore
-from backend.infrastructure.data.model.database import get_session as get_db_session
-from backend.infrastructure.data.model.models import User
+from backend.infrastructure.db.database import get_session as get_db_session
+from backend.infrastructure.db.models import User
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 

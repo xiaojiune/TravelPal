@@ -20,7 +20,7 @@ from typing import cast
 
 from backend.agent.tools.plan._common import ensure_matrix
 from backend.di import get_driving_provider
-from backend.infrastructure.data.driving_cache import get_driving_pair
+from backend.infrastructure.external.amap.driving_cache import get_driving_pair
 from backend.infrastructure.engine.solver import get_solver
 from backend.tasks.submit import submit_task
 

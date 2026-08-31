@@ -31,15 +31,15 @@ from backend.api.schemas import (
     TaskListResponse,
     TaskSubmitResponse,
 )
-from backend.infrastructure.data.amap_loader import get_poi_details
-from backend.infrastructure.data.checkpointer import get_checkpointer
+from backend.infrastructure.external.amap.amap_loader import get_poi_details
+from backend.infrastructure.db.checkpointer import get_checkpointer
 from backend.infrastructure.data.conversations import (
     get_history_messages,
     get_or_create_conversation,
     get_recent_conversation,
 )
-from backend.infrastructure.data.model.database import get_session
-from backend.infrastructure.data.model.models import FeedbackRecord, PlanTask, SharedPlan, User
+from backend.infrastructure.db.database import get_session
+from backend.infrastructure.db.models import FeedbackRecord, PlanTask, SharedPlan, User
 from backend.tasks.submit import submit_task
 
 router = APIRouter()

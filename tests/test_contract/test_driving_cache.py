@@ -6,7 +6,7 @@
 
 import json
 
-import backend.infrastructure.data.driving_cache as dc  # noqa: E402
+import backend.infrastructure.external.amap.driving_cache as dc  # noqa: E402
 
 
 class FakeRedis:

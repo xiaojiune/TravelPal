@@ -2,7 +2,7 @@
 
 覆盖轴2：User 模型字段齐全；三张业务表均挂 user_id 外键（可空=存量匿名兼容）。
 """
-from backend.infrastructure.data.model.models import FeedbackRecord, SharedPlan, PlanTask, User
+from backend.infrastructure.db.models import FeedbackRecord, SharedPlan, PlanTask, User
 
 
 class TestUserModel:

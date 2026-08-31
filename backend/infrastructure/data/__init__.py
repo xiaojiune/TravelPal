@@ -1,8 +1,17 @@
-"""数据加载层：高德地图 POI 搜索、驾车路径规划、成本矩阵构建、ORM 数据库模型。"""
+"""数据层（暂存）：会话域服务（conversations）。
 
-from backend.infrastructure.data.amap_loader import build_real_data, get_poi_details
+ORM 与外部 API 已分别归 infrastructure/db/ 与 infrastructure/external/amap/；
+本层暂存会话服务，待后续单独收敛上移 domain（会话属领域层）。
+"""
+
+from backend.infrastructure.data.conversations import (
+    get_history_messages,
+    get_or_create_conversation,
+    get_recent_conversation,
+)
 
 __all__ = [
-    "build_real_data",
-    "get_poi_details",
+    "get_history_messages",
+    "get_or_create_conversation",
+    "get_recent_conversation",
 ]

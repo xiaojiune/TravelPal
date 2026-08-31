@@ -9,7 +9,7 @@ domain 只依赖端口（domain/ports.py 的 DrivingDataProvider），本模块�
 故本模块不再收敛；这里只承载「分散重复」的 DrivingDataProvider。
 """
 
-from backend.infrastructure.data.driving_service import AmapDrivingProvider
+from backend.infrastructure.external.amap.driving_service import AmapDrivingProvider
 
 # 单例：AmapDrivingProvider 无 volatile 状态（仅调高德 API + 共享缓存），多入口共享安全。
 _driving_provider = AmapDrivingProvider()

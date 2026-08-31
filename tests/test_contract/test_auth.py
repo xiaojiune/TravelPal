@@ -13,7 +13,7 @@ from starlette.requests import Request
 from backend.api.auth import get_current_user_optional, require_admin
 from backend.api.schemas import AuthLogin, AuthRegister, UserOut
 from backend.domain.security import hash_password, verify_password
-from backend.infrastructure.data.model.models import User
+from backend.infrastructure.db.models import User
 
 
 class TestPassword:

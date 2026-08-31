@@ -12,8 +12,8 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.infrastructure.data.checkpointer import get_checkpointer
-from backend.infrastructure.data.model.models import Conversation
+from backend.infrastructure.db.checkpointer import get_checkpointer
+from backend.infrastructure.db.models import Conversation
 
 # 会话 TTL：登录用户 7 天，匿名访客 1 天
 TTL_LOGGED_IN = timedelta(days=7)

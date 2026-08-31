@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, St
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
-from backend.infrastructure.data.model.database import Base
+from backend.infrastructure.db.database import Base
 
 
 class User(Base):

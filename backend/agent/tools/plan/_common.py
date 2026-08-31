@@ -4,7 +4,7 @@
 不进 __all__ / 不对外导出（对齐 planning/_core.py 先例）。
 """
 
-from backend.infrastructure.data.driving_cache import get_driving_matrix
+from backend.infrastructure.external.amap.driving_cache import get_driving_matrix
 
 
 def ensure_matrix(plan: dict, city: str) -> bool:

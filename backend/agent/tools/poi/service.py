@@ -64,7 +64,7 @@ async def poi_lookup(city: str, names: list[str]) -> list[dict]:
         poi_type 为 "hotel" | "spot" | "facility" | "unknown"。
         单个查询失败时该项为 { name, error: str }。
     """
-    from backend.infrastructure.data.amap_loader import get_poi_details
+    from backend.infrastructure.external.amap.amap_loader import get_poi_details
 
     results: list[dict] = []
     for name in names:

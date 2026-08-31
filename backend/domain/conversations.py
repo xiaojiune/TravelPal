@@ -5,7 +5,7 @@ LangGraph checkpoint）归 infrastructure。本模块只定义：
 
 - ``Conversation``：领域会话类型（轻量，infra ORM 映射到它，domain 不碰 ORM）。
 - ``ConversationSession``：会话存储端口（抽象会话表的域操作集，隔离 sqlalchemy）。
-- ``ConversationStore``：会话服务端口（上层 get_or_create/get_recent/get_history）。
+- ``ConversationStore``：会话服务端口（上层 get_or_create/get_recent/get_history_messages）。
 - ``_belongs``/``_expires_for``/TTL：纯业务规则。
 
 domain 零外部实现依赖：只 import 标准库，具体存取由 infrastructure 实现。
@@ -58,7 +58,7 @@ def _belongs(conv_user_id: UUID | None, current_user_id: UUID | None) -> bool:
 class ConversationSession(Protocol):
     """会话存储端口：抽象会话表的域操作集（domain 不碰 sqlalchemy）。
 
-    infra 提供一个 Adapter，由 `AsyncSession` 满足本协议（把 ORM 存取
+    infra 提供一个 Adapter，由 ``AsyncSession`` 实现本协议（把 ORM 存取
     映射到 ``Conversation``）。domain 端只调用这些域级方法。
     """
 
@@ -75,7 +75,7 @@ class ConversationSession(Protocol):
         ...
 
     async def delete(self, conversation: Conversation) -> None:
-        """标记删除会话（uncommit 由 commit 生效）。"""
+        """标记删除会话（未提交前不落库，由 commit 生效）。"""
         ...
 
     async def commit(self) -> None:

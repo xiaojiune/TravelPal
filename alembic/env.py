@@ -6,7 +6,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-import backend.data.model.models  # noqa: F401  导入 ORM 模型以注册 metadata
+import backend.infrastructure.data.model.models  # noqa: F401  导入 ORM 模型以注册 metadata
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -24,7 +24,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # ORM 声明式基类，autogenerate 据此对比数据库生成迁移。
-from backend.data.model.database import Base  # noqa: E402
+from backend.infrastructure.data.model.database import Base  # noqa: E402
 
 target_metadata = Base.metadata
 

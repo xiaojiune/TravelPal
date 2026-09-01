@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.agent.chat import build_chat_messages, stream_orchestrator
 from backend.agent.tools import parse_biz_hours
+from backend.agent.tools.poi.service import _classify_poi
 from backend.api.auth import get_current_user_optional
 from backend.api.schemas import (
     ChatHistoryResponse,
@@ -37,6 +38,7 @@ from backend.infrastructure.db.checkpointer import get_checkpointer
 from backend.infrastructure.db.database import get_session
 from backend.infrastructure.db.models import FeedbackRecord, PlanTask, SharedPlan, User
 from backend.infrastructure.external.amap.amap_loader import get_poi_details
+from backend.infrastructure.external.amap.poi_cache import get_poi_cached, set_poi_cached
 from backend.tasks.submit import submit_task
 
 # 会话存储单例（组合根取用）：会话服务实现来自 di，按请求注入 session。
@@ -71,14 +73,43 @@ async def poi_lookup(req: POILookupRequest):
 
     for name in req.names:
         try:
+            cached = get_poi_cached(req.city, name)
+            if cached is not None:
+                items.append(
+                    POILookupItem(
+                        name=cached["name"],
+                        lon=cached["lon"],
+                        lat=cached["lat"],
+                        address=cached["address"],
+                        tw_start=cached.get("tw_start"),
+                        tw_end=cached.get("tw_end"),
+                    )
+                )
+                continue
             result = get_poi_details(name, req.city)
             if isinstance(result, str):
                 failed.append(result)
             else:
-                lon, lat, biz_hours, address, pname, cityname, actual_name, _ = result
-                parsed = await parse_biz_hours(biz_hours) if biz_hours else None
-                tw_start = parsed[0] if parsed else None
-                tw_end = parsed[1] if parsed else None
+                lon, lat, biz_hours, address, pname, cityname, actual_name, poi_type_str = result
+                poi_type = _classify_poi(poi_type_str, actual_name)
+                if poi_type == "hotel":
+                    # 酒店为 depot 全天可用（0-1440），无需 LLM 解析；与 Agent 工具逻辑一致
+                    tw_start = 0
+                    tw_end = 1440
+                else:
+                    parsed = await parse_biz_hours(biz_hours) if biz_hours else None
+                    tw_start = parsed[0] if parsed else None
+                    tw_end = parsed[1] if parsed else None
+                item = {
+                    "name": actual_name,
+                    "lon": lon,
+                    "lat": lat,
+                    "address": address,
+                    "tw_start": tw_start,
+                    "tw_end": tw_end,
+                    "poi_type": poi_type,
+                }
+                set_poi_cached(req.city, name, item)
                 items.append(
                     POILookupItem(
                         name=actual_name,

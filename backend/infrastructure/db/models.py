@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
@@ -45,6 +45,10 @@ class SharedPlan(Base):
 
     __tablename__ = "share_records"
 
+    __table_args__ = (
+        Index("ix_share_records_created_at", "created_at", postgresql_using="btree"),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(
         UUID(as_uuid=True),
@@ -81,8 +85,15 @@ class PlanTask(Base):
 
     __tablename__ = "plan_tasks"
 
+    __table_args__ = (
+        # 用户任务面板热查询：WHERE user_id=? ORDER BY created_at DESC LIMIT n
+        Index("ix_plan_tasks_user_created", "user_id", "created_at", postgresql_using="btree"),
+        # admin 全量任务列表：ORDER BY created_at DESC（无 user 过滤时复合索引不命中，故需单列）
+        Index("ix_plan_tasks_created_at", "created_at", postgresql_using="btree"),
+    )
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True, comment="归属用户（可空）")
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, comment="归属用户（可空）")
     task_type = Column(String(16), nullable=False, comment="任务类型：or-ca 或 or-vns")
     status = Column(String(16), nullable=False, default="pending", comment="pending/running/done/failed/canceled")
     request_params = Column(JSONB, nullable=False, comment="提交的完整请求参数（PlanRequest 结构）")

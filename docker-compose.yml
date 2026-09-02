@@ -136,6 +136,9 @@ services:
     image: prom/prometheus
     container_name: travelpal-prometheus
     logging: *default-logging
+    environment:
+      # 供 prometheus.yml 的 ${PROMETHEUS_BASIC_PASS} 展开；值来自服务器 .env
+      PROMETHEUS_BASIC_PASS: ${PROMETHEUS_BASIC_PASS}
     volumes:
       - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:

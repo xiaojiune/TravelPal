@@ -11,7 +11,9 @@
 
 import pytest
 
+from backend.tasks.app import celery_app
 from backend.tasks.executors import TASK_EXECUTORS, _build_poi_cache
+from backend.utils.exceptions import TransientError
 
 
 def _plan_params() -> dict:
@@ -87,3 +89,36 @@ class TestBuildPoiCache:
         del params["spots"][0]["expected_arrival"]
         cache = _build_poi_cache(params)
         assert "expected_arrival" not in cache["spots"][0]
+
+
+class TestCeleryReliability:
+    """Celery 可靠性配置契约：死信队列 / autoretry_for / 幂等判断。
+
+    锁定想法3 的核心加固，防止未来改动退化：
+    - 主队列带死信参数（失败超重试进 plan.dead）
+    - 任务对 TransientError autoretry_for + 指数退避重试
+    - _is_transient 区分瞬时/业务错误
+    """
+
+    def test_queues_plan_has_dead_letter(self):
+        from backend.tasks.app import task_queues
+
+        queues = {q.name: q for q in task_queues}
+        assert "plan" in queues and "plan.dead" in queues
+        args = queues["plan"].queue_arguments
+        assert args["x-dead-letter-exchange"] == "x-dead"
+        assert args["x-dead-letter-routing-key"] == "plan.dead"
+
+    def test_run_plan_task_autoretry_for_transient(self):
+        from backend.tasks.worker import run_plan_task
+
+        assert run_plan_task.autoretry_for == (TransientError,)
+        assert run_plan_task.max_retries == 3
+        assert run_plan_task.retry_backoff is True
+
+    def test_terminal_state_idempotent(self):
+        from backend.tasks.worker import _is_transient
+
+        # 瞬时错误应判 True，业务类 Exception 返回 False
+        assert _is_transient(ConnectionError("conn reset")) is True
+        assert _is_transient(ValueError("bad param")) is False

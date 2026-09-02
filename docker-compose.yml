@@ -10,6 +10,7 @@ services:
     image: pgvector/pgvector:pg16
     container_name: travelpal-postgres
     logging: *default-logging
+    restart: unless-stopped
     environment:
       POSTGRES_USER: travelpal
       POSTGRES_PASSWORD: travelpal123
@@ -29,6 +30,12 @@ services:
     container_name: travelpal-redis
     command: ["redis-server", "--maxmemory-policy", "allkeys-lru"]
     logging: *default-logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
     ports:
       - "6379:6379"
     volumes:
@@ -39,6 +46,7 @@ services:
     image: cloudamqp/lavinmq:latest
     container_name: travelpal-lavinmq
     logging: *default-logging
+    restart: unless-stopped
     environment:
       LAVINMQ_AMQP_PORT: "5672"
       LAVINMQ_HTTP_PORT: "15672"
@@ -60,6 +68,13 @@ services:
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-backend
     logging: *default-logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
       CELERY_BROKER_URL: amqp://guest:guest@lavinmq:5672//
@@ -91,6 +106,13 @@ services:
         PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
     container_name: travelpal-worker
     logging: *default-logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     command: ["celery", "-A", "backend.tasks.app", "worker", "--loglevel=info", "--concurrency=2"]
     environment:
       DATABASE_URL: postgresql+asyncpg://travelpal:travelpal123@postgres:5432/travelpal
@@ -120,6 +142,13 @@ services:
         NPM_REGISTRY: https://registry.npmmirror.com
     container_name: travelpal-nginx
     logging: *default-logging
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     ports:
       - "80:80"
       - "443:443"

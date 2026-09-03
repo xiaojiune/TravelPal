@@ -64,4 +64,4 @@ mcp / observability / utils / config.py / typedefs.py   （旁路 / 工具 / 配
 
 ## 案例：用户系统（已落地）
 
-`api/auth.py`（HTTP 接入）+ `domain/security.py`（鉴权逻辑/端口）+ `infrastructure/auth/session_store.py`（会话存储实现）+ `infrastructure/data/model/models.py`（用户表）。鉴权属业务 → 逻辑在 `domain`，实现（会话存储）在 `infrastructure/auth`，接入在 `api`。
+`api/auth.py`（HTTP 接入）+ `domain/security.py`（鉴权逻辑/端口）+ `infrastructure/auth/session_store.py`（会话存储实现）+ `infrastructure/db/models.py`（用户表）。鉴权属业务 → 逻辑在 `domain`，实现（会话存储）在 `infrastructure/auth`，接入在 `api`。

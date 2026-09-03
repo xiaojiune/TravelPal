@@ -27,14 +27,46 @@ from backend.observability import task_duration, task_total
 from backend.tasks.app import celery_app
 from backend.tasks.executors import TASK_EXECUTORS
 from backend.tasks.types import TaskParams
-from backend.utils.exceptions import TaskCancelled
+from backend.utils.exceptions import TaskCancelled, TransientError
 
 
-@celery_app.task(name="travelpal.run_plan_task")
-def run_plan_task(task_id: str) -> str:
+def _is_transient(exc: Exception) -> bool:
+    """判断异常是否为可重试的瞬时外部抖动（数据库/依赖连接类）。
+
+    Args:
+        exc: 捕获的异常。
+
+    Returns:
+        bool: 是否为瞬时错误（适合 autoretry_for 重试）。
+    """
+    # 数据库连接层抖动：连接丢失、pool 用完、DB 不可达、产生新连接失败
+    try:
+        from sqlalchemy.exc import (  # noqa: F401
+            DBAPIError,
+            DisconnectionError,
+            OperationalError,
+        )
+    except ImportError:  # pragma: no cover
+        DBAPIError = DisconnectionError = OperationalError = ()  # type: ignore[assignment]
+
+    transient_types = (DBAPIError, DisconnectionError, OperationalError, ConnectionError, TimeoutError)
+    return isinstance(exc, transient_types)
+
+
+@celery_app.task(
+    name="travelpal.run_plan_task",
+    bind=True,
+    autoretry_for=(TransientError,),
+    retry_backoff=True,
+    retry_backoff_max=120,
+    retry_jitter=True,
+    max_retries=3,
+)
+def run_plan_task(self, task_id: str) -> str:
     """异步规划任务入口：执行 or-ca 或 or-vns 求解，更新 plan_tasks 状态。
 
     Args:
+        self: Celery 任务实例（bind=True 注入，供 retry 使用）。
         task_id: plan_tasks 表主键（UUID 字符串）。
 
     Returns:
@@ -47,6 +79,8 @@ def run_plan_task(task_id: str) -> str:
       旧 loop 上的连接，触发 "Future attached to a different loop" 错误。
     - 每次 dispose 会重建连接（毫秒级开销），相对任务本身（驾车 API 数十秒）
       可忽略，换来的是跨 loop 的健壮性。
+    - autoretry_for=(TransientError,)：瞬时外部错误（DB 连接抖动等）自动重试，
+      指数退避；重试会重新调用本任务，_execute_task 内置终态幂等检查避免重复求解。
     """
     loop = asyncio.new_event_loop()
     try:
@@ -77,17 +111,15 @@ async def _execute_task(task_id: str) -> None:
 
     分发：按 task_type 从 TASK_EXECUTORS 取执行函数（未知类型触发 KeyError → failed）。
     """
-    # 阶段1：读任务 + 前置取消检测 + 置 running（session 内取值，避免 detached 访问）
+    # 阶段1：读任务 + 幂等检查 + 置 running（session 内取值，避免 detached 访问）
     async with async_session() as session:
         task = await session.get(PlanTask, UUID(task_id))
         if task is None:
             return
         task_type = task.task_type  # type: ignore[assignment]
         start = time.monotonic()
-        if task.status == "canceled":  # type: ignore[comparison-overlap]
-            # 排队中被取消：worker 尚未执行，直接收尾（不写 error）
-            task.finished_at = datetime.now(timezone.utc)  # type: ignore[assignment]
-            await session.commit()
+        if task.status in ("done", "failed", "canceled"):  # type: ignore[comparison-overlap]
+            # 终态幂等兜底：自动重试重投同一 task_id 时，已完成的直接跳过，避免重复求解
             return
         task.status = "running"  # type: ignore[assignment]
         task.started_at = datetime.now(timezone.utc)  # type: ignore[assignment]
@@ -115,8 +147,16 @@ async def _execute_task(task_id: str) -> None:
             task = await session.get(PlanTask, UUID(task_id))
             task.status = "canceled"  # type: ignore[assignment]
             await session.commit()
+    except TransientError:
+        # 瞬时错误（DB 连接抖动等）：不清状态（保持 running/pending），重新抛出交给
+        # autoretry_for 自动重试（指数退避）；重试会重投同一 task_id，靠终态幂等检查防重复求解
+        raise
     except Exception as e:
         traceback.print_exc()
+        # 连接/依赖服务抖动类（DB 不可达、pool 用尽）视为瞬时，交给 autoretry_for 重试；
+        # 其余（业务/引擎）才落 failed 终态
+        if _is_transient(e):
+            raise TransientError(str(e)) from e
         async with async_session() as session:
             task = await session.get(PlanTask, UUID(task_id))
             task.status = "failed"  # type: ignore[assignment]

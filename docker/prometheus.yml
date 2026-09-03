@@ -1,0 +1,21 @@
+# Prometheus scrape 配置：抓取 TravelPal 的 /api/metrics 端点。
+#
+# 抓取目标走 nginx（前端反代），命中 nginx.conf 中 `location = /api/metrics` 的
+# Basic Auth 保护（与站内 Prometheus 指标保护一致）。账号密码复用服务器
+# /etc/nginx/.htpasswd 中 `metrics` 用户。
+#
+# 密码不出现在本文件（不进 git）：部署时通过环境变量 PROMETHEUS_BASIC_PASS
+# 注入替换下方 ${PROMETHEUS_BASIC_PASS}（docker compose 若用 env_file 传递，
+# 或服务器直接创建 .htpasswd 后手动填入）。
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: travelpal
+    metrics_path: /api/metrics
+    basic_auth:
+      username: metrics
+      password: ${PROMETHEUS_BASIC_PASS}
+    static_configs:
+      - targets: ["nginx"]

@@ -1,6 +1,9 @@
 <template>
   <div class="page-admin">
-    <h2>管理台</h2>
+    <div class="admin-header">
+      <h2>管理台</h2>
+      <n-button size="small" strong @click="openMonitor">监控看板</n-button>
+    </div>
     <p class="subtitle">用户 / 任务 / 反馈（只读，仅超级管理员可见）</p>
 
     <n-tabs v-model:value="tab" type="line" animated>
@@ -40,7 +43,7 @@
  */
 import { ref, computed, watch, onMounted } from 'vue'
 import { h } from 'vue'
-import { NTag } from 'naive-ui'
+import { NButton, NTag } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { getAdminFeedback, getAdminTasks, getAdminUsers } from '@/services/admin'
 import type { AdminFeedback, AdminTask, AdminUser } from '@/types'
@@ -70,6 +73,11 @@ const roleText: Record<string, string> = {
 function formatTime(iso: string) {
   if (!iso) return ''
   return new Date(iso).toLocaleString()
+}
+
+// 跳转到监控看板（Grafana，经 nginx /grafana/ 子路径反代，需登录）
+function openMonitor() {
+  window.open('/grafana/', '_blank', 'noopener')
 }
 
 // ====== 表格列定义 ======
@@ -206,6 +214,12 @@ onMounted(() => {
   font-size: 22px;
   font-weight: 600;
   color: var(--tp-text);
+}
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 .page-admin .subtitle {
   margin: 0 0 20px;

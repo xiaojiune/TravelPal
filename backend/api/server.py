@@ -95,6 +95,19 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.get("/api/health")
+    async def health():
+        """健康检查端点：供 Docker healthcheck 与运维探测。
+
+        只需进程存活即返回 200（不查外部依赖——DB/Redis 的健康由各自 healthcheck 负责，
+        避免健康检查因瞬时外部抖动误判 backend down）。若将来需要更细的存活探测
+        （如确认 DB 可达），可在此扩展为返回各依赖的状态。
+
+        Returns:
+            dict: {"status": "ok"}，HTTP 200。
+        """
+        return {"status": "ok"}
+
     @app.get("/api/metrics")
     async def metrics():
         """Prometheus 指标端点：聚合 backend 与 celery worker 全部进程指标。

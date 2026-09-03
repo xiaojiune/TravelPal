@@ -1,22 +1,42 @@
 name: Release
 
+# 发布放在流程最后：CI + Docs 并行检查 → Deploy 成功后 → Release。
+# 用 workflow_run 监听 Deploy 而非 push tag，避免"一打 tag 就提前发布"。
+# 版本号从 pyproject.toml 单一事实源读取，自动打 tag 指向 main（被部署的代码）。
 on:
-  push:
-    tags: ["v*"]
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
 
 jobs:
   release:
+    # 仅当 Deploy 由 main push 触发且成功（CI 全绿 + 部署）时才发布；PR/失败不发布。
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
+          # 检出被部署的 commit（触发 Deploy 的 push 到 main 的 head），tag 与之对齐
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
+
+      - name: Extract version from pyproject.toml
+        id: version
+        run: |
+          VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -1)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Read release notes
         id: changelog
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          NOTES_FILE="docs/releases/${GITHUB_REF_NAME}.md"
+          NOTES_FILE="docs/releases/${TAG}.md"
           if [ -f "$NOTES_FILE" ]; then
             {
               echo 'NOTES<<RELEASE_EOF'
@@ -26,11 +46,14 @@ jobs:
               echo 'RELEASE_EOF'
             } >> "$GITHUB_OUTPUT"
           else
-            echo "缺少 docs/releases/${GITHUB_REF_NAME}.md，请补充后再发布" >> "$GITHUB_OUTPUT"
+            echo "缺少 docs/releases/${TAG}.md，请补充后再发布" >> "$GITHUB_OUTPUT"
           fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.event.workflow_run.head_sha }}
           body: ${{ steps.changelog.outputs.NOTES }}
           generate_release_notes: false
-          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          prerelease: ${{ contains(steps.version.outputs.version, '-beta') || contains(steps.version.outputs.version, '-rc') }}

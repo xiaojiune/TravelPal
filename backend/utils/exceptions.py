@@ -13,3 +13,12 @@ class TaskCancelled(Exception):
     cancel_check 检查点往上抛，最终在 worker._execute_task 捕获并将
     plan_tasks.status 置为 canceled（终态，不写 error）。
     """
+
+
+class TransientError(Exception):
+    """瞬时错误哨兵：任务执行中遇到可重试的外部抖动时抛出。
+
+    如数据库连接偶发失败、依赖服务瞬时不可用等。tasks.worker 用
+    ``autoretry_for=(TransientError,)`` 自动重试（指数退避），
+    与业务性失败（参数缺字段/引擎 bug，直接置 failed）区分。
+    """

@@ -54,6 +54,7 @@ async def poi_lookup(city: str, names: list[str]) -> list[dict]:
 
     自动识别每个 POI 类型（酒店/景点），酒店默认时间窗为 0-1440（全天）。
     内部 LLM 解析（parse_biz_hours）走 domain/LLMService 防腐层。
+    结果经 poi_cache 单层缓存（TTL 24h）：命中即免高德 + 免 LLM，cross-session 可复用。
 
     Args:
         city: 所在城市。
@@ -65,9 +66,15 @@ async def poi_lookup(city: str, names: list[str]) -> list[dict]:
         单个查询失败时该项为 { name, error: str }。
     """
     from backend.infrastructure.external.amap.amap_loader import get_poi_details
+    from backend.infrastructure.external.amap.poi_cache import get_poi_cached, set_poi_cached
 
     results: list[dict] = []
     for name in names:
+        # 命中缓存：整份 {name, lon, lat, address, tw_start, tw_end, poi_type} 直接复用
+        cached = get_poi_cached(city, name)
+        if cached is not None:
+            results.append(cached)
+            continue
         try:
             result = get_poi_details(name, city)
             if isinstance(result, str):
@@ -75,24 +82,25 @@ async def poi_lookup(city: str, names: list[str]) -> list[dict]:
                 continue
             lon, lat, biz_hours, address, _, _, actual_name, poi_type_str = result
             poi_type = _classify_poi(poi_type_str, actual_name)
-            parsed = await parse_biz_hours(biz_hours) if biz_hours else None
             if poi_type == "hotel":
+                # 酒店为 depot 全天可用（0-1440），无需调 LLM 解析营业时间
                 tw_start = 0
                 tw_end = 1440
             else:
+                parsed = await parse_biz_hours(biz_hours) if biz_hours else None
                 tw_start = parsed[0] if parsed else 480
                 tw_end = parsed[1] if parsed else 1020
-            results.append(
-                {
-                    "name": actual_name,
-                    "lon": lon,
-                    "lat": lat,
-                    "address": address,
-                    "tw_start": tw_start,
-                    "tw_end": tw_end,
-                    "poi_type": poi_type,
-                }
-            )
+            item = {
+                "name": actual_name,
+                "lon": lon,
+                "lat": lat,
+                "address": address,
+                "tw_start": tw_start,
+                "tw_end": tw_end,
+                "poi_type": poi_type,
+            }
+            set_poi_cached(city, name, item)
+            results.append(item)
         except Exception as e:
             results.append({"name": name, "error": str(e)})
     return results

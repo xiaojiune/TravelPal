@@ -1,0 +1,12 @@
+# Grafana 数据源 provisioning：指向 Prometheus。
+# 显式指定 uid，供看板 json 的 datasource.uid 绑定（避免 uid 随机生成导致看板断连）。
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true

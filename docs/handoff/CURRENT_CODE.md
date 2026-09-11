@@ -1,76 +1,64 @@
 ---
-task: "TravelPal 六边形架构收敛收尾(domain 端口/核心 + infra 实现 + 组合根 + 会话/鉴权归位) + CI 修复/CICD拆分 + 服务器 lavinmq 部署修复；下一步= dev push / P1 剩余项"
+task: "P1 收尾(想法21-B 索引 / 想法14 POI缓存 / 想法3 Celery可靠性) + Release 自动发布链路改造 + 想法7 可观测性落地(Prometheus+Grafana) + 想法22 restart/健康检查 + 模型换多模态"
 status: "done"
-date: "2026-08-31"
-version: "0.1.0"
-range: "2026-08-31"
-git: "e6e94c0..HEAD"
+date: "2026-09-12"
+version: "0.2.0"
+range: "2026-08-31..2026-09-12"
+git: "e6e94c0..7e1deec"
 ---
 # 代码会话交接
 
 ## 上一段进行到哪
 
-本会话（承接上一档 e6e94c0）完成了架构收敛收尾 + CI/CD 修复 + 服务器部署修复，全部已提交 dev；工作区干净。
+本会话完成 **P1 全部剩余项 + P2 两项落地 + 发布链路改造**，已提交并推送 `origin/dev`；工作区干净。
 
-### 六边形架构收敛收尾（domain 纯端口/核心）
-- `a9c55d1`：domain 求解子目录归位 `solver/`（聚类/适应度/求解入口收敛子域）。
-- `576e099`：方案调整逻辑归位 `domain/planning/`（_core + ops/add,remove,balance）+ `solver_factory` 注入，**消除 domain→agent 反向依赖**。
-- `77e9c26`：`typedefs.py` 收敛——领域类型归 `domain/types.py`、任务参数归 `tasks/types.py`、跨层异常归 `utils/exceptions.py`；删 typedefs.py。
-- `62b5c5a`：新增**六边形依赖守护测试** `backend/utils/architecture.py::check_hexagonal_layering` + `tests/test_contract/test_architecture.py`（锁定 domain←infra←app 依赖方向）。
-- `75b5a3e` / `c9dac78`：**会话端口-适配器**——`domain/ports.py` 增 `ConversationStore`/`ConversationSession` 端口 + `domain/conversation_rules.py`（Conversation/TTL/_belongs/_expires 规则）；infra 以 `PostgresConversationStore` + `SqlAlchemyConversationSession` 实现；`api/routes` 经组合根注入。
-- `domain/ports.py` 现汇聚 `DrivingDataProvider`/`Solver`/`SessionStore`/`ConversationStore`/`ConversationSession`（端口单一来源）。
+### 入口动作：交接核实
+- 读取上一档 CURRENT_CODE.md 发现**已过期**（档称"dev 领先 8 commit 未推"，实际早已推送且发布了 v0.2.0）。教训：交接档是参考，先 `git log/status` 核实现状再行动。
 
-### infra 拆轴 + 组合根
-- `b345e4e`：`infrastructure/data` 拆轴——ORM 归 `db/`（database/models/checkpointer）、高德适配归 `external/amap/`（amap_loader/driving_cache/driving_service）；`data/` 删除。
-- `5ffb87b`：组合根 `backend/di.py`——`get_driving_provider()`（Amap 单例）+ `get_conversation_store()`，消除 3 处 `_driving = AmapDrivingProvider()` 硬编码。
-- `c9dac78` / `0395b25` / `cf82fae`：会话/鉴权归位 + 子包 `__init__` 补齐 + **鉴权统一命名** `api/auth.py` + `infra/auth/` + 路由 `/api/auth`（前后端一致）。
+### 发布链路改造（Release 移到流程最后）
+- `6b92f4a`：`release.yml` 从 `on: push tags` 改为 `workflow_run` 监听 **Deploy 成功**；版本号读 `pyproject.toml` 的 version，自动打 tag 指向部署的 commit（`workflow_run.head_sha`）；`if` 同时要求 `conclusion=='success'` **且** `event=='push'`（排除 PR 触发的 CI）。
+- `8df18ee`（另一会话）：git 发布描述同步为自动链路（CI+Docs→Deploy→Release）。
+- `e157bb6`：同步 main 到 dev（Merge）。
 
-### CI/CD
-- CI 修复（让 CI 绿）：`bddd62e`(poetry.lock content-hash)、`a3bd1c2`(sync_all `__all__` 规范化)、`e579b48`(alembic/env.py `infrastructure.data.model`→`db`)、`09192c5`(plan_tasks task_type/status 列注释迁移)。
-- `9628707`：**CI/CD 拆分**——`ci.yml` 只留 test+frontend(纯 CI)；`deploy.yml`(CD) 用 `workflow_run` 等 CI 全绿且 main push 才部署（等效原 needs）。
+### P1 收尾
+- `54d8d88`（**想法21-B 索引**）：`plan_tasks` 加 `(user_id, created_at)` 复合 + `created_at` 单列；`share_records` 加 `created_at` 单列；**删除冗余** `ix_plan_tasks_user_id`；迁移 `6f2c9100d4b5`。
+- `c516675`（**想法14 POI 缓存**）：新增 `infra/external/amap/poi_cache.py` **单层缓存**（`tp:poi:{city}:{name_fp}`，TTL 24h，Redis 降级）+ 修复**酒店重复 LLM 解析**（酒店跳过解析，直接 0/1440）+ **统一 agent 工具与 HTTP 端点逻辑**（共用同一缓存，酒店判定必须一致）。
+- `77d1e69`（**想法3 Celery 可靠性**）：死信队列（`plan` 队列配 `x-dead-letter-exchange` → `plan.dead`）+ `autoretry_for=(TransientError,)` 指数退避 max 3 + **终态幂等**（重投时 done/failed/canceled 直接跳过）+ `_is_transient` 区分连接抖动/业务错误。
 
-### 服务器部署修复（无 git commit）
-- 服务器 lavinmq 拉取 403：根因 = 服务器无 lavinmq 镜像 + daocloud 加速器对 lavinmq 403。
-- 解决：本地 `docker save cloudamqp/lavinmq:latest` → `scp` 服务器 → `docker load`；服务器 `daemon.json` 换源（`1ms`/`xuanyuan`/`daocloud`）+ `systemctl restart docker`；lavinmq 容器已 Up。
+### P2 落地（想法7 + 想法22）
+- `d0289b3`（**想法7 可观测性**）：新增 `docker/prometheus.yml`（抓 nginx + Basic Auth）+ `docker/grafana/`（数据源 uid=prometheus + dashboard provider + `travelpal-overview` 看板）+ compose 加 prometheus/grafana 服务 + `nginx.conf` 加 `/grafana/` 子路径反代 + AdminPage 加"监控看板"跳转按钮。
+- `d0db670` / `3ef1859`：密码注入——`PROMETHEUS_BASIC_PASS` 注入 prometheus 容器、`GF_SECURITY_ADMIN_PASSWORD` 注入 grafana 容器；`.env.example` 补充两项。
+- `aaccc89`（**想法22**）：全 8 服务加 `restart: unless-stopped`；backend 新增 `GET /api/health` + redis/worker/nginx healthcheck。
 
 ### 其它
-- `8a99451`：README 首页截图替换（HomePage.png）。
-- `38fb2f9`：git-release skill（区分普通 push 同步与发布打 tag，用户侧）。
+- `55201b2`：`LLM_MODEL` 改用多模态 `deepseek-v4-flash-vision-exp`（`.env` + `.env.example`）。
+- `2a0bfd0`：`.dockerignore` 补 `.idea/`、`.coverage`、`coverage.xml`、`.ruff_cache/`、`tests/`、`raw_data/`。
+- **服务器侧（手动，无 commit）**：建 `/etc/nginx/.htpasswd`（metrics 用户）+ 服务器 `.env` 写 `PROMETHEUS_BASIC_PASS`；服务器无 `htpasswd`，已装 `apache2-utils`。
+- ⚠️ **服务器代码尚未拉取本会话改动**（仍停在 `f00cb83`），prometheus/grafana 容器未起、`/grafana/` 暂不可访问。
 
-## 当前后端分层
+## 决定 / 已知坑（本会话）
 
-- **`domain/`**：`ports.py`(端口汇聚)、`conversation_rules.py`、`types.py`、`security.py`、`llm_service.py`、`weather_service.py`、`pipeline.py`(OR 编排)、`solver/`(clustering/fitness/search)、`planning/`(_core + ops/add,remove,balance)。
-- **`infrastructure/`**：`db/`(database/models/checkpointer)、`engine/`(ca/vns/solver)、`external/amap/`(amap_loader/driving_cache/driving_service)、`auth/`(session_store/postgres_conversation_store)、`llm/`、`retrieval/`、`weather/`。
-- **应用/接入层（顶层）**：`api/`(auth.py/routes.py/admin.py/server.py)、`tasks/`、`agent/`、`mcp/`、`observability/`、`utils/`；`di.py`(组合根)、`config.py`；`typedefs.py` 已删。
-- 依赖方向 `domain ← infra ← app`，组合根 `di.py` 装配注入（driving / conversation store / solver_factory）。
+- **Release 自动链路**：Release 由 **Deploy 成功**触发（不再 `push tags`）；版本号读 `pyproject.toml` 的 `version`，`target_commitish` 用被部署的 `head_sha`；正文读 `docs/releases/v<version>.md`。**发布前必须 bump pyproject 版本**，否则重复打同一 tag。
+- **索引设计**：`plan_tasks (user_id, created_at)` 复合服务**用户任务面板**；`created_at` 单列服务 **admin 全量列表**（无 user 过滤时复合索引不命中）；`share_records` 只建 `created_at` 单列（**全站分享站无 user 过滤**）；**不做 JSONB GIN**（result/request_params 从无内容筛选查询）。
+- **POI 缓存单层、不拆两层**：`biz_hours`(高德) 与 `tw_start/end`(LLM解析) 同刻同源、解析结果是高德响应的纯派生，拆 L1/L2 只会引入"L1命中L2过期"复杂度；键为规范化名称 sha1 指纹；**酒店跳过 LLM**（全天 0/1440）；agent 工具与 HTTP 端点**共用同一缓存，酒店判定逻辑必须一致**。
+- **Celery 可靠性**：死信队列 `plan.dead`；`autoretry_for=(TransientError,)` 仅重试瞬时错误；`_is_transient` 判连接/DB 抖动（SQLAlchemy DBAPIError/DisconnectionError/OperationalError + ConnectionError/TimeoutError）；**终态幂等**（重投时 status ∈ done/failed/canceled 直接 return）；`task_reject_on_worker_lost=True`。
+- **可观测性**：`/api/metrics` 经 nginx **Basic Auth**（`.htpasswd` 的 metrics 用户）；**Prometheus 抓 `nginx`（非直连 backend）**；Grafana 子路径 `/grafana/`（需 `GF_SERVER_ROOT_URL` + `GF_SERVER_SERVE_FROM_SUB_PATH=true`）。
+- **密码注入两层展开**：`.env` → compose 展开 → 容器环境变量 → **Prometheus 启动时填 `prometheus.yml` 的 `${PROMETHEUS_BASIC_PASS}`**。`PROMETHEUS_BASIC_PASS` 填**明文**（客户端凭证），`/etc/nginx/.htpasswd` 存该明文的 **hash**（服务端校验）。
+- **Grafana 密码**：`GF_SECURITY_ADMIN_PASSWORD` 仅**首次启动消费一次**；首登后**强制改密，新密码只写 Grafana DB（`grafana_data` volume），不回写 `.env`**；删 volume 才会重新应用初始密码。
+- **健康检查**：backend `GET /api/health` 只检**进程存活**（不查 DB/Redis，避免外部抖动误判 down）；worker 用 `pgrep -f celery`；nginx 用 `wget` 本地探测；**lavinmq 未加强制 healthcheck**（探针不确定，避免误杀）。
+- **模型多模态**：`LLM_MODEL=deepseek-v4-flash-vision-exp`（支持视觉）；但 `domain/llm_service.py` 的 `messages` 仍是**纯文本约定**，图片 content 通道未定义。
+- **服务器信息**：部署目录 `~/TravelPal`；SSH 用户/密钥见本地 `.env.local`（不进 git，勿写入本档）；注意服务器原有一个 `/etc/nginx/htpasswd` **目录**，项目用的是 `/etc/nginx/.htpasswd` **文件**。
 
-## 决定 / 已知坑（累积）
+## 评估结论（本会话，未动代码）
 
-- 认证：httpOnly Cookie + Redis 服务端会话（非 JWT）兼容 SSE；第三方走 API Key 双轨（ADR-010/011）。
-- 会话记忆方案 B：orchestrator 内部不做 add_messages 转换，历史由 `get_history_messages` 读 checkpoint 后拼接。
-- 会话归属：登录用户会话持久、复用最近未过期；游客每次新建；`_belongs` 防串。
-- LavinMQ 用默认 guest/guest（独立 sy 账号被 bcrypt hash 的 compose 插值破坏，暂放弃）；容器间 broker 用服务名 `lavinmq`；docker 部署 `.env` 勿设 CELERY_BROKER_URL（compose 写死）；端口 5672/15672 仅回环；`make dc-up` 已含 lavinmq。
-- 高德：熔断在 `_amap_get`，仅瞬时错误重试，业务态不重试；熔断期抛"高德 API 熔断中"。
-- 前端坑：`make format` 破坏 Vue 内联多语句 `@click="a; b"`，验证用 `vite build`。
-- git 操作必须用户明确，未经确认不 commit/push；`.env` 不进 git。
-- Agent/工具面板/门户 z-index：AgentPanel 遮罩(1999)/面板(2000)/navbar(2001)。
-- **架构分层（六边形）**：domain 只端口/核心/纯算法（零外部依赖）；infra 实现 domain 端口；应用层组合根装配注入。换数据源/算法只动 infra。
-- **ML 定位**：不做路径计算，承载用户记忆/习惯（软约束），经可量化参数注入 OR 目标函数（**不是**成本矩阵）。`run_planning.preference` 口已留（未启用）。
-- **任务生命周期**：提交不阻塞（registerTask + store 后台轮询）；游客内存/登录 localStorage；登出清；无活动任务即停。
-- **取消回滚**：worker 状态改写必须 `commit`（async_session 退出回滚）；协作式取消靠 `_watch_cancel` + `run_in_executor` + `cancel_check`。
-- **端点语义化**：`or-ca`/`or-vns`、`/or`(生产)/`/show`(展示)。
-- **地图**：`AmapMap.setFitView` 无覆盖物静默失效（默认北京）；确保 data 有值才渲染。
-- **依赖注入**：`pipeline`(domain) 收 `driving`/`solver_factory`（None 抛错）；`search` 的 `solver_factory` 组合根必注入。
-- **会话端口-适配器**：`Conversation`(domain dataclass, `eq=False` 可哈希)；`ConversationSession`/`ConversationStore` 在 `domain/ports.py`；实现 `PostgresConversationStore`+`SqlAlchemyConversationSession` 在 `infra/auth/`；`api/routes` 经 `di.get_conversation_store()` + `SqlAlchemyConversationSession(session)` 注入。
-- **鉴权统一命名**：`api/auth.py` + `infra/auth/` + 路由 `/api/auth`（方案2 统一 auth）；前端 openapi/types.generated 本就是 `/api/auth`，无需重生成。⚠️ 对话会话 `postgres_conversation_store.py` 现也在 `infra/auth/`（非认证），如需更纯粹可后续拆到 `infra/conversations/`。
-- **架构守护测试**：`check_hexagonal_layering`——domain 禁 infra/api/agent/tasks/mcp；infra 禁 api/agent/tasks/mcp；utils/observability 为工具层默认不违规；`strict=True` 查 domain→utils。CI `test_contract` 含它。
-- **CI/CD 拆分**：`deploy.yml` 用 `workflow_run`（CI 全绿 + push main 才部署）；`ci.yml` 只 test/frontend。
-- **服务器 Docker 源**：`daemon.json` 三源（1ms/xuanyuan/daocloud）；lavinmq 镜像离线 load（避免 daocloud 403）；建议 compose 固定 lavinmq tag（避开 latest）。
-- **auth 曾改名 session**：中途 auth→session→再统一回 auth（cf82fae）。
+- **想法19（NP-hard/QPS）不做**：预置热门城市距离矩阵**不可行**（矩阵依赖用户 POI 组合，命中率趋零）；多级缓存当前无 QPS 压力。
+- **想法23（前端虚拟滚动）不做**：`SchedulePanel` 是几十行原生 table、`HomePage` 景点卡是**手风琴单卡展开**（重组件只渲染 1 个），均未到需虚拟化的量级；实际也未遇到卡顿。
+- **LLM-as-Judge 暂缓**：LLM 调用点均已有硬约束/兜底（营业时间解析有 0-1440 校验、停留时间有 fallback、工具调用有 error 回填重调），Judge 收益不抵成本。
+- **想法27（外部 UGC / 多模态分享）值得做但留待后续**：模型前提已具备，需一次**跨层迭代**（LLMService 协议扩多模态 + 编排 + 前端上传入口 + 图片→结构化卡片）。
 
 ## 下一步目标
 
-1. **dev push**：dev 领先 origin/dev **8 commit**（`5ffb87b..cf82fae`，未推）：组合根、data 拆轴、会话端口-适配器、注释、可哈希、会话/鉴权归位、子包 __init__、鉴权统一命名。建议联调验证后再 push（需用户明确）。注意 `/api/auth` 前后端已一致。
-2. **服务器完整部署**：lavinmq 已修；若 push 后走 `deploy.yml` 自动部署（workflow_run），确认其它镜像（pgvector/redis）走新源 OK、lavinmq 不再 403。
-3. **P1 剩余项**（先出计划等批准，遵循 plan-build）：想法21-B 索引（`plan_tasks` `(status,created_at)` 复合 + `result`/`request_params` JSONB GIN）、想法3 Celery 用优（优先级/死信/重试）、想法19 QPS、想法14 cache。
-4. **（可选）接入层归位**：api/tasks/agent/mcp/observability/utils 是否进一步归 infra（已评估：当前"三层"自洽，非必要不拆）。
+1. **服务器部署（最优先）**：服务器仍停在 `f00cb83`，需 `git pull` + `docker compose up -d`，让 Celery 可靠性 / 监控编排（`/grafana/`）/ 健康检查 / 多模态模型 生效。部署后首访 `/grafana/` 用 `admin/admin` 登录并改密（存 Grafana DB）。
+2. **发布 v0.3.0（如需要）**：先 bump `pyproject.toml` 的 version 并补 `docs/releases/v<version>.md`，合入 main 后自动走 CI→Deploy→Release（自动打 tag）。
+3. **想法27（多模态 UGC）**：若启动先出方案（LLMService 协议扩展 + 前端图片入口 + 图片→旅行卡片，**只进用户私有会话、不进公共库**）。
+4. **可选**：`infra/auth/postgres_conversation_store.py` 拆到 `infra/conversations/`（语义更纯）。
